@@ -5,15 +5,17 @@ use clap::{App, Arg};
 use image::{Rgba, RgbaImage};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector3;
-use primitives::{Intersectable, Sphere};
+use primitives::{Primitive, Sphere};
 use raytrace::Ray;
 use std::convert::TryInto;
 
 const WIDTH: u32 = 256;
 const HEIGHT: u32 = 256;
+const WIDTH_F: f32 = WIDTH as f32;
+const HEIGHT_F: f32 = HEIGHT as f32;
 
 pub struct Scene {
-    objects: Vec<Box<dyn Intersectable>>,
+    objects: Vec<Box<dyn Primitive>>,
 }
 
 fn raycast(scene: &Scene, x: f32, y: f32) -> Rgba<u8> {
@@ -22,16 +24,14 @@ fn raycast(scene: &Scene, x: f32, y: f32) -> Rgba<u8> {
         direction: Vector3::from([0.0, 0.0, -1.0]),
     };
 
-    let mut r: u8 = 0;
-    let mut g: u8 = 0;
-    let mut b: u8 = 0;
+    let r: u8 = 0;
+    let g: u8 = 0;
+    let b: u8 = 0;
     let a: u8 = 255;
 
     for object in scene.objects.iter() {
         if object.intersects(&ray) {
-            r = 255;
-            g = 255;
-            b = 255;
+            return object.color();
         }
     }
 
@@ -50,7 +50,7 @@ fn main() {
 
     let use_framebuffer = matches.is_present("framebuffer");
 
-    let center = Vector3::from([WIDTH as f32 / 2.0, HEIGHT as f32 / 2.0, 0.0]);
+    let center = Vector3::from([WIDTH_F / 2.0, HEIGHT_F / 2.0, 0.0]);
 
     let mut scene = Scene {
         objects: Vec::new(),
@@ -69,18 +69,20 @@ fn main() {
     }
 
     if use_framebuffer {
-        let w = WIDTH as usize;
-        let h = HEIGHT as usize;
-
         let mut buffer: Vec<u32> = Vec::new();
         for pixel in image.into_vec().chunks_exact(4) {
             buffer.push(u32::from_le_bytes(pixel.try_into().unwrap()));
         }
 
-        let mut window: Window = Window::new("raytracer", w, h, WindowOptions::default())
-            .unwrap_or_else(|e| {
-                panic!("{}", e);
-            });
+        let mut window: Window = Window::new(
+            "raytracer",
+            WIDTH as usize,
+            HEIGHT as usize,
+            WindowOptions::default(),
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
 
         println!("Rendering to window. Press escape to exit");
         while window.is_open() && !window.is_key_down(Key::Escape) {

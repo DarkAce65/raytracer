@@ -1,10 +1,18 @@
 use crate::raytrace::Ray;
+use image::Rgba;
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
+
+pub trait Drawable {
+    fn color(&self) -> Rgba<u8>;
+}
 
 pub trait Intersectable {
     fn intersects(&self, ray: &Ray) -> bool;
 }
+
+pub trait Primitive: Drawable + Intersectable {}
+impl<T> Primitive for T where T: Drawable + Intersectable {}
 
 #[derive(Debug)]
 pub struct Sphere {
@@ -12,6 +20,7 @@ pub struct Sphere {
     center: Vector3<f32>,
 }
 
+#[allow(dead_code)]
 impl Sphere {
     pub fn new() -> Self {
         Sphere {
@@ -22,6 +31,12 @@ impl Sphere {
 
     pub fn from(radius: f32, center: Vector3<f32>) -> Self {
         Sphere { radius, center }
+    }
+}
+
+impl Drawable for Sphere {
+    fn color(&self) -> Rgba<u8> {
+        Rgba([255, 0, 0, 255])
     }
 }
 
