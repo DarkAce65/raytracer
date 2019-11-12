@@ -41,14 +41,15 @@ fn raycast(scene: &Scene, x: f32, y: f32) -> Rgba<u8> {
 fn main() {
     let matches = App::new("raytracer")
         .arg(
-            Arg::with_name("framebuffer")
+            Arg::with_name("file")
                 .short("f")
-                .long("framebuffer")
-                .help("Runs the raytracer in a window"),
+                .long("file")
+                .takes_value(true)
+                .help("Output raytracer image to file"),
         )
         .get_matches();
 
-    let use_framebuffer = matches.is_present("framebuffer");
+    let output_filename = matches.value_of("file");
 
     let center = Vector3::from([WIDTH_F / 2.0, HEIGHT_F / 2.0, 0.0]);
 
@@ -68,29 +69,31 @@ fn main() {
         }
     }
 
-    if use_framebuffer {
-        let mut buffer: Vec<u32> = Vec::new();
-        for pixel in image.into_vec().chunks_exact(4) {
-            buffer.push(u32::from_le_bytes(pixel.try_into().unwrap()));
-        }
-
-        let mut window: Window = Window::new(
-            "raytracer",
-            WIDTH as usize,
-            HEIGHT as usize,
-            WindowOptions::default(),
-        )
-        .unwrap_or_else(|e| {
-            panic!("{}", e);
-        });
-
-        println!("Rendering to window. Press escape to exit");
-        while window.is_open() && !window.is_key_down(Key::Escape) {
-            window.update_with_buffer(&buffer).unwrap();
-        }
-    } else {
-        let filename = "output.png";
+    if output_filename.is_some() {
+        let filename = output_filename.unwrap();
         image.save(filename).expect("Unable to write image");
         println!("Output written to {}", filename);
+
+        return;
+    }
+
+    let mut buffer: Vec<u32> = Vec::new();
+    for pixel in image.into_vec().chunks_exact(4) {
+        buffer.push(u32::from_le_bytes(pixel.try_into().unwrap()));
+    }
+
+    let mut window: Window = Window::new(
+        "raytracer",
+        WIDTH as usize,
+        HEIGHT as usize,
+        WindowOptions::default(),
+    )
+    .unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
+
+    println!("Rendering to window. Press escape to exit");
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        window.update_with_buffer(&buffer).unwrap();
     }
 }
