@@ -1,6 +1,7 @@
 use crate::raytrace::Ray;
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
+use std::marker::{Send, Sync};
 
 pub trait Drawable {
     fn color(&self) -> [u8; 4];
@@ -10,8 +11,8 @@ pub trait Intersectable {
     fn intersects(&self, ray: &Ray) -> bool;
 }
 
-pub trait Primitive: Drawable + Intersectable {}
-impl<T> Primitive for T where T: Drawable + Intersectable {}
+pub trait Primitive: Send + Sync + Drawable + Intersectable {}
+impl<T> Primitive for T where T: Send + Sync + Drawable + Intersectable {}
 
 #[derive(Debug)]
 pub struct Sphere {

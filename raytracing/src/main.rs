@@ -6,10 +6,14 @@ use image::RgbaImage;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector3;
 use primitives::Sphere;
+use rand::{seq::SliceRandom, thread_rng};
 use raytrace::{raycast, Scene};
+use std::sync::{Arc, Mutex};
+use std::thread::{sleep, spawn};
+use std::time::Instant;
 
-const WIDTH: u32 = 256;
-const HEIGHT: u32 = 256;
+const WIDTH: u32 = 800;
+const HEIGHT: u32 = 800;
 const WIDTH_F: f32 = WIDTH as f32;
 const HEIGHT_F: f32 = HEIGHT as f32;
 
@@ -23,11 +27,23 @@ fn to_argb_u32(rgba: [u8; 4]) -> u32 {
     a << 24 | r << 16 | g << 8 | b
 }
 
-fn raytrace_fb(scene: Scene, image_buffer: &mut Vec<u32>, width: u32) {
-    for (index, pixel) in image_buffer.iter_mut().enumerate() {
-        let i = index as u32;
-        *pixel = to_argb_u32(raycast(&scene, i % width, i / width));
-    }
+fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, width: u32, height: u32) {
+    let buffer_mutex = Arc::clone(&buffer_mutex);
+    let mut indexes: Vec<u32> = (0..width * height).collect();
+    indexes.shuffle(&mut thread_rng());
+
+    println!("Raytracing...");
+    spawn(move || {
+        for index in indexes.iter() {
+            let color = raycast(&scene, index % width, index / width);
+            let index = *index as usize;
+            let mut buffer = buffer_mutex.lock().unwrap();
+            buffer[index] = to_argb_u32(color);
+            drop(buffer);
+        }
+
+        println!("Done.");
+    });
 }
 
 fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>, width: u32, height: u32) {
@@ -65,22 +81,30 @@ fn main() {
         30.0,
         center + Vector3::from([30.0, -20.0, 45.0]),
     )));
+    scene.objects.push(Box::new(Sphere::from(
+        70.0,
+        center + Vector3::from([-80.0, 80.0, 0.0]),
+    )));
+    scene.objects.push(Box::new(Sphere::from(
+        90.0,
+        center + Vector3::from([220.0, 190.0, 0.0]),
+    )));
 
     if output_filename.is_some() {
         let mut image_buffer: Vec<u8> = vec![0; (WIDTH * HEIGHT * 4) as usize];
+
+        let start = Instant::now();
         raytrace(scene, &mut image_buffer, WIDTH, HEIGHT);
+        let duration = start.elapsed();
 
         let filename = output_filename.unwrap();
         let image =
             RgbaImage::from_raw(WIDTH, HEIGHT, image_buffer).expect("Failed to convert buffer");
         image.save(filename).expect("Unable to write image");
-        println!("Output written to {}", filename);
+        println!("Output written to {} in {:?}", filename, duration);
 
         return;
     }
-
-    let mut image_buffer: Vec<u32> = vec![0; (WIDTH * HEIGHT) as usize];
-    raytrace_fb(scene, &mut image_buffer, WIDTH);
 
     let mut window: Window = Window::new(
         "raytracer",
@@ -93,7 +117,15 @@ fn main() {
     });
 
     println!("Rendering to window. Press escape to exit");
+
+    let image_buffer: Vec<u32> = vec![0; (WIDTH * HEIGHT) as usize];
+    let buffer_mutex = Arc::new(Mutex::new(image_buffer));
+    raytrace_fb(scene, &buffer_mutex, WIDTH, HEIGHT);
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        window.update_with_buffer(&image_buffer).unwrap();
+        let buffer = buffer_mutex.lock().unwrap();
+        window.update_with_buffer(&buffer).unwrap();
+        drop(buffer);
+        sleep(std::time::Duration::from_millis(16));
     }
 }
