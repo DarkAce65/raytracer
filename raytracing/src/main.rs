@@ -5,17 +5,13 @@ use clap::{App, Arg};
 use image::RgbaImage;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector3;
-use primitives::{Primitive, Sphere};
-use raytrace::Ray;
+use primitives::Sphere;
+use raytrace::{raycast, Scene};
 
 const WIDTH: u32 = 256;
 const HEIGHT: u32 = 256;
 const WIDTH_F: f32 = WIDTH as f32;
 const HEIGHT_F: f32 = HEIGHT as f32;
-
-pub struct Scene {
-    objects: Vec<Box<dyn Primitive>>,
-}
 
 fn to_argb_u32(rgba: [u8; 4]) -> u32 {
     let (r, g, b, a) = (
@@ -25,23 +21,6 @@ fn to_argb_u32(rgba: [u8; 4]) -> u32 {
         rgba[3] as u32,
     );
     a << 24 | r << 16 | g << 8 | b
-}
-
-fn raycast(scene: &Scene, x: u32, y: u32) -> [u8; 4] {
-    let ray = Ray {
-        origin: Vector3::from([x as f32, y as f32, 0.0]),
-        direction: Vector3::from([0.0, 0.0, -1.0]),
-    };
-
-    let mut color = [0; 4];
-
-    for object in scene.objects.iter() {
-        if object.intersects(&ray) {
-            color = object.color();
-        }
-    }
-
-    color
 }
 
 fn raytrace_fb(scene: &Scene, image_buffer: &mut Vec<u32>, width: u32) {
