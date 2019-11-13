@@ -1,10 +1,9 @@
 use crate::raytrace::Ray;
-use image::Rgba;
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
 
 pub trait Drawable {
-    fn color(&self) -> Rgba<u8>;
+    fn color(&self) -> [u8; 4];
 }
 
 pub trait Intersectable {
@@ -35,8 +34,8 @@ impl Sphere {
 }
 
 impl Drawable for Sphere {
-    fn color(&self) -> Rgba<u8> {
-        Rgba([255, 0, 0, 255])
+    fn color(&self) -> [u8; 4] {
+        [255, 0, 0, 255]
     }
 }
 
