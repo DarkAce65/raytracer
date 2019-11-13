@@ -1,5 +1,6 @@
 use crate::primitives::Primitive;
 use nalgebra::Vector3;
+use num_traits::identities::Zero;
 
 #[derive(Debug)]
 pub struct Ray {
@@ -8,13 +9,16 @@ pub struct Ray {
 }
 
 pub struct Scene {
+    pub width: u32,
+    pub height: u32,
+    pub fov: f32,
     pub objects: Vec<Box<dyn Primitive>>,
 }
 
-pub fn raycast(scene: &Scene, x: u32, y: u32) -> [u8; 4] {
+pub fn raycast(scene: &Scene, x: f32, y: f32) -> [u8; 4] {
     let ray = Ray {
-        origin: Vector3::from([x as f32, y as f32, 0.0]),
-        direction: Vector3::from([0.0, 0.0, -1.0]),
+        origin: Vector3::zero(),
+        direction: Vector3::from([x, y, -1.0]).normalize(),
     };
 
     let mut color = [0; 4];
