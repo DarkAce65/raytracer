@@ -5,7 +5,7 @@ use clap::{App, Arg};
 use image::RgbaImage;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector3;
-use primitives::Sphere;
+use primitives::SphereBuilder;
 use rand::{seq::SliceRandom, thread_rng};
 use raytrace::{raycast, Scene};
 use std::sync::{Arc, Mutex};
@@ -76,19 +76,33 @@ fn main() {
     let mut scene = Scene {
         objects: Vec::new(),
     };
-    scene.objects.push(Box::new(Sphere::from(10.0, center)));
-    scene.objects.push(Box::new(Sphere::from(
-        30.0,
-        center + Vector3::from([30.0, -20.0, 45.0]),
-    )));
-    scene.objects.push(Box::new(Sphere::from(
-        70.0,
-        center + Vector3::from([-80.0, 80.0, 0.0]),
-    )));
-    scene.objects.push(Box::new(Sphere::from(
-        90.0,
-        center + Vector3::from([220.0, 190.0, 0.0]),
-    )));
+    scene.objects.push(Box::new(
+        SphereBuilder::default().center(center).build().unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        SphereBuilder::default()
+            .radius(30.)
+            .center(center + Vector3::from([30.0, -20.0, 45.0]))
+            .color([0, 64, 127, 255])
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        SphereBuilder::default()
+            .radius(70.0)
+            .center(center + Vector3::from([-80.0, 80.0, 0.0]))
+            .color([255, 0, 0, 255])
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        SphereBuilder::default()
+            .radius(90.0)
+            .center(center + Vector3::from([220.0, 190.0, 0.0]))
+            .color([0, 64, 0, 255])
+            .build()
+            .unwrap(),
+    ));
 
     if output_filename.is_some() {
         let mut image_buffer: Vec<u8> = vec![0; (WIDTH * HEIGHT * 4) as usize];
