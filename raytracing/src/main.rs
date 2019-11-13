@@ -23,14 +23,14 @@ fn to_argb_u32(rgba: [u8; 4]) -> u32 {
     a << 24 | r << 16 | g << 8 | b
 }
 
-fn raytrace_fb(scene: &Scene, image_buffer: &mut Vec<u32>, width: u32) {
+fn raytrace_fb(scene: Scene, image_buffer: &mut Vec<u32>, width: u32) {
     for (index, pixel) in image_buffer.iter_mut().enumerate() {
         let i = index as u32;
         *pixel = to_argb_u32(raycast(&scene, i % width, i / width));
     }
 }
 
-fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, width: u32, height: u32) {
+fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>, width: u32, height: u32) {
     for index in 0..width * height {
         let color = raycast(&scene, index % width, index / width);
 
@@ -68,7 +68,7 @@ fn main() {
 
     if output_filename.is_some() {
         let mut image_buffer: Vec<u8> = vec![0; (WIDTH * HEIGHT * 4) as usize];
-        raytrace(&scene, &mut image_buffer, WIDTH, HEIGHT);
+        raytrace(scene, &mut image_buffer, WIDTH, HEIGHT);
 
         let filename = output_filename.unwrap();
         let image =
@@ -79,8 +79,8 @@ fn main() {
         return;
     }
 
-    let mut buffer: Vec<u32> = vec![0; (WIDTH * HEIGHT) as usize];
-    raytrace_fb(&scene, &mut buffer, WIDTH);
+    let mut image_buffer: Vec<u32> = vec![0; (WIDTH * HEIGHT) as usize];
+    raytrace_fb(scene, &mut image_buffer, WIDTH);
 
     let mut window: Window = Window::new(
         "raytracer",
@@ -94,6 +94,6 @@ fn main() {
 
     println!("Rendering to window. Press escape to exit");
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        window.update_with_buffer(&buffer).unwrap();
+        window.update_with_buffer(&image_buffer).unwrap();
     }
 }
