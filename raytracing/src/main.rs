@@ -3,6 +3,7 @@ mod raytrace;
 
 use clap::{App, Arg};
 use image::RgbaImage;
+use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector3;
 use primitives::SphereBuilder;
@@ -37,7 +38,7 @@ fn to_xy(scene: &Scene, index: u32) -> (f32, f32) {
     (x, y / aspect)
 }
 
-fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>) {
+fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, bar: Option<ProgressBar>) {
     let buffer_mutex = Arc::clone(&buffer_mutex);
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
     indexes.shuffle(&mut thread_rng());
@@ -45,6 +46,10 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>) {
     println!("Raytracing...");
     spawn(move || {
         for index in indexes.iter() {
+            if let Some(bar) = &bar {
+                bar.inc(1);
+            }
+
             let (x, y) = to_xy(&scene, *index);
             let color = raycast(&scene, x, y);
             let index = *index as usize;
@@ -53,12 +58,20 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>) {
             drop(buffer);
         }
 
+        if let Some(bar) = bar {
+            bar.finish_and_clear();
+        }
+
         println!("Done.");
     });
 }
 
-fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>) {
+fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>, bar: Option<ProgressBar>) {
     for index in 0..scene.width * scene.height {
+        if let Some(bar) = &bar {
+            bar.inc(1);
+        }
+
         let (x, y) = to_xy(&scene, index);
         let color = raycast(&scene, x, y);
 
@@ -67,6 +80,10 @@ fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>) {
         image_buffer[index + 1] = color[1];
         image_buffer[index + 2] = color[2];
         image_buffer[index + 3] = color[3];
+    }
+
+    if let Some(bar) = bar {
+        bar.finish();
     }
 }
 
@@ -79,9 +96,15 @@ fn main() {
                 .takes_value(true)
                 .help("Output raytracer image to file"),
         )
+        .arg(
+            Arg::with_name("progress")
+                .long("progress")
+                .help("Show progress bar"),
+        )
         .get_matches();
 
     let output_filename = matches.value_of("file");
+    let show_progress = matches.is_present("progress");
 
     let mut scene: Scene = Scene {
         width: 800,
@@ -121,11 +144,22 @@ fn main() {
             .unwrap(),
     ));
 
+    let bar = if show_progress {
+        let bar = ProgressBar::new((width * height).into());
+        bar.set_draw_delta((width * height / 200).into());
+        bar.set_style(
+            ProgressStyle::default_bar().template("[{elapsed_precise}] {bar:40} {pos}/{len} rays"),
+        );
+        Some(bar)
+    } else {
+        None
+    };
+
     if output_filename.is_some() {
         let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
 
         let start = Instant::now();
-        raytrace(scene, &mut image_buffer);
+        raytrace(scene, &mut image_buffer, bar);
         let duration = start.elapsed();
 
         let filename = output_filename.unwrap();
@@ -141,22 +175,23 @@ fn main() {
         "raytracer",
         width as usize,
         height as usize,
-        WindowOptions::default(),
+        WindowOptions {
+            borderless: true,
+            ..Default::default()
+        },
     )
-    .unwrap_or_else(|e| {
-        panic!("{}", e);
-    });
+    .unwrap();
 
     println!("Rendering to window. Press escape to exit");
 
     let image_buffer: Vec<u32> = vec![0; (width * height) as usize];
     let buffer_mutex = Arc::new(Mutex::new(image_buffer));
-    raytrace_fb(scene, &buffer_mutex);
+    raytrace_fb(scene, &buffer_mutex, bar);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let buffer = buffer_mutex.lock().unwrap();
         window.update_with_buffer(&buffer).unwrap();
         drop(buffer);
-        sleep(std::time::Duration::from_millis(50));
+        sleep(std::time::Duration::from_millis(100));
     }
 }
