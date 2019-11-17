@@ -1,6 +1,7 @@
-use crate::primitives::Primitive;
-use nalgebra::Vector3;
+use crate::primitives::{Intersection, Primitive};
+use nalgebra::{Vector3, Vector4};
 use num_traits::identities::Zero;
+use std::cmp::Ordering::Equal;
 
 #[derive(Debug)]
 pub struct Ray {
@@ -15,19 +16,25 @@ pub struct Scene {
     pub objects: Vec<Box<dyn Primitive>>,
 }
 
-pub fn raycast(scene: &Scene, x: f32, y: f32) -> [u8; 4] {
+pub fn raycast(scene: &Scene, x: f32, y: f32) -> Vector4<f32> {
     let ray = Ray {
         origin: Vector3::zero(),
         direction: Vector3::from([x, y, -1.0]).normalize(),
     };
 
-    let mut color = [0; 4];
+    let intersection: Option<Intersection> = scene
+        .objects
+        .iter()
+        .rev()
+        .filter_map(|object| object.intersect(&ray))
+        .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal));
 
-    for object in scene.objects.iter() {
-        if object.intersects(&ray) {
-            color = object.color();
-        }
+    if let Some(intersection) = intersection {
+        return intersection
+            .normal
+            .insert_row(3, intersection.object.color().w);
+        // return intersection.object.color().xyz().component_mul (&-intersection.normal).insert_row(3,intersection.object.color().w);
     }
 
-    color
+    Vector4::zero()
 }

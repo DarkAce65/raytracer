@@ -5,7 +5,7 @@ use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
-use nalgebra::Vector3;
+use nalgebra::{clamp, Vector3, Vector4};
 use primitives::SphereBuilder;
 use rand::{seq::SliceRandom, thread_rng};
 use raytrace::{raycast, Scene};
@@ -13,12 +13,13 @@ use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Instant;
 
-fn to_argb_u32(rgba: [u8; 4]) -> u32 {
+fn to_argb_u32(rgba: Vector4<f32>) -> u32 {
+    let rgba = rgba.map(|c| clamp(c, 0.0, 1.0));
     let (r, g, b, a) = (
-        rgba[0] as u32,
-        rgba[1] as u32,
-        rgba[2] as u32,
-        rgba[3] as u32,
+        (rgba.x * 255.0) as u32,
+        (rgba.y * 255.0) as u32,
+        (rgba.z * 255.0) as u32,
+        (rgba.w * 255.0) as u32,
     );
     a << 24 | r << 16 | g << 8 | b
 }
@@ -74,12 +75,13 @@ fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>, bar: Option<ProgressBar>) 
 
         let (x, y) = to_xy(&scene, index);
         let color = raycast(&scene, x, y);
+        let color = color.map(|c| clamp(c, 0.0, 1.0));
 
         let index = (index * 4) as usize;
-        image_buffer[index] = color[0];
-        image_buffer[index + 1] = color[1];
-        image_buffer[index + 2] = color[2];
-        image_buffer[index + 3] = color[3];
+        image_buffer[index] = (color.x * 255.0) as u8;
+        image_buffer[index + 1] = (color.y * 255.0) as u8;
+        image_buffer[index + 2] = (color.z * 255.0) as u8;
+        image_buffer[index + 3] = (color.w * 255.0) as u8;
     }
 
     if let Some(bar) = bar {
@@ -122,8 +124,8 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(3.0)
-            .center(Vector3::from([3.0, -2.0, -4.0]))
-            .color([0, 64, 127, 255])
+            .center(Vector3::from([3.0, -2.0, -5.0]))
+            .color(Vector4::from([0.0, 0.25, 0.5, 1.0]))
             .build()
             .unwrap(),
     ));
@@ -131,7 +133,7 @@ fn main() {
         SphereBuilder::default()
             .radius(7.0)
             .center(Vector3::from([-6.0, 6.0, -18.0]))
-            .color([255, 60, 30, 255])
+            .color(Vector4::from([1.0, 0.25, 0.1, 1.0]))
             .build()
             .unwrap(),
     ));
@@ -139,7 +141,7 @@ fn main() {
         SphereBuilder::default()
             .radius(9.0)
             .center(Vector3::from([22.0, 5.0, -100.0]))
-            .color([30, 120, 30, 255])
+            .color(Vector4::from([0.1, 0.5, 0.1, 1.0]))
             .build()
             .unwrap(),
     ));
