@@ -19,8 +19,6 @@ fn quadratic(a: f32, b: f32, c: f32) -> Option<(f32, f32)> {
 }
 
 pub struct Intersection {
-    pub hit_point: Vector3<f32>,
-    pub normal: Vector3<f32>,
     pub distance: f32,
     pub object: Box<dyn Primitive>,
 }
@@ -31,6 +29,7 @@ pub trait Drawable {
 
 pub trait Intersectable {
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
+    fn surface_normal(&self, hit_point: &Vector3<f32>) -> Vector3<f32>;
 }
 
 pub trait Primitive: Send + Sync + Drawable + Intersectable {}
@@ -75,17 +74,17 @@ impl Intersectable for Sphere {
                 return None;
             }
 
-            let hit_point = ray.origin + ray.direction * t;
-            let normal = (hit_point - self.center).normalize();
-            let distance = hit_point.magnitude();
+            let distance = t;
             return Some(Intersection {
-                hit_point,
-                normal,
                 distance,
                 object: Box::new(*self),
             });
         }
 
         None
+    }
+
+    fn surface_normal(&self, hit_point: &Vector3<f32>) -> Vector3<f32> {
+        (hit_point - self.center).normalize()
     }
 }

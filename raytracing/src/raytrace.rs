@@ -29,8 +29,11 @@ pub fn raycast(scene: &Scene, x: f32, y: f32) -> Vector4<f32> {
         .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal));
 
     if let Some(intersection) = intersection {
-        let light = (Vector3::from([-8.0, -7.0, 0.0]) - intersection.hit_point).normalize();
-        return (intersection.object.color().xyz() * intersection.normal.dot(&light))
+        let hit_point = ray.origin + ray.direction * intersection.distance;
+        let normal = intersection.object.surface_normal(&hit_point);
+
+        let light = (Vector3::from([-8.0, -7.0, 0.0]) - hit_point).normalize();
+        return (intersection.object.color().xyz() * normal.dot(&light))
             .insert_row(3, intersection.object.color().w);
     }
 
