@@ -16,12 +16,7 @@ pub struct Scene {
     pub objects: Vec<Box<dyn Primitive>>,
 }
 
-pub fn raycast(scene: &Scene, x: f32, y: f32) -> Vector4<f32> {
-    let ray = Ray {
-        origin: Vector3::zero(),
-        direction: Vector3::from([x, y, -1.0]).normalize(),
-    };
-
+fn raycast(scene: &Scene, ray: &Ray) -> Vector4<f32> {
     let intersection: Option<Intersection> = scene
         .objects
         .iter()
@@ -38,4 +33,13 @@ pub fn raycast(scene: &Scene, x: f32, y: f32) -> Vector4<f32> {
     }
 
     Vector4::zero()
+}
+
+pub fn screen_raycast(scene: &Scene, x: f32, y: f32) -> Vector4<f32> {
+    let ray = Ray {
+        origin: Vector3::zero(),
+        direction: Vector3::from([x, y, -1.0]).normalize(),
+    };
+
+    raycast(&scene, &ray)
 }

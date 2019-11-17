@@ -10,7 +10,7 @@ use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Vector3, Vector4};
 use primitives::SphereBuilder;
 use rand::{seq::SliceRandom, thread_rng};
-use raytrace::{raycast, Scene};
+use raytrace::{screen_raycast, Scene};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Instant;
@@ -54,7 +54,7 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
             }
 
             let (x, y) = to_xy(&scene, *index);
-            let color = raycast(&scene, x, y);
+            let color = screen_raycast(&scene, x, y);
             let index = *index as usize;
             let mut buffer = buffer_mutex.lock().unwrap();
             buffer[index] = to_argb_u32(color);
@@ -75,7 +75,7 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
         }
 
         let (x, y) = to_xy(&scene, index);
-        let color = raycast(&scene, x, y);
+        let color = screen_raycast(&scene, x, y);
         let color = color.map(|c| clamp(c, 0.0, 1.0));
 
         let index = (index * 4) as usize;
