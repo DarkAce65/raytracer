@@ -8,9 +8,9 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33"
-derive_builder = "0.9.0"
+derive_builder = "0.9"
 image = "0.22"
-indicatif = "0.13.0"
+indicatif = "0.13"
 minifb = "0.13"
 nalgebra = "0.19"
 num-traits = "0.2"

@@ -36,3 +36,17 @@ pub trait Intersectable {
 
 pub trait Primitive: Send + Sync + Drawable + Intersectable {}
 impl<T> Primitive for T where T: Send + Sync + Drawable + Intersectable {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn it_solves_quadratic_eqs() {
+        assert_eq!(quadratic(1.0, 2.0, 1.0), Some((-1.0, -1.0)));
+        assert_eq!(quadratic(1.0, -6.0, 9.0), Some((3.0, 3.0)));
+        assert_eq!(quadratic(4.0, 4.0, 1.0), Some((-0.5, -0.5)));
+        assert_eq!(quadratic(2.0, -25.0, 12.0), Some((0.5, 12.0)));
+        assert_eq!(quadratic(1.0, 1.0, 1.0), None);
+    }
+}

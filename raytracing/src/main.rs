@@ -197,3 +197,22 @@ fn main() {
         sleep(std::time::Duration::from_millis(100));
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn it_converts_color_vecs_to_u32() {
+        let color = 0;
+        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 0.0])), color);
+        let color = 255 << 24;
+        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 1.0])), color);
+        let color = 255 << 24 | 255 << 16 | 255 << 8 | 255;
+        assert_eq!(to_argb_u32(Vector4::from([1.0, 1.0, 1.0, 1.0])), color);
+        let color = 255 << 24 | 255;
+        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 1.0, 1.0])), color);
+        let color = 255 << 24 | 255 << 16 | 255;
+        assert_eq!(to_argb_u32(Vector4::from([1.0, -1.0, 2.0, 1.0])), color);
+    }
+}
