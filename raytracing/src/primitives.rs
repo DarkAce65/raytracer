@@ -46,7 +46,7 @@ pub struct Sphere {
 
 impl Default for Sphere {
     fn default() -> Self {
-        Sphere {
+        Self {
             radius: 1.0,
             center: Vector3::zero(),
             color: Vector4::from([1.0; 4]),

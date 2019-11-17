@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 mod primitives;
 mod raytrace;
 
@@ -39,7 +41,7 @@ fn to_xy(scene: &Scene, index: u32) -> (f32, f32) {
     (x, y / aspect)
 }
 
-fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, bar: Option<ProgressBar>) {
+fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Option<ProgressBar>) {
     let buffer_mutex = Arc::clone(&buffer_mutex);
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
     indexes.shuffle(&mut thread_rng());
@@ -47,8 +49,8 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, bar: Option<Pr
     println!("Raytracing...");
     spawn(move || {
         for index in indexes.iter() {
-            if let Some(bar) = &bar {
-                bar.inc(1);
+            if let Some(progress) = &progress {
+                progress.inc(1);
             }
 
             let (x, y) = to_xy(&scene, *index);
@@ -59,18 +61,18 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, bar: Option<Pr
             drop(buffer);
         }
 
-        if let Some(bar) = bar {
-            bar.finish_and_clear();
+        if let Some(progress) = progress {
+            progress.finish_and_clear();
         }
 
         println!("Done.");
     });
 }
 
-fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>, bar: Option<ProgressBar>) {
+fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<ProgressBar>) {
     for index in 0..scene.width * scene.height {
-        if let Some(bar) = &bar {
-            bar.inc(1);
+        if let Some(progress) = &progress {
+            progress.inc(1);
         }
 
         let (x, y) = to_xy(&scene, index);
@@ -84,8 +86,8 @@ fn raytrace(scene: Scene, image_buffer: &mut Vec<u8>, bar: Option<ProgressBar>) 
         image_buffer[index + 3] = (color.w * 255.0) as u8;
     }
 
-    if let Some(bar) = bar {
-        bar.finish();
+    if let Some(progress) = progress {
+        progress.finish();
     }
 }
 
@@ -146,25 +148,24 @@ fn main() {
             .unwrap(),
     ));
 
-    let bar = if show_progress {
-        let bar = ProgressBar::new((width * height).into());
-        bar.set_draw_delta((width * height / 200).into());
-        bar.set_style(
+    let progress = if show_progress {
+        let progress = ProgressBar::new((width * height).into());
+        progress.set_draw_delta((width * height / 200).into());
+        progress.set_style(
             ProgressStyle::default_bar().template("[{elapsed_precise}] {bar:40} {pos}/{len} rays"),
         );
-        Some(bar)
+        Some(progress)
     } else {
         None
     };
 
-    if output_filename.is_some() {
+    if let Some(filename) = output_filename {
         let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
 
         let start = Instant::now();
-        raytrace(scene, &mut image_buffer, bar);
+        raytrace(&scene, &mut image_buffer, progress);
         let duration = start.elapsed();
 
-        let filename = output_filename.unwrap();
         let image =
             RgbaImage::from_raw(width, height, image_buffer).expect("Failed to convert buffer");
         image.save(filename).expect("Unable to write image");
@@ -179,7 +180,7 @@ fn main() {
         height as usize,
         WindowOptions {
             borderless: true,
-            ..Default::default()
+            ..WindowOptions::default()
         },
     )
     .unwrap();
@@ -188,7 +189,7 @@ fn main() {
 
     let image_buffer: Vec<u32> = vec![0; (width * height) as usize];
     let buffer_mutex = Arc::new(Mutex::new(image_buffer));
-    raytrace_fb(scene, &buffer_mutex, bar);
+    raytrace_fb(scene, &buffer_mutex, progress);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let buffer = buffer_mutex.lock().unwrap();
