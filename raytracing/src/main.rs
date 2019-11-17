@@ -46,8 +46,8 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
     indexes.shuffle(&mut thread_rng());
 
-    println!("Raytracing...");
     spawn(move || {
+        println!("Raytracing...");
         for index in indexes.iter() {
             if let Some(progress) = &progress {
                 progress.inc(1);
@@ -62,14 +62,13 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
         }
 
         if let Some(progress) = progress {
-            progress.finish_and_clear();
+            progress.finish();
         }
-
-        println!("Done.");
     });
 }
 
 fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<ProgressBar>) {
+    println!("Raytracing...");
     for index in 0..scene.width * scene.height {
         if let Some(progress) = &progress {
             progress.inc(1);
@@ -101,14 +100,14 @@ fn main() {
                 .help("Output raytracer image to file"),
         )
         .arg(
-            Arg::with_name("progress")
-                .long("progress")
-                .help("Show progress bar"),
+            Arg::with_name("noprogress")
+                .long("no-progress")
+                .help("Hide progress bar"),
         )
         .get_matches();
 
     let output_filename = matches.value_of("file");
-    let show_progress = matches.is_present("progress");
+    let hide_progress = matches.is_present("noprogress");
 
     let mut scene: Scene = Scene {
         width: 800,
@@ -148,15 +147,15 @@ fn main() {
             .unwrap(),
     ));
 
-    let progress = if show_progress {
+    let progress = if hide_progress {
+        None
+    } else {
         let progress = ProgressBar::new((width * height).into());
         progress.set_draw_delta((width * height / 200).into());
         progress.set_style(
             ProgressStyle::default_bar().template("[{elapsed_precise}] {bar:40} {pos}/{len} rays"),
         );
         Some(progress)
-    } else {
-        None
     };
 
     if let Some(filename) = output_filename {
