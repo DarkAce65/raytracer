@@ -30,16 +30,13 @@ impl Drawable for Cube {
 
 impl Intersectable for Cube {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        let translated_center = self.center - ray.origin;
         let half = self.size / 2.0;
 
-        let mut t0 =
-            (self.center.x - ray.direction.x.signum() * half - ray.origin.x) / ray.direction.x;
-        let mut t1 =
-            (self.center.x + ray.direction.x.signum() * half - ray.origin.x) / ray.direction.x;
-        let tymin =
-            (self.center.y - ray.direction.y.signum() * half - ray.origin.y) / ray.direction.y;
-        let tymax =
-            (self.center.y + ray.direction.y.signum() * half - ray.origin.y) / ray.direction.y;
+        let mut t0 = (translated_center.x - ray.direction.x.signum() * half) / ray.direction.x;
+        let mut t1 = (translated_center.x + ray.direction.x.signum() * half) / ray.direction.x;
+        let tymin = (translated_center.y - ray.direction.y.signum() * half) / ray.direction.y;
+        let tymax = (translated_center.y + ray.direction.y.signum() * half) / ray.direction.y;
 
         if t0 > tymax || t1 < tymin {
             return None;
@@ -52,10 +49,8 @@ impl Intersectable for Cube {
             t1 = tymax;
         }
 
-        let tzmin =
-            (self.center.z - ray.direction.z.signum() * half - ray.origin.z) / ray.direction.z;
-        let tzmax =
-            (self.center.z + ray.direction.z.signum() * half - ray.origin.z) / ray.direction.z;
+        let tzmin = (translated_center.z - ray.direction.z.signum() * half) / ray.direction.z;
+        let tzmax = (translated_center.z + ray.direction.z.signum() * half) / ray.direction.z;
 
         if t0 > tzmax || t1 < tzmin {
             return None;

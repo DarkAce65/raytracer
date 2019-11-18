@@ -36,8 +36,8 @@ pub trait Intersectable {
     fn surface_normal(&self, hit_point: &Vector3<f32>) -> Vector3<f32>;
 }
 
-pub trait Primitive: Send + Sync +   Drawable+Intersectable {}
-impl<T> Primitive for T where T: Send + Sync +   Drawable+Intersectable {}
+pub trait Primitive: Send + Sync + Drawable + Intersectable {}
+impl<T> Primitive for T where T: Send + Sync + Drawable + Intersectable {}
 
 #[cfg(test)]
 mod test {

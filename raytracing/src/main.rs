@@ -10,7 +10,7 @@ use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Vector3, Vector4};
 use primitives::{CubeBuilder, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
-use raytrace::{screen_raycast, Scene};
+use raytrace::Scene;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Instant;
@@ -26,21 +26,6 @@ fn to_argb_u32(rgba: Vector4<f32>) -> u32 {
     a << 24 | r << 16 | g << 8 | b
 }
 
-fn to_xy(scene: &Scene, index: u32) -> (f32, f32) {
-    let (w, h) = (scene.width as f32, scene.height as f32);
-    let (x, y) = ((index % scene.width) as f32, (index / scene.width) as f32);
-    let aspect = w / h;
-    let fov = (scene.fov.to_radians() / 2.0).tan();
-    let x = (((x + 0.5) / w) * 2.0 - 1.0) * fov;
-    let y = (1.0 - ((y + 0.5) / h) * 2.0) * fov;
-
-    if scene.width < scene.height {
-        return (x * aspect, y);
-    }
-
-    (x, y / aspect)
-}
-
 fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Option<ProgressBar>) {
     let buffer_mutex = Arc::clone(&buffer_mutex);
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
@@ -53,8 +38,7 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
                 progress.inc(1);
             }
 
-            let (x, y) = to_xy(&scene, *index);
-            let color = screen_raycast(&scene, x, y);
+            let color = scene.screen_raycast(*index);
             let index = *index as usize;
             let mut buffer = buffer_mutex.lock().unwrap();
             buffer[index] = to_argb_u32(color);
@@ -74,8 +58,7 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
             progress.inc(1);
         }
 
-        let (x, y) = to_xy(&scene, index);
-        let color = screen_raycast(&scene, x, y);
+        let color = scene.screen_raycast(index);
         let color = color.map(|c| clamp(c, 0.0, 1.0));
 
         let index = (index * 4) as usize;
