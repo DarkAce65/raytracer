@@ -8,7 +8,7 @@ use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Vector3, Vector4};
-use primitives::SphereBuilder;
+use primitives::{CubeBuilder, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
 use raytrace::{screen_raycast, Scene};
 use std::sync::{Arc, Mutex};
@@ -141,8 +141,16 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(9.0)
-            .center(Vector3::from([22.0, 5.0, -100.0]))
+            .center(Vector3::from([-22.0, -15.0, -90.0]))
             .color(Vector4::from([0.1, 0.5, 0.1, 1.0]))
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        CubeBuilder::default()
+            .size(2.0)
+            .center(Vector3::from([-4.0, -3.0, -10.0]))
+            .color(Vector4::from([0.5, 0.1, 0.1, 1.0]))
             .build()
             .unwrap(),
     ));
