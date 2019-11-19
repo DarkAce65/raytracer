@@ -1,3 +1,4 @@
+use crate::lights::Light;
 use crate::primitives::{Intersection, Primitive};
 use nalgebra::{Vector3, Vector4};
 use num_traits::identities::Zero;
@@ -19,6 +20,7 @@ pub struct Scene {
     pub width: u32,
     pub height: u32,
     pub fov: f32,
+    pub lights: Vec<Box<dyn Light>>,
     pub objects: Vec<Box<dyn Primitive>>,
 }
 
@@ -41,20 +43,31 @@ impl Scene {
         }
     }
 
-    fn raycast(&self, ray: &Ray) -> Vector4<f32> {
-        let intersection: Option<Intersection> = self
-            .objects
+    fn raycast(&self, ray: &Ray) -> Option<Intersection> {
+        self.objects
             .iter()
             .filter_map(|object| object.intersect(&ray))
-            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal));
+            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+    }
 
-        if let Some(intersection) = intersection {
+    fn get_color(&self, ray: &Ray) -> Vector4<f32> {
+        if let Some(intersection) = self.raycast(ray) {
             let hit_point = ray.origin + ray.direction * intersection.distance;
             let normal = intersection.object.surface_normal(&hit_point);
 
-            let light = (Vector3::from([-8.0, -7.0, 0.0]) - hit_point).normalize();
-            (intersection.object.color().xyz() * normal.dot(&light))
-                .insert_row(3, intersection.object.color().w)
+            let mut color = Vector3::zero();
+            for light in self.lights.iter() {
+                let light_dir = (light.position() - hit_point).normalize();
+                let shadow_ray = Ray {
+                    origin: hit_point + (normal * 5e-3),
+                    direction: light_dir,
+                };
+                if self.raycast(&shadow_ray).is_none() {
+                    color += intersection.object.color().xyz() * normal.dot(&light_dir);
+                }
+            }
+
+            color.insert_row(3, intersection.object.color().w)
         } else {
             Vector4::zero()
         }
@@ -66,6 +79,6 @@ impl Scene {
             direction: self.index_to_dir(index),
         };
 
-        self.raycast(&ray)
+        self.get_color(&ray)
     }
 }

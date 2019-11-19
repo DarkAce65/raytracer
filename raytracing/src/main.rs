@@ -1,11 +1,13 @@
 #![warn(clippy::all)]
 
+mod lights;
 mod primitives;
 mod raytrace;
 
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
+use lights::PointLightBuilder;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Vector3, Vector4};
 use primitives::{CubeBuilder, SphereBuilder};
@@ -96,9 +98,22 @@ fn main() {
         width: 800,
         height: 800,
         fov: 65.0,
+        lights: Vec::new(),
         objects: Vec::new(),
     };
     let (width, height) = (scene.width, scene.height);
+    scene.lights.push(Box::new(
+        PointLightBuilder::default()
+            .position(Vector3::from([-8.0, -7.0, 0.0]))
+            .build()
+            .unwrap(),
+    ));
+    scene.lights.push(Box::new(
+        PointLightBuilder::default()
+            .position(Vector3::from([3.0, 5.0, -3.0]))
+            .build()
+            .unwrap(),
+    ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .center(Vector3::from([0.0, 0.0, -5.0]))
