@@ -9,6 +9,12 @@ pub struct Ray {
     pub direction: Vector3<f32>,
 }
 
+pub trait Object3D {
+    fn position(&self) -> Vector3<f32>;
+    fn scale(&self) -> Vector3<f32>;
+    fn rotation(&self) -> Vector3<f32>;
+}
+
 pub struct Scene {
     pub width: u32,
     pub height: u32,

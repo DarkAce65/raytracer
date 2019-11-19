@@ -1,5 +1,5 @@
 use super::{quadratic, Drawable, Intersectable, Intersection};
-use crate::raytrace::Ray;
+use crate::raytrace::{Object3D, Ray};
 use derive_builder::Builder;
 use nalgebra::{Vector3, Vector4};
 use num_traits::identities::Zero;
@@ -19,6 +19,20 @@ impl Default for Sphere {
             center: Vector3::zero(),
             color: Vector4::from([1.0; 4]),
         }
+    }
+}
+
+impl Object3D for Sphere {
+    fn position(&self) -> Vector3<f32> {
+        self.center
+    }
+
+    fn scale(&self) -> Vector3<f32> {
+        unimplemented!()
+    }
+
+    fn rotation(&self) -> Vector3<f32> {
+        unimplemented!()
     }
 }
 
