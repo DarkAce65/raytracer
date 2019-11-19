@@ -1,7 +1,7 @@
 use super::{Drawable, Intersectable, Intersection};
 use crate::raytrace::{Object3D, Ray};
 use derive_builder::Builder;
-use nalgebra::{Point3, Vector3, Vector4};
+use nalgebra::{Point3, Unit, Vector3, Vector4};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
@@ -89,18 +89,18 @@ impl Intersectable for Cube {
         Some(intersection)
     }
 
-    fn surface_normal(&self, hit_point: &Point3<f64>) -> Vector3<f64> {
+    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         let normal = hit_point - self.center;
         if normal.x > normal.y {
             if normal.x > normal.z {
-                Vector3::x()
+                Vector3::x_axis()
             } else {
-                Vector3::z()
+                Vector3::z_axis()
             }
         } else if normal.y > normal.z {
-            Vector3::y()
+            Vector3::y_axis()
         } else {
-            Vector3::z()
+            Vector3::z_axis()
         }
     }
 }

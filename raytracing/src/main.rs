@@ -101,7 +101,7 @@ fn main() {
             65.0,
             Point3::from([2.0, 5.0, 10.0]),
             Point3::origin(),
-            Vector3::y(),
+            Vector3::y_axis(),
         ),
         lights: Vec::new(),
         objects: Vec::new(),

@@ -1,13 +1,13 @@
 use crate::lights::Light;
 use crate::primitives::{Intersection, Primitive};
-use nalgebra::{Matrix4, Point3, Vector3, Vector4};
+use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
 
 #[derive(Debug)]
 pub struct Ray {
     pub origin: Point3<f64>,
-    pub direction: Vector3<f64>,
+    pub direction: Unit<Vector3<f64>>,
 }
 
 pub trait Object3D {
@@ -23,7 +23,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn from(fov: f64, eye: Point3<f64>, target: Point3<f64>, up: Vector3<f64>) -> Self {
+    pub fn from(fov: f64, eye: Point3<f64>, target: Point3<f64>, up: Unit<Vector3<f64>>) -> Self {
         Self {
             fov,
             position: eye,
@@ -50,16 +50,17 @@ impl Scene {
 
     fn get_color(&self, ray: Ray) -> Vector4<f64> {
         if let Some(intersection) = self.raycast(&ray) {
-            let hit_point = ray.origin + ray.direction * intersection.distance;
+            let hit_point = ray.origin + ray.direction.into_inner() * intersection.distance;
             let normal = intersection.object.surface_normal(&hit_point);
 
             let mut color = Vector3::zero();
             for light in self.lights.iter() {
-                let light_dir = (light.position() - hit_point).normalize();
+                let light_dir = Unit::new_normalize(light.position() - hit_point);
                 let shadow_ray = Ray {
-                    origin: hit_point + (normal * 1e-10),
+                    origin: hit_point + (normal.into_inner() * 1e-10),
                     direction: light_dir,
                 };
+
                 if self.raycast(&shadow_ray).is_none() {
                     color += intersection.object.color().xyz() * normal.dot(&light_dir);
                 }
@@ -89,7 +90,7 @@ impl Scene {
         let (x, y) = (x * fov, y * fov);
 
         let direction = Vector4::from([x, y, -1.0, 0.0]).normalize();
-        let direction = (self.camera.camera_to_world * direction).xyz();
+        let direction = Unit::new_normalize((self.camera.camera_to_world * direction).xyz());
 
         let ray = Ray {
             origin: self.camera.position,

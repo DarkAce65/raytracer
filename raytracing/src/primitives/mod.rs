@@ -2,7 +2,7 @@ mod cube;
 mod sphere;
 
 use crate::raytrace::{Object3D, Ray};
-use nalgebra::{Point3, Vector3, Vector4};
+use nalgebra::{Point3, Unit, Vector3, Vector4};
 use std::marker::{Send, Sync};
 
 pub use cube::*;
@@ -33,7 +33,7 @@ pub trait Drawable {
 
 pub trait Intersectable {
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
-    fn surface_normal(&self, hit_point: &Point3<f64>) -> Vector3<f64>;
+    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>>;
 }
 
 pub trait Primitive: Send + Sync + Object3D + Drawable + Intersectable {}
