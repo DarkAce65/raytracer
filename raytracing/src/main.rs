@@ -9,10 +9,10 @@ use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
 use lights::PointLightBuilder;
 use minifb::{Key, Window, WindowOptions};
-use nalgebra::{clamp, Vector3, Vector4};
+use nalgebra::{clamp, Point3, Vector3, Vector4};
 use primitives::{CubeBuilder, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
-use raytrace::Scene;
+use raytrace::{Camera, Scene};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Instant;
@@ -97,49 +97,62 @@ fn main() {
     let mut scene: Scene = Scene {
         width: 800,
         height: 800,
-        fov: 65.0,
+        camera: Camera::from(
+            65.0,
+            Point3::from([2.0, 5.0, 10.0]),
+            Point3::origin(),
+            Vector3::y(),
+        ),
         lights: Vec::new(),
         objects: Vec::new(),
     };
     let (width, height) = (scene.width, scene.height);
     scene.lights.push(Box::new(
         PointLightBuilder::default()
-            .position(Vector3::from([-8.0, -7.0, 0.0]))
+            .position(Point3::from([-8.0, -7.0, 0.0]))
             .build()
             .unwrap(),
     ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
-            .position(Vector3::from([3.0, 5.0, -3.0]))
+            .position(Point3::from([3.0, 5.0, -3.0]))
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
-            .center(Vector3::from([0.0, 0.0, -5.0]))
+            .center(Point3::from([0.0, 0.0, -5.0]))
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(3.0)
-            .center(Vector3::from([3.0, -2.0, -5.0]))
+            .center(Point3::from([3.0, -2.0, -5.0]))
             .color(Vector4::from([0.0, 0.25, 0.5, 1.0]))
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
-            .radius(7.0)
-            .center(Vector3::from([-6.0, 6.0, -18.0]))
+            .radius(6.0)
+            .center(Point3::from([-6.0, 6.0, -18.0]))
             .color(Vector4::from([1.0, 0.25, 0.1, 1.0]))
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
+            .radius(4.0)
+            .center(Point3::from([-6.0, -6.0, -3.0]))
+            .color(Vector4::from([0.4, 0.25, 0.6, 1.0]))
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        SphereBuilder::default()
             .radius(9.0)
-            .center(Vector3::from([-22.0, -15.0, -90.0]))
+            .center(Point3::from([-22.0, -15.0, -90.0]))
             .color(Vector4::from([0.1, 0.5, 0.1, 1.0]))
             .build()
             .unwrap(),
@@ -147,8 +160,16 @@ fn main() {
     scene.objects.push(Box::new(
         CubeBuilder::default()
             .size(2.0)
-            .center(Vector3::from([-4.0, -3.0, -10.0]))
+            .center(Point3::from([-4.0, -3.0, -2.0]))
             .color(Vector4::from([0.5, 0.1, 0.1, 1.0]))
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        CubeBuilder::default()
+            .size(2.0)
+            .center(Point3::from([1.0, -2.0, -2.0]))
+            .color(Vector4::from([0.9, 0.7, 0.1, 1.0]))
             .build()
             .unwrap(),
     ));

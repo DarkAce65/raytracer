@@ -1,14 +1,13 @@
 use super::{quadratic, Drawable, Intersectable, Intersection};
 use crate::raytrace::{Object3D, Ray};
 use derive_builder::Builder;
-use nalgebra::{Vector3, Vector4};
-use num_traits::identities::Zero;
+use nalgebra::{Point3, Vector3, Vector4};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Sphere {
     radius: f64,
-    center: Vector3<f64>,
+    center: Point3<f64>,
     color: Vector4<f64>,
 }
 
@@ -16,14 +15,14 @@ impl Default for Sphere {
     fn default() -> Self {
         Self {
             radius: 1.0,
-            center: Vector3::zero(),
+            center: Point3::origin(),
             color: Vector4::from([1.0; 4]),
         }
     }
 }
 
 impl Object3D for Sphere {
-    fn position(&self) -> Vector3<f64> {
+    fn position(&self) -> Point3<f64> {
         self.center
     }
 
@@ -67,7 +66,7 @@ impl Intersectable for Sphere {
         None
     }
 
-    fn surface_normal(&self, hit_point: &Vector3<f64>) -> Vector3<f64> {
+    fn surface_normal(&self, hit_point: &Point3<f64>) -> Vector3<f64> {
         (hit_point - self.center).normalize()
     }
 }

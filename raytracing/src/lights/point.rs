@@ -1,24 +1,23 @@
 use crate::raytrace::Object3D;
 use derive_builder::Builder;
-use nalgebra::Vector3;
-use num_traits::identities::Zero;
+use nalgebra::{Point3, Vector3};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct PointLight {
-    position: Vector3<f64>,
+    position: Point3<f64>,
 }
 
 impl Default for PointLight {
     fn default() -> Self {
         Self {
-            position: Vector3::zero(),
+            position: Point3::origin(),
         }
     }
 }
 
 impl Object3D for PointLight {
-    fn position(&self) -> Vector3<f64> {
+    fn position(&self) -> Point3<f64> {
         self.position
     }
 
