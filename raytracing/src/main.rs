@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Instant;
 
-fn to_argb_u32(rgba: Vector4<f32>) -> u32 {
+fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     let rgba = rgba.map(|c| clamp(c, 0.0, 1.0));
     let (r, g, b, a) = (
         (rgba.x * 255.0) as u32,

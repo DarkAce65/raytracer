@@ -7,9 +7,9 @@ use num_traits::identities::Zero;
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Sphere {
-    radius: f32,
-    center: Vector3<f32>,
-    color: Vector4<f32>,
+    radius: f64,
+    center: Vector3<f64>,
+    color: Vector4<f64>,
 }
 
 impl Default for Sphere {
@@ -23,21 +23,21 @@ impl Default for Sphere {
 }
 
 impl Object3D for Sphere {
-    fn position(&self) -> Vector3<f32> {
+    fn position(&self) -> Vector3<f64> {
         self.center
     }
 
-    fn scale(&self) -> Vector3<f32> {
+    fn scale(&self) -> Vector3<f64> {
         unimplemented!()
     }
 
-    fn rotation(&self) -> Vector3<f32> {
+    fn rotation(&self) -> Vector3<f64> {
         unimplemented!()
     }
 }
 
 impl Drawable for Sphere {
-    fn color(&self) -> Vector4<f32> {
+    fn color(&self) -> Vector4<f64> {
         self.color
     }
 }
@@ -67,7 +67,7 @@ impl Intersectable for Sphere {
         None
     }
 
-    fn surface_normal(&self, hit_point: &Vector3<f32>) -> Vector3<f32> {
+    fn surface_normal(&self, hit_point: &Vector3<f64>) -> Vector3<f64> {
         (hit_point - self.center).normalize()
     }
 }

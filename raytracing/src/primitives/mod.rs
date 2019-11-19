@@ -8,7 +8,7 @@ use std::marker::{Send, Sync};
 pub use cube::*;
 pub use sphere::*;
 
-fn quadratic(a: f32, b: f32, c: f32) -> Option<(f32, f32)> {
+fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
     let discriminant = b * b - 4.0 * a * c;
     if discriminant < 0.0 {
         None
@@ -23,17 +23,17 @@ fn quadratic(a: f32, b: f32, c: f32) -> Option<(f32, f32)> {
 }
 
 pub struct Intersection {
-    pub distance: f32,
+    pub distance: f64,
     pub object: Box<dyn Primitive>,
 }
 
 pub trait Drawable {
-    fn color(&self) -> Vector4<f32>;
+    fn color(&self) -> Vector4<f64>;
 }
 
 pub trait Intersectable {
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
-    fn surface_normal(&self, hit_point: &Vector3<f32>) -> Vector3<f32>;
+    fn surface_normal(&self, hit_point: &Vector3<f64>) -> Vector3<f64>;
 }
 
 pub trait Primitive: Send + Sync + Object3D + Drawable + Intersectable {}

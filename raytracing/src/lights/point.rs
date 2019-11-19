@@ -6,7 +6,7 @@ use num_traits::identities::Zero;
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct PointLight {
-    position: Vector3<f32>,
+    position: Vector3<f64>,
 }
 
 impl Default for PointLight {
@@ -18,15 +18,15 @@ impl Default for PointLight {
 }
 
 impl Object3D for PointLight {
-    fn position(&self) -> Vector3<f32> {
+    fn position(&self) -> Vector3<f64> {
         self.position
     }
 
-    fn scale(&self) -> Vector3<f32> {
+    fn scale(&self) -> Vector3<f64> {
         unimplemented!()
     }
 
-    fn rotation(&self) -> Vector3<f32> {
+    fn rotation(&self) -> Vector3<f64> {
         unimplemented!()
     }
 }

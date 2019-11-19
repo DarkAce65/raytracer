@@ -7,9 +7,9 @@ use num_traits::identities::Zero;
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Cube {
-    size: f32,
-    center: Vector3<f32>,
-    color: Vector4<f32>,
+    size: f64,
+    center: Vector3<f64>,
+    color: Vector4<f64>,
 }
 
 impl Default for Cube {
@@ -23,21 +23,21 @@ impl Default for Cube {
 }
 
 impl Object3D for Cube {
-    fn position(&self) -> Vector3<f32> {
+    fn position(&self) -> Vector3<f64> {
         self.center
     }
 
-    fn scale(&self) -> Vector3<f32> {
+    fn scale(&self) -> Vector3<f64> {
         unimplemented!()
     }
 
-    fn rotation(&self) -> Vector3<f32> {
+    fn rotation(&self) -> Vector3<f64> {
         unimplemented!()
     }
 }
 
 impl Drawable for Cube {
-    fn color(&self) -> Vector4<f32> {
+    fn color(&self) -> Vector4<f64> {
         self.color
     }
 }
@@ -90,7 +90,7 @@ impl Intersectable for Cube {
         Some(intersection)
     }
 
-    fn surface_normal(&self, hit_point: &Vector3<f32>) -> Vector3<f32> {
+    fn surface_normal(&self, hit_point: &Vector3<f64>) -> Vector3<f64> {
         let normal = hit_point - self.center;
         if normal.x > normal.y {
             if normal.x > normal.z {

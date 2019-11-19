@@ -6,30 +6,30 @@ use std::cmp::Ordering::Equal;
 
 #[derive(Debug)]
 pub struct Ray {
-    pub origin: Vector3<f32>,
-    pub direction: Vector3<f32>,
+    pub origin: Vector3<f64>,
+    pub direction: Vector3<f64>,
 }
 
 pub trait Object3D {
-    fn position(&self) -> Vector3<f32>;
-    fn scale(&self) -> Vector3<f32>;
-    fn rotation(&self) -> Vector3<f32>;
+    fn position(&self) -> Vector3<f64>;
+    fn scale(&self) -> Vector3<f64>;
+    fn rotation(&self) -> Vector3<f64>;
 }
 
 pub struct Scene {
     pub width: u32,
     pub height: u32,
-    pub fov: f32,
+    pub fov: f64,
     pub lights: Vec<Box<dyn Light>>,
     pub objects: Vec<Box<dyn Primitive>>,
 }
 
 impl Scene {
-    fn index_to_dir(&self, index: u32) -> Vector3<f32> {
+    fn index_to_dir(&self, index: u32) -> Vector3<f64> {
         assert!(index < self.width * self.height);
 
-        let (w, h) = (self.width as f32, self.height as f32);
-        let (x, y) = ((index % self.width) as f32, (index / self.width) as f32);
+        let (w, h) = (self.width as f64, self.height as f64);
+        let (x, y) = ((index % self.width) as f64, (index / self.width) as f64);
 
         let aspect = w / h;
         let fov = (self.fov.to_radians() / 2.0).tan();
@@ -50,7 +50,7 @@ impl Scene {
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
-    fn get_color(&self, ray: &Ray) -> Vector4<f32> {
+    fn get_color(&self, ray: &Ray) -> Vector4<f64> {
         if let Some(intersection) = self.raycast(ray) {
             let hit_point = ray.origin + ray.direction * intersection.distance;
             let normal = intersection.object.surface_normal(&hit_point);
@@ -59,7 +59,7 @@ impl Scene {
             for light in self.lights.iter() {
                 let light_dir = (light.position() - hit_point).normalize();
                 let shadow_ray = Ray {
-                    origin: hit_point + (normal * 5e-3),
+                    origin: hit_point + (normal * 1e-10),
                     direction: light_dir,
                 };
                 if self.raycast(&shadow_ray).is_none() {
@@ -73,7 +73,7 @@ impl Scene {
         }
     }
 
-    pub fn screen_raycast(&self, index: u32) -> Vector4<f32> {
+    pub fn screen_raycast(&self, index: u32) -> Vector4<f64> {
         let ray = Ray {
             origin: Vector3::zero(),
             direction: self.index_to_dir(index),
