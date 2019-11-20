@@ -55,7 +55,9 @@ impl Scene {
 
             let mut color = Vector3::zero();
             for light in self.lights.iter() {
-                let light_dir = Unit::new_normalize(light.position() - hit_point);
+                let light_dir = light.position() - hit_point;
+                let light_distance = light_dir.magnitude();
+                let light_dir = Unit::new_normalize(light_dir);
                 let n_dot_l = normal.dot(&light_dir);
                 if n_dot_l > 0.0 {
                     let shadow_ray = Ray {
@@ -63,7 +65,10 @@ impl Scene {
                         direction: light_dir,
                     };
 
-                    if self.raycast(&shadow_ray).is_none() {
+                    let shadow_intersection = self.raycast(&shadow_ray);
+                    if shadow_intersection.is_none()
+                        || shadow_intersection.unwrap().distance > light_distance
+                    {
                         color += intersection.object.color().xyz() * n_dot_l;
                     }
                 }
