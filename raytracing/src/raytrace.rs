@@ -56,13 +56,16 @@ impl Scene {
             let mut color = Vector3::zero();
             for light in self.lights.iter() {
                 let light_dir = Unit::new_normalize(light.position() - hit_point);
-                let shadow_ray = Ray {
-                    origin: hit_point + (normal.into_inner() * 1e-10),
-                    direction: light_dir,
-                };
+                let n_dot_l = normal.dot(&light_dir);
+                if n_dot_l > 0.0 {
+                    let shadow_ray = Ray {
+                        origin: hit_point + (normal.into_inner() * 1e-10),
+                        direction: light_dir,
+                    };
 
-                if self.raycast(&shadow_ray).is_none() {
-                    color += intersection.object.color().xyz() * normal.dot(&light_dir);
+                    if self.raycast(&shadow_ray).is_none() {
+                        color += intersection.object.color().xyz() * n_dot_l;
+                    }
                 }
             }
 
