@@ -1,4 +1,5 @@
 mod cube;
+mod plane;
 mod sphere;
 
 use crate::raytrace::{Object3D, Ray};
@@ -6,6 +7,7 @@ use nalgebra::{Point3, Unit, Vector3, Vector4};
 use std::marker::{Send, Sync};
 
 pub use cube::*;
+pub use plane::*;
 pub use sphere::*;
 
 fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {

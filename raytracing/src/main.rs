@@ -10,7 +10,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use lights::PointLightBuilder;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Point3, Vector3, Vector4};
-use primitives::{CubeBuilder, SphereBuilder};
+use primitives::{CubeBuilder, PlaneBuilder, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
 use raytrace::{Camera, Scene};
 use std::sync::{Arc, Mutex};
@@ -99,7 +99,7 @@ fn main() {
         height: 800,
         camera: Camera::from(
             65.0,
-            Point3::from([2.0, 5.0, 10.0]),
+            Point3::from([2.0, 5.0, 15.0]),
             Point3::origin(),
             Vector3::y_axis(),
         ),
@@ -109,13 +109,19 @@ fn main() {
     let (width, height) = (scene.width, scene.height);
     scene.lights.push(Box::new(
         PointLightBuilder::default()
-            .position(Point3::from([-8.0, -7.0, 0.0]))
+            .position(Point3::from([-8.0, 3.0, 0.0]))
             .build()
             .unwrap(),
     ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
             .position(Point3::from([3.0, 5.0, -3.0]))
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
+        PlaneBuilder::default()
+            .position(Point3::from([0.0, -15.0, 0.0]))
             .build()
             .unwrap(),
     ));
@@ -152,7 +158,7 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(9.0)
-            .center(Point3::from([-22.0, -15.0, -90.0]))
+            .center(Point3::from([-22.0, -12.0, -90.0]))
             .color(Vector4::from([0.1, 0.5, 0.1, 1.0]))
             .build()
             .unwrap(),
