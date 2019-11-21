@@ -1,21 +1,11 @@
+use crate::core::{Intersection, Ray};
 use crate::lights::Light;
-use crate::primitives::{Intersection, Primitive};
+use crate::primitives::Primitive;
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
 
 #[derive(Debug)]
-pub struct Ray {
-    pub origin: Point3<f64>,
-    pub direction: Unit<Vector3<f64>>,
-}
-
-pub trait Object3D {
-    fn position(&self) -> Point3<f64>;
-    fn scale(&self) -> Vector3<f64>;
-    fn rotation(&self) -> Vector3<f64>;
-}
-
 pub struct Camera {
     fov: f64,
     position: Point3<f64>,
@@ -32,6 +22,7 @@ impl Camera {
     }
 }
 
+#[derive(Debug)]
 pub struct Scene {
     pub width: u32,
     pub height: u32,
@@ -97,7 +88,7 @@ impl Scene {
         };
         let (x, y) = (x * fov, y * fov);
 
-        let direction = Vector4::from([x, y, -1.0, 0.0]).normalize();
+        let direction = Vector4::from([x, y, -1.0, 1.0]).normalize();
         let direction = Unit::new_normalize((self.camera.camera_to_world * direction).xyz());
 
         let ray = Ray {

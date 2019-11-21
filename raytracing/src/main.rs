@@ -1,8 +1,9 @@
 #![warn(clippy::all)]
 
+mod core;
 mod lights;
 mod primitives;
-mod raytrace;
+mod scene;
 
 use clap::{App, Arg};
 use image::RgbaImage;
@@ -12,7 +13,7 @@ use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Point3, Vector3, Vector4};
 use primitives::{CubeBuilder, PlaneBuilder, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
-use raytrace::{Camera, Scene};
+use scene::{Camera, Scene};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Instant;

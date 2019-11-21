@@ -1,4 +1,4 @@
-use crate::raytrace::Object3D;
+use crate::core::Object3D;
 use derive_builder::Builder;
 use nalgebra::{Point3, Vector3};
 

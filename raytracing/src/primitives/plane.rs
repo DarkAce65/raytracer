@@ -1,5 +1,5 @@
-use super::{Drawable, Intersectable, Intersection};
-use crate::raytrace::{Object3D, Ray};
+use super::{Drawable, Intersectable};
+use crate::core::{Intersection, Object3D, Ray};
 use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3, Vector4};
 
