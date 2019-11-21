@@ -1,14 +1,14 @@
-use super::{Drawable, Intersectable};
+use super::{Drawable, Intersectable, Material};
 use crate::core::{quadratic, Intersection, Object3D, Ray};
 use derive_builder::Builder;
-use nalgebra::{Point3, Unit, Vector3, Vector4};
+use nalgebra::{Point3, Unit, Vector3};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Sphere {
     radius: f64,
     center: Point3<f64>,
-    color: Vector4<f64>,
+    material: Material,
 }
 
 impl Default for Sphere {
@@ -16,7 +16,7 @@ impl Default for Sphere {
         Self {
             radius: 1.0,
             center: Point3::origin(),
-            color: Vector4::from([1.0; 4]),
+            material: Material::default(),
         }
     }
 }
@@ -32,12 +32,6 @@ impl Object3D for Sphere {
 
     fn rotation(&self) -> Vector3<f64> {
         unimplemented!()
-    }
-}
-
-impl Drawable for Sphere {
-    fn color(&self) -> Vector4<f64> {
-        self.color
     }
 }
 
@@ -68,5 +62,11 @@ impl Intersectable for Sphere {
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         Unit::new_normalize(hit_point - self.center)
+    }
+}
+
+impl Drawable for Sphere {
+    fn material(&self) -> Material {
+        self.material
     }
 }

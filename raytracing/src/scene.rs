@@ -5,6 +5,8 @@ use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
 
+const K_AMBIENT: f64 = 0.3;
+
 #[derive(Debug)]
 pub struct Camera {
     fov: f64,
@@ -43,12 +45,17 @@ impl Scene {
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction.into_inner() * intersection.distance;
             let normal = intersection.object.surface_normal(&hit_point);
+            let material = intersection.object.material();
 
             let mut color = Vector3::zero();
+
+            color += K_AMBIENT * material.color;
+
             for light in self.lights.iter() {
                 let light_dir = light.position() - hit_point;
                 let light_distance = light_dir.magnitude();
                 let light_dir = Unit::new_normalize(light_dir);
+
                 let n_dot_l = normal.dot(&light_dir);
                 if n_dot_l > 0.0 {
                     let shadow_ray = Ray {
@@ -60,12 +67,19 @@ impl Scene {
                     if shadow_intersection.is_none()
                         || shadow_intersection.unwrap().distance > light_distance
                     {
-                        color += intersection.object.color().xyz() * n_dot_l;
+                        color += material.color * n_dot_l;
+
+                        let half_vec =
+                            (light_dir.into_inner() - ray.direction.into_inner()).normalize();
+                        let n_dot_h = normal.dot(&half_vec);
+                        if n_dot_h > 0.0 {
+                            color += material.specular * n_dot_h.powf(material.shininess);
+                        }
                     }
                 }
             }
 
-            color.insert_row(3, intersection.object.color().w)
+            color.insert_row(3, 1.0)
         } else {
             Vector4::zero()
         }

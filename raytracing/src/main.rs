@@ -11,7 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use lights::PointLightBuilder;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Point3, Vector3, Vector4};
-use primitives::{CubeBuilder, PlaneBuilder, SphereBuilder};
+use primitives::{CubeBuilder, MaterialBuilder, PlaneBuilder, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
 use scene::{Camera, Scene};
 use std::sync::{Arc, Mutex};
@@ -108,6 +108,10 @@ fn main() {
         objects: Vec::new(),
     };
     let (width, height) = (scene.width, scene.height);
+    let white_material = MaterialBuilder::default()
+        .color(Vector3::from([1.0; 3]))
+        .build()
+        .unwrap();
     scene.lights.push(Box::new(
         PointLightBuilder::default()
             .position(Point3::from([-8.0, 3.0, 0.0]))
@@ -123,12 +127,14 @@ fn main() {
     scene.objects.push(Box::new(
         PlaneBuilder::default()
             .position(Point3::from([0.0, -15.0, 0.0]))
+            .material(white_material)
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .center(Point3::from([0.0, 0.0, -5.0]))
+            .material(white_material)
             .build()
             .unwrap(),
     ));
@@ -136,7 +142,14 @@ fn main() {
         SphereBuilder::default()
             .radius(3.0)
             .center(Point3::from([3.0, -2.0, -5.0]))
-            .color(Vector4::from([0.0, 0.25, 0.5, 1.0]))
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([0.0, 0.25, 0.5]))
+                    .specular(Vector3::from([1.0; 3]))
+                    .shininess(10.0)
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));
@@ -144,7 +157,12 @@ fn main() {
         SphereBuilder::default()
             .radius(6.0)
             .center(Point3::from([-6.0, 6.0, -18.0]))
-            .color(Vector4::from([1.0, 0.25, 0.1, 1.0]))
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([1.0, 0.25, 0.1]))
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));
@@ -152,7 +170,14 @@ fn main() {
         SphereBuilder::default()
             .radius(4.0)
             .center(Point3::from([-6.0, -6.0, -3.0]))
-            .color(Vector4::from([0.4, 0.25, 0.6, 1.0]))
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([0.4, 0.25, 0.6]))
+                    .specular(Vector3::from([0.5; 3]))
+                    .shininess(100.0)
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));
@@ -160,7 +185,12 @@ fn main() {
         SphereBuilder::default()
             .radius(9.0)
             .center(Point3::from([-22.0, -12.0, -90.0]))
-            .color(Vector4::from([0.1, 0.5, 0.1, 1.0]))
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([0.1, 0.5, 0.1]))
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));
@@ -168,7 +198,12 @@ fn main() {
         CubeBuilder::default()
             .size(2.0)
             .center(Point3::from([-4.0, -3.0, -2.0]))
-            .color(Vector4::from([0.5, 0.1, 0.1, 1.0]))
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([0.5, 0.1, 0.1]))
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));
@@ -176,7 +211,12 @@ fn main() {
         CubeBuilder::default()
             .size(2.0)
             .center(Point3::from([1.0, -2.0, -2.0]))
-            .color(Vector4::from([0.9, 0.7, 0.1, 1.0]))
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([0.9, 0.7, 0.1]))
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));

@@ -1,14 +1,14 @@
-use super::{Drawable, Intersectable};
+use super::{Drawable, Intersectable, Material};
 use crate::core::{Intersection, Object3D, Ray};
 use derive_builder::Builder;
-use nalgebra::{Point3, Unit, Vector3, Vector4};
+use nalgebra::{Point3, Unit, Vector3};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Cube {
     size: f64,
     center: Point3<f64>,
-    color: Vector4<f64>,
+    material: Material,
 }
 
 impl Default for Cube {
@@ -16,7 +16,7 @@ impl Default for Cube {
         Self {
             size: 1.0,
             center: Point3::origin(),
-            color: Vector4::from([1.0; 4]),
+            material: Material::default(),
         }
     }
 }
@@ -32,12 +32,6 @@ impl Object3D for Cube {
 
     fn rotation(&self) -> Vector3<f64> {
         unimplemented!()
-    }
-}
-
-impl Drawable for Cube {
-    fn color(&self) -> Vector4<f64> {
-        self.color
     }
 }
 
@@ -102,5 +96,11 @@ impl Intersectable for Cube {
         } else {
             Vector3::z_axis()
         }
+    }
+}
+
+impl Drawable for Cube {
+    fn material(&self) -> Material {
+        self.material
     }
 }
