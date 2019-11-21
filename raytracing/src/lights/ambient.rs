@@ -2,30 +2,29 @@ use super::LightColor;
 use crate::core::Object3D;
 use derive_builder::Builder;
 use nalgebra::{Point3, Vector3};
+use num_traits::identities::Zero;
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
-pub struct PointLight {
-    position: Point3<f64>,
+pub struct AmbientLight {
     color: Vector3<f64>,
 }
 
-impl Default for PointLight {
+impl Default for AmbientLight {
     fn default() -> Self {
         Self {
-            position: Point3::origin(),
-            color: Vector3::from([1.0; 3]),
+            color: Vector3::zero(),
         }
     }
 }
 
-impl Object3D for PointLight {
+impl Object3D for AmbientLight {
     fn position(&self) -> Point3<f64> {
-        self.position
+        unimplemented!()
     }
 }
 
-impl LightColor for PointLight {
+impl LightColor for AmbientLight {
     fn get_color(&self) -> Vector3<f64> {
         self.color
     }

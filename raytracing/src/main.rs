@@ -8,7 +8,7 @@ mod scene;
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
-use lights::PointLightBuilder;
+use lights::{AmbientLightBuilder, PointLightBuilder};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Point3, Vector3, Vector4};
 use primitives::{CubeBuilder, MaterialBuilder, PlaneBuilder, SphereBuilder};
@@ -108,33 +108,54 @@ fn main() {
         objects: Vec::new(),
     };
     let (width, height) = (scene.width, scene.height);
-    let white_material = MaterialBuilder::default()
-        .color(Vector3::from([1.0; 3]))
-        .build()
-        .unwrap();
+    scene.lights.push(Box::new(
+        AmbientLightBuilder::default()
+            .color(Vector3::from([0.125; 3]))
+            .build()
+            .unwrap(),
+    ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
             .position(Point3::from([-8.0, 3.0, 0.0]))
+            .color(Vector3::from([0.5, 0.5, 0.5]))
+            .build()
+            .unwrap(),
+    ));
+    scene.lights.push(Box::new(
+        PointLightBuilder::default()
+            .position(Point3::from([-2.0, 5.0, -10.0]))
+            .color(Vector3::from([0.5, 0.0, 0.0]))
             .build()
             .unwrap(),
     ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
             .position(Point3::from([3.0, 5.0, -3.0]))
+            .color(Vector3::from([0.0, 0.3, 0.5]))
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         PlaneBuilder::default()
             .position(Point3::from([0.0, -15.0, 0.0]))
-            .material(white_material)
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([0.6; 3]))
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .center(Point3::from([0.0, 0.0, -5.0]))
-            .material(white_material)
+            .material(
+                MaterialBuilder::default()
+                    .color(Vector3::from([1.0; 3]))
+                    .build()
+                    .unwrap(),
+            )
             .build()
             .unwrap(),
     ));

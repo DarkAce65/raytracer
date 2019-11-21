@@ -1,11 +1,9 @@
 use crate::core::{Intersection, Ray};
-use crate::lights::Light;
+use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
-
-const K_AMBIENT: f64 = 0.3;
 
 #[derive(Debug)]
 pub struct Camera {
@@ -49,34 +47,45 @@ impl Scene {
 
             let mut color = Vector3::zero();
 
-            color += K_AMBIENT * material.color;
-
             for light in self.lights.iter() {
-                let light_dir = light.position() - hit_point;
-                let light_distance = light_dir.magnitude();
-                let light_dir = Unit::new_normalize(light_dir);
+                color += match light.get_type() {
+                    LightType::Ambient => material.color.component_mul(&light.get_color()),
+                    LightType::Point => {
+                        let mut light_color = Vector3::zero();
 
-                let n_dot_l = normal.dot(&light_dir);
-                if n_dot_l > 0.0 {
-                    let shadow_ray = Ray {
-                        origin: hit_point + (normal.into_inner() * 1e-10),
-                        direction: light_dir,
-                    };
+                        let light_dir = light.position() - hit_point;
+                        let light_distance = light_dir.magnitude();
+                        let light_dir = Unit::new_normalize(light_dir);
 
-                    let shadow_intersection = self.raycast(&shadow_ray);
-                    if shadow_intersection.is_none()
-                        || shadow_intersection.unwrap().distance > light_distance
-                    {
-                        color += material.color * n_dot_l;
+                        let n_dot_l = normal.dot(&light_dir);
+                        if n_dot_l > 0.0 {
+                            let shadow_ray = Ray {
+                                origin: hit_point + (normal.into_inner() * 1e-10),
+                                direction: light_dir,
+                            };
 
-                        let half_vec =
-                            (light_dir.into_inner() - ray.direction.into_inner()).normalize();
-                        let n_dot_h = normal.dot(&half_vec);
-                        if n_dot_h > 0.0 {
-                            color += material.specular * n_dot_h.powf(material.shininess);
+                            let shadow_intersection = self.raycast(&shadow_ray);
+                            if shadow_intersection.is_none()
+                                || shadow_intersection.unwrap().distance > light_distance
+                            {
+                                light_color +=
+                                    material.color.component_mul(&light.get_color()) * n_dot_l;
+
+                                let half_vec = (light_dir.into_inner()
+                                    - ray.direction.into_inner())
+                                .normalize();
+                                let n_dot_h = normal.dot(&half_vec);
+                                if n_dot_h > 0.0 {
+                                    light_color +=
+                                        material.specular.component_mul(&light.get_color())
+                                            * n_dot_h.powf(material.shininess);
+                                }
+                            }
                         }
+
+                        light_color
                     }
-                }
+                };
             }
 
             color.insert_row(3, 1.0)
