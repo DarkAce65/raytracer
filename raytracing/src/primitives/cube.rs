@@ -77,14 +77,28 @@ impl Intersectable for Cube {
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         let normal = hit_point - self.center;
+        let normal_sign = normal.map(|c| c.signum());
+        let normal = normal.map(|c| c.abs());
         if normal.x > normal.y {
             if normal.x > normal.z {
-                Vector3::x_axis()
+                if normal_sign.x < 0.0 {
+                    -Vector3::x_axis()
+                } else {
+                    Vector3::x_axis()
+                }
+            } else if normal_sign.z < 0.0 {
+                -Vector3::z_axis()
             } else {
                 Vector3::z_axis()
             }
         } else if normal.y > normal.z {
-            Vector3::y_axis()
+            if normal_sign.y < 0.0 {
+                -Vector3::y_axis()
+            } else {
+                Vector3::y_axis()
+            }
+        } else if normal_sign.z < 0.0 {
+            -Vector3::z_axis()
         } else {
             Vector3::z_axis()
         }
