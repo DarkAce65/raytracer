@@ -43,4 +43,7 @@ pub trait Drawable {
 }
 
 pub trait Primitive: Send + Sync + Debug + Object3D + Intersectable + Drawable {}
-impl<T> Primitive for T where T: Send + Sync + Debug + Object3D + Intersectable + Drawable {}
+
+impl Primitive for Cube {}
+impl Primitive for Plane {}
+impl Primitive for Sphere {}
