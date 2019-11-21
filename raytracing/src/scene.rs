@@ -1,6 +1,6 @@
 use crate::core::{Intersection, Ray};
 use crate::lights::{Light, LightType};
-use crate::primitives::Primitive;
+use crate::primitives::{MaterialSide, Primitive};
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
@@ -42,8 +42,12 @@ impl Scene {
     fn get_color(&self, ray: Ray) -> Vector4<f64> {
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction.into_inner() * intersection.distance;
-            let normal = intersection.object.surface_normal(&hit_point);
             let material = intersection.object.material();
+            let normal = intersection.object.surface_normal(&hit_point);
+            let normal = match material.side {
+                MaterialSide::Front => normal,
+                MaterialSide::Back => -normal,
+            };
 
             let mut color = Vector3::zero();
 

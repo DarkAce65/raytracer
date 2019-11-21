@@ -11,7 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use lights::{AmbientLightBuilder, PointLightBuilder};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{clamp, Point3, Vector3, Vector4};
-use primitives::{CubeBuilder, MaterialBuilder, PlaneBuilder, SphereBuilder};
+use primitives::{CubeBuilder, MaterialBuilder, MaterialSide, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
 use scene::{Camera, Scene};
 use std::sync::{Arc, Mutex};
@@ -136,10 +136,12 @@ fn main() {
             .unwrap(),
     ));
     scene.objects.push(Box::new(
-        PlaneBuilder::default()
-            .position(Point3::from([0.0, -15.0, 0.0]))
+        CubeBuilder::default()
+            .size(120.0)
+            .center(Point3::from([30.0, 49.0, -40.0]))
             .material(
                 MaterialBuilder::default()
+                    .side(MaterialSide::Back)
                     .color(Vector3::from([0.6; 3]))
                     .build()
                     .unwrap(),
@@ -190,7 +192,7 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(4.0)
-            .center(Point3::from([-6.0, -6.0, -3.0]))
+            .center(Point3::from([-6.0, -9.0, -3.0]))
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.4, 0.25, 0.6]))
@@ -204,8 +206,8 @@ fn main() {
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
-            .radius(9.0)
-            .center(Point3::from([-22.0, -12.0, -90.0]))
+            .radius(5.0)
+            .center(Point3::from([-20.0, -9.0, -40.0]))
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.1, 0.5, 0.1]))
@@ -216,9 +218,22 @@ fn main() {
             .unwrap(),
     ));
     scene.objects.push(Box::new(
+        SphereBuilder::default()
+            .radius(1.5)
+            .center(Point3::from([2.0, -10.0, -4.0]))
+            .material(
+                MaterialBuilder::default()
+                    .emissive(Vector3::from([0.0, 1.0, 0.0]))
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap(),
+    ));
+    scene.objects.push(Box::new(
         CubeBuilder::default()
             .size(2.0)
-            .center(Point3::from([-4.0, -3.0, -2.0]))
+            .center(Point3::from([-4.0, -5.0, -2.0]))
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.5, 0.1, 0.1]))
