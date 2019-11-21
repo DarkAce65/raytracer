@@ -17,8 +17,14 @@ pub fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
 
 pub trait Object3D {
     fn position(&self) -> Point3<f64>;
-    fn scale(&self) -> Vector3<f64>;
-    fn rotation(&self) -> Vector3<f64>;
+
+    fn scale(&self) -> Vector3<f64> {
+        unimplemented!()
+    }
+
+    fn rotation(&self) -> Vector3<f64> {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug)]

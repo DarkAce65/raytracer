@@ -25,14 +25,6 @@ impl Object3D for Plane {
     fn position(&self) -> Point3<f64> {
         self.position
     }
-
-    fn scale(&self) -> Vector3<f64> {
-        unimplemented!()
-    }
-
-    fn rotation(&self) -> Vector3<f64> {
-        unimplemented!()
-    }
 }
 
 impl Intersectable for Plane {
