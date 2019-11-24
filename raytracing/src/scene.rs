@@ -1,9 +1,12 @@
-use crate::core::{Intersection, Ray};
+use crate::core::{cosine_sample_hemisphere, Intersection, Ray, EPSILON};
 use crate::lights::{Light, LightType};
 use crate::primitives::{MaterialSide, Primitive};
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
+
+const MAX_DEPTH: u8 = 2;
+const INDIRECT_RAYS: u8 = 16;
 
 #[derive(Debug)]
 pub struct Camera {
@@ -39,7 +42,11 @@ impl Scene {
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
-    fn get_color(&self, ray: Ray) -> Vector4<f64> {
+    fn get_color(&self, ray: Ray, depth: u8) -> Vector4<f64> {
+        if depth == 0 {
+            return Vector4::zero();
+        }
+
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction.into_inner() * intersection.distance;
             let material = intersection.object.material();
@@ -49,13 +56,30 @@ impl Scene {
                 MaterialSide::Back => -normal,
             };
 
-            let mut color = Vector3::zero();
+            let mut indirect_light = Vector3::zero();
+            if INDIRECT_RAYS > 0 {
+                for _ in 0..INDIRECT_RAYS {
+                    let direction = cosine_sample_hemisphere(&normal);
+                    let diffuse_ray = Ray {
+                        origin: hit_point + (direction.into_inner() * EPSILON),
+                        direction,
+                    };
 
+                    indirect_light += 2.0
+                        * normal.dot(&direction)
+                        * material
+                            .color
+                            .component_mul(&self.get_color(diffuse_ray, depth - 1).xyz());
+                }
+                indirect_light /= INDIRECT_RAYS as f64;
+            }
+
+            let mut direct_light = Vector3::zero();
             for light in self.lights.iter() {
-                color += match light.get_type() {
+                direct_light += match light.get_type() {
                     LightType::Ambient => material.color.component_mul(&light.get_color()),
                     LightType::Point => {
-                        let mut light_color = Vector3::zero();
+                        let mut direct_light = Vector3::zero();
 
                         let light_dir = light.position() - hit_point;
                         let light_distance = light_dir.magnitude();
@@ -64,7 +88,7 @@ impl Scene {
                         let n_dot_l = normal.dot(&light_dir);
                         if n_dot_l > 0.0 {
                             let shadow_ray = Ray {
-                                origin: hit_point + (normal.into_inner() * 1e-10),
+                                origin: hit_point + (light_dir.into_inner() * EPSILON),
                                 direction: light_dir,
                             };
 
@@ -72,7 +96,7 @@ impl Scene {
                             if shadow_intersection.is_none()
                                 || shadow_intersection.unwrap().distance > light_distance
                             {
-                                light_color +=
+                                direct_light +=
                                     material.color.component_mul(&light.get_color()) * n_dot_l;
 
                                 let half_vec = (light_dir.into_inner()
@@ -80,19 +104,19 @@ impl Scene {
                                 .normalize();
                                 let n_dot_h = normal.dot(&half_vec);
                                 if n_dot_h > 0.0 {
-                                    light_color +=
+                                    direct_light +=
                                         material.specular.component_mul(&light.get_color())
                                             * n_dot_h.powf(material.shininess);
                                 }
                             }
                         }
 
-                        light_color
+                        direct_light
                     }
                 };
             }
 
-            color.insert_row(3, 1.0)
+            (material.emissive + direct_light + indirect_light).insert_row(3, 1.0)
         } else {
             Vector4::zero()
         }
@@ -123,6 +147,6 @@ impl Scene {
             direction,
         };
 
-        self.get_color(ray)
+        self.get_color(ray, MAX_DEPTH)
     }
 }

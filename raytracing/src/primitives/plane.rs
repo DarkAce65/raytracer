@@ -1,5 +1,5 @@
 use super::{Drawable, Intersectable, Material};
-use crate::core::{Intersection, Object3D, Ray};
+use crate::core::{Intersection, Object3D, Ray, EPSILON};
 use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 
@@ -31,7 +31,7 @@ impl Intersectable for Plane {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let normal = -self.normal;
         let denom = normal.dot(&ray.direction);
-        if denom > 1e-6 {
+        if denom > EPSILON {
             let view = self.position - ray.origin;
             let distance = view.dot(&normal) / denom;
 
