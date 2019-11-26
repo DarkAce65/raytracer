@@ -1,6 +1,7 @@
 use crate::primitives::Primitive;
 use nalgebra::{Point3, Unit, Vector3};
 use rand::Rng;
+use std::f64::consts::PI;
 
 pub const EPSILON: f64 = 1e-10;
 
@@ -21,9 +22,9 @@ pub fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
 pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64>> {
     let mut rng = rand::thread_rng();
 
-    let r1 = 2.0 * std::f64::consts::PI * rng.gen::<f64>();
-    let r2 = rng.gen::<f64>();
-    let r2s = r2.sqrt();
+    let theta = 2.0 * PI * rng.gen::<f64>();
+    let r = rng.gen::<f64>();
+    let rs = r.sqrt();
 
     let w = normal.into_inner();
     let u = if w.x.abs() > EPSILON {
@@ -33,7 +34,7 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
     };
 
     let v = normal.cross(&u);
-    Unit::new_normalize(u * r1.cos() * r2s + v * r1.sin() * r2s + w * (1.0 - r2).sqrt())
+    Unit::new_normalize(u * rs * theta.cos() + v * rs * theta.sin() + (1.0 - r).sqrt() * w)
 }
 
 pub trait Object3D {

@@ -65,11 +65,10 @@ impl Scene {
                         direction,
                     };
 
-                    indirect_light += 2.0
-                        * normal.dot(&direction)
-                        * material
-                            .color
-                            .component_mul(&self.get_color(diffuse_ray, depth - 1).xyz());
+                    indirect_light += self
+                        .get_color(diffuse_ray, depth - 1)
+                        .xyz()
+                        .component_mul(&material.color);
                 }
                 indirect_light /= INDIRECT_RAYS as f64;
             }
@@ -77,7 +76,7 @@ impl Scene {
             let mut direct_light = Vector3::zero();
             for light in self.lights.iter() {
                 direct_light += match light.get_type() {
-                    LightType::Ambient => material.color.component_mul(&light.get_color()),
+                    LightType::Ambient => light.get_color().component_mul(&material.color),
                     LightType::Point => {
                         let mut direct_light = Vector3::zero();
 
@@ -97,7 +96,7 @@ impl Scene {
                                 || shadow_intersection.unwrap().distance > light_distance
                             {
                                 direct_light +=
-                                    material.color.component_mul(&light.get_color()) * n_dot_l;
+                                    light.get_color().component_mul(&material.color) * n_dot_l;
 
                                 let half_vec = (light_dir.into_inner()
                                     - ray.direction.into_inner())
