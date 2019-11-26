@@ -220,7 +220,7 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(1.5)
-            .center(Point3::from([2.0, -10.0, -4.0]))
+            .center(Point3::from([2.0, -10.0, -2.0]))
             .material(
                 MaterialBuilder::default()
                     .emissive(Vector3::from([0.0, 1.0, 0.0]))

@@ -29,46 +29,39 @@ impl Object3D for Cube {
 
 impl Intersectable for Cube {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        let ray_sign = ray.direction.into_inner().map(|c| c.signum());
         let translated_center = self.center - ray.origin;
         let half = self.size / 2.0;
 
-        let mut t0 = (translated_center.x - ray.direction.x.signum() * half) / ray.direction.x;
-        let mut t1 = (translated_center.x + ray.direction.x.signum() * half) / ray.direction.x;
-        let tymin = (translated_center.y - ray.direction.y.signum() * half) / ray.direction.y;
-        let tymax = (translated_center.y + ray.direction.y.signum() * half) / ray.direction.y;
+        let d0 = (translated_center.x - ray_sign.x * half) / ray.direction.x;
+        let d1 = (translated_center.x + ray_sign.x * half) / ray.direction.x;
+        let dy_min = (translated_center.y - ray_sign.y * half) / ray.direction.y;
+        let dy_max = (translated_center.y + ray_sign.y * half) / ray.direction.y;
 
-        if t0 > tymax || t1 < tymin {
+        if dy_max < d0 || d1 < dy_min {
             return None;
         }
 
-        if tymin > t0 {
-            t0 = tymin;
-        }
-        if tymax < t1 {
-            t1 = tymax;
-        }
+        let d0 = if dy_min > d0 { dy_min } else { d0 };
+        let d1 = if d1 > dy_max { dy_max } else { d1 };
 
-        let tzmin = (translated_center.z - ray.direction.z.signum() * half) / ray.direction.z;
-        let tzmax = (translated_center.z + ray.direction.z.signum() * half) / ray.direction.z;
+        let dz_min = (translated_center.z - ray_sign.z * half) / ray.direction.z;
+        let dz_max = (translated_center.z + ray_sign.z * half) / ray.direction.z;
 
-        if t0 > tzmax || t1 < tzmin {
+        if dz_max < d0 || d1 < dz_min {
             return None;
         }
 
-        if tzmin > t0 {
-            t0 = tzmin;
-        }
-        if tzmax < t1 {
-            t1 = tzmax;
-        }
+        let d0 = if dz_min > d0 { dz_min } else { d0 };
+        let d1 = if d1 > dz_max { dz_max } else { d1 };
 
-        let t = if t0 < 0.0 { t1 } else { t0 };
-        if t < 0.0 {
+        let d = if d0 < 0.0 { d1 } else { d0 };
+        if d < 0.0 {
             return None;
         }
 
         let intersection = Intersection {
-            distance: t,
+            distance: d,
             object: Box::new(*self),
         };
 
