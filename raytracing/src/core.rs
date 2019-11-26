@@ -64,6 +64,7 @@ pub struct Intersection {
 #[cfg(test)]
 mod test {
     use super::*;
+    use more_asserts::assert_le;
 
     #[test]
     fn it_solves_quadratic_eqs() {
@@ -72,5 +73,24 @@ mod test {
         assert_eq!(quadratic(4.0, 4.0, 1.0), Some((-0.5, -0.5)));
         assert_eq!(quadratic(2.0, -25.0, 12.0), Some((0.5, 12.0)));
         assert_eq!(quadratic(1.0, 1.0, 1.0), None);
+    }
+
+    #[test]
+    fn it_generates_hemisphere_samples() {
+        let mut i = 0;
+        loop {
+            if i >= 1000 {
+                break;
+            }
+
+            let vec: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
+            let sampled = cosine_sample_hemisphere(&vec);
+            let dot = sampled.dot(&vec);
+
+            assert_le!(0.0, dot,);
+            assert_le!(dot, 1.0);
+
+            i += 1;
+        }
     }
 }
