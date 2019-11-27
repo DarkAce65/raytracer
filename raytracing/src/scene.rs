@@ -80,7 +80,7 @@ impl Scene {
                     LightType::Point => {
                         let mut direct_light = Vector3::zero();
 
-                        let light_dir = light.position() - hit_point;
+                        let light_dir = light.transform().position - hit_point;
                         let light_distance = light_dir.magnitude();
                         let light_dir = Unit::new_normalize(light_dir);
 

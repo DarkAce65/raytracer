@@ -1,27 +1,27 @@
 use super::LightColor;
-use crate::core::Object3D;
+use crate::core::{Object3D, Transform};
 use derive_builder::Builder;
-use nalgebra::{Point3, Vector3};
+use nalgebra::Vector3;
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct PointLight {
-    position: Point3<f64>,
+    transform: Transform,
     color: Vector3<f64>,
 }
 
 impl Default for PointLight {
     fn default() -> Self {
         Self {
-            position: Point3::origin(),
+            transform: Transform::default(),
             color: Vector3::from([1.0; 3]),
         }
     }
 }
 
 impl Object3D for PointLight {
-    fn position(&self) -> Point3<f64> {
-        self.position
+    fn transform(&self) -> Transform {
+        self.transform
     }
 }
 

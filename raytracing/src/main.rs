@@ -5,6 +5,7 @@ mod lights;
 mod primitives;
 mod scene;
 
+use crate::core::TransformBuilder;
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -122,21 +123,36 @@ fn main() {
     ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
-            .position(Point3::from([-8.0, 3.0, 0.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([-8.0, 3.0, 0.0]))
+                    .build()
+                    .unwrap(),
+            )
             .color(Vector3::from([0.5, 0.5, 0.5]))
             .build()
             .unwrap(),
     ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
-            .position(Point3::from([-2.0, 5.0, -10.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([-2.0, 5.0, -10.0]))
+                    .build()
+                    .unwrap(),
+            )
             .color(Vector3::from([0.5, 0.0, 0.0]))
             .build()
             .unwrap(),
     ));
     scene.lights.push(Box::new(
         PointLightBuilder::default()
-            .position(Point3::from([3.0, 5.0, -3.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([3.0, 5.0, -3.0]))
+                    .build()
+                    .unwrap(),
+            )
             .color(Vector3::from([0.0, 0.3, 0.5]))
             .build()
             .unwrap(),
@@ -144,7 +160,12 @@ fn main() {
     scene.objects.push(Box::new(
         CubeBuilder::default()
             .size(120.0)
-            .center(Point3::from([30.0, 49.0, -40.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([30.0, 49.0, -40.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .side(MaterialSide::Back)
@@ -157,7 +178,12 @@ fn main() {
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
-            .center(Point3::from([0.0, 0.0, -5.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([0.0, 0.0, -5.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([1.0; 3]))
@@ -170,7 +196,12 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(3.0)
-            .center(Point3::from([3.0, -2.0, -5.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([3.0, -2.0, -5.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.0, 0.25, 0.5]))
@@ -185,7 +216,12 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(6.0)
-            .center(Point3::from([-6.0, 6.0, -18.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([-6.0, 6.0, -18.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([1.0, 0.25, 0.1]))
@@ -198,7 +234,12 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(4.0)
-            .center(Point3::from([-6.0, -9.0, -3.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([-6.0, -9.0, -3.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.4, 0.25, 0.6]))
@@ -213,7 +254,12 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(5.0)
-            .center(Point3::from([-20.0, -9.0, -40.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([-20.0, -9.0, -40.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.1, 0.5, 0.1]))
@@ -226,7 +272,12 @@ fn main() {
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .radius(1.5)
-            .center(Point3::from([2.0, -10.0, -2.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([2.0, -10.0, -2.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .emissive(Vector3::from([0.0, 1.0, 0.0]))
@@ -239,7 +290,12 @@ fn main() {
     scene.objects.push(Box::new(
         CubeBuilder::default()
             .size(2.0)
-            .center(Point3::from([-4.0, -5.0, -2.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([-4.0, -5.0, -2.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.5, 0.1, 0.1]))
@@ -252,7 +308,12 @@ fn main() {
     scene.objects.push(Box::new(
         CubeBuilder::default()
             .size(2.0)
-            .center(Point3::from([1.0, -2.0, -2.0]))
+            .transform(
+                TransformBuilder::default()
+                    .position(Point3::from([1.0, -2.0, -2.0]))
+                    .build()
+                    .unwrap(),
+            )
             .material(
                 MaterialBuilder::default()
                     .color(Vector3::from([0.9, 0.7, 0.1]))

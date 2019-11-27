@@ -1,7 +1,7 @@
 use super::LightColor;
-use crate::core::Object3D;
+use crate::core::{Object3D, Transform};
 use derive_builder::Builder;
-use nalgebra::{Point3, Vector3};
+use nalgebra::Vector3;
 use num_traits::identities::Zero;
 
 #[derive(Builder, Copy, Clone, Debug)]
@@ -19,7 +19,7 @@ impl Default for AmbientLight {
 }
 
 impl Object3D for AmbientLight {
-    fn position(&self) -> Point3<f64> {
+    fn transform(&self) -> Transform {
         unimplemented!()
     }
 }

@@ -1,6 +1,9 @@
 use crate::primitives::Primitive;
+use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
+use num_traits::identities::Zero;
 use rand::Rng;
+use std::default::Default;
 use std::f64::consts::PI;
 
 pub const EPSILON: f64 = 1e-10;
@@ -37,16 +40,26 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
     Unit::new_normalize(u * rs * theta.cos() + v * rs * theta.sin() + (1.0 - r).sqrt() * w)
 }
 
+#[derive(Builder, Copy, Clone, Debug)]
+#[builder(default)]
+pub struct Transform {
+    pub position: Point3<f64>,
+    rotation: (f64, Unit<Vector3<f64>>),
+    scale: Vector3<f64>,
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            position: Point3::origin(),
+            rotation: (0.0, Vector3::y_axis()),
+            scale: Vector3::zero(),
+        }
+    }
+}
+
 pub trait Object3D {
-    fn position(&self) -> Point3<f64>;
-
-    fn scale(&self) -> Vector3<f64> {
-        unimplemented!()
-    }
-
-    fn rotation(&self) -> Vector3<f64> {
-        unimplemented!()
-    }
+    fn transform(&self) -> Transform;
 }
 
 #[derive(Debug)]

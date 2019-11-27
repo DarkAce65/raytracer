@@ -1,12 +1,12 @@
 use super::{Drawable, Intersectable, Material};
-use crate::core::{Intersection, Object3D, Ray, EPSILON};
+use crate::core::{Intersection, Object3D, Ray, Transform, EPSILON};
 use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Plane {
-    position: Point3<f64>,
+    transform: Transform,
     normal: Unit<Vector3<f64>>,
     material: Material,
 }
@@ -14,7 +14,7 @@ pub struct Plane {
 impl Default for Plane {
     fn default() -> Self {
         Self {
-            position: Point3::origin(),
+            transform: Transform::default(),
             normal: Vector3::y_axis(),
             material: Material::default(),
         }
@@ -22,8 +22,8 @@ impl Default for Plane {
 }
 
 impl Object3D for Plane {
-    fn position(&self) -> Point3<f64> {
-        self.position
+    fn transform(&self) -> Transform {
+        self.transform
     }
 }
 
@@ -32,7 +32,7 @@ impl Intersectable for Plane {
         let normal = -self.normal;
         let denom = normal.dot(&ray.direction);
         if denom > EPSILON {
-            let view = self.position - ray.origin;
+            let view = self.transform.position - ray.origin;
             let distance = view.dot(&normal) / denom;
 
             if distance >= 0.0 {

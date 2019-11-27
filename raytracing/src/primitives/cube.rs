@@ -1,36 +1,36 @@
 use super::{Drawable, Intersectable, Material};
-use crate::core::{Intersection, Object3D, Ray};
+use crate::core::{Intersection, Object3D, Ray, Transform};
 use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]
 pub struct Cube {
+    transform: Transform,
     size: f64,
-    center: Point3<f64>,
     material: Material,
 }
 
 impl Default for Cube {
     fn default() -> Self {
         Self {
+            transform: Transform::default(),
             size: 1.0,
-            center: Point3::origin(),
             material: Material::default(),
         }
     }
 }
 
 impl Object3D for Cube {
-    fn position(&self) -> Point3<f64> {
-        self.center
+    fn transform(&self) -> Transform {
+        self.transform
     }
 }
 
 impl Intersectable for Cube {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray_sign = ray.direction.into_inner().map(|c| c.signum());
-        let translated_center = self.center - ray.origin;
+        let translated_center = self.transform.position - ray.origin;
         let half = self.size / 2.0;
 
         let d0 = (translated_center.x - ray_sign.x * half) / ray.direction.x;
@@ -69,7 +69,7 @@ impl Intersectable for Cube {
     }
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        let normal = hit_point - self.center;
+        let normal = hit_point - self.transform.position;
         let normal_sign = normal.map(|c| c.signum());
         let normal = normal.map(|c| c.abs());
         if normal.x > normal.y {
