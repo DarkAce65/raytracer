@@ -36,12 +36,14 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
     indexes.shuffle(&mut thread_rng());
 
     spawn(move || {
-        println!("Raytracing...");
-        for index in indexes.iter() {
-            if let Some(progress) = &progress {
-                progress.inc(1);
-            }
+        let iter: Box<dyn Iterator<Item = &u32>> = if let Some(progress) = &progress {
+            Box::new(progress.wrap_iter(indexes.iter()))
+        } else {
+            Box::new(indexes.iter())
+        };
 
+        println!("Raytracing...");
+        for index in iter {
             let color = scene.screen_raycast(*index);
             let index = *index as usize;
             let mut buffer = buffer_mutex.lock().unwrap();
@@ -59,13 +61,15 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
     indexes.shuffle(&mut thread_rng());
 
+    let iter: Box<dyn Iterator<Item = &u32>> = if let Some(progress) = &progress {
+        Box::new(progress.wrap_iter(indexes.iter()))
+    } else {
+        Box::new(indexes.iter())
+    };
+
     println!("Raytracing...");
     let start = Instant::now();
-    for index in indexes.iter() {
-        if let Some(progress) = &progress {
-            progress.inc(1);
-        }
-
+    for index in iter {
         let color = scene.screen_raycast(*index);
         let color = color.map(|c| clamp(c, 0.0, 1.0));
 

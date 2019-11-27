@@ -1,5 +1,4 @@
 use crate::primitives::Primitive;
-use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 use num_traits::identities::Zero;
 use rand::Rng;
@@ -40,12 +39,11 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
     Unit::new_normalize(u * rs * theta.cos() + v * rs * theta.sin() + (1.0 - r).sqrt() * w)
 }
 
-#[derive(Builder, Copy, Clone, Debug)]
-#[builder(default)]
+#[derive(Copy, Clone, Debug)]
 pub struct Transform {
     pub position: Point3<f64>,
-    rotation: (f64, Unit<Vector3<f64>>),
-    scale: Vector3<f64>,
+    pub rotation: (f64, Unit<Vector3<f64>>),
+    pub scale: Vector3<f64>,
 }
 
 impl Default for Transform {
