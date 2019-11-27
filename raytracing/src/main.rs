@@ -16,7 +16,7 @@ use rand::{seq::SliceRandom, thread_rng};
 use scene::{Camera, Scene};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     let rgba = rgba.map(|c| clamp(c, 0.0, 1.0));
@@ -54,14 +54,18 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
     });
 }
 
-fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<ProgressBar>) {
+fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<ProgressBar>) -> Duration {
+    let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
+    indexes.shuffle(&mut thread_rng());
+
     println!("Raytracing...");
-    for index in 0..scene.width * scene.height {
+    let start = Instant::now();
+    for index in indexes.iter() {
         if let Some(progress) = &progress {
             progress.inc(1);
         }
 
-        let color = scene.screen_raycast(index);
+        let color = scene.screen_raycast(*index);
         let color = color.map(|c| clamp(c, 0.0, 1.0));
 
         let index = (index * 4) as usize;
@@ -74,6 +78,8 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
     if let Some(progress) = progress {
         progress.finish();
     }
+
+    start.elapsed()
 }
 
 fn main() {
@@ -271,9 +277,7 @@ fn main() {
     if let Some(filename) = output_filename {
         let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
 
-        let start = Instant::now();
-        raytrace(&scene, &mut image_buffer, progress);
-        let duration = start.elapsed();
+        let duration = raytrace(&scene, &mut image_buffer, progress);
 
         let image =
             RgbaImage::from_raw(width, height, image_buffer).expect("Failed to convert buffer");
