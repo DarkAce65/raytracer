@@ -36,6 +36,7 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
     indexes.shuffle(&mut thread_rng());
 
     spawn(move || {
+        let mut rays = 0;
         let iter: Box<dyn Iterator<Item = &u32>> = if let Some(progress) = &progress {
             Box::new(progress.wrap_iter(indexes.iter()))
         } else {
@@ -44,11 +45,16 @@ fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Opti
 
         println!("Raytracing...");
         for index in iter {
-            let color = scene.screen_raycast(*index);
+            let (color, r) = scene.screen_raycast(*index);
+            rays += r;
             let index = *index as usize;
             let mut buffer = buffer_mutex.lock().unwrap();
             buffer[index] = to_argb_u32(color);
             drop(buffer);
+
+            if let Some(progress) = &progress {
+                progress.set_message(&rays.to_string());
+            }
         }
 
         if let Some(progress) = progress {
@@ -61,6 +67,7 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
     indexes.shuffle(&mut thread_rng());
 
+    let mut rays = 0;
     let iter: Box<dyn Iterator<Item = &u32>> = if let Some(progress) = &progress {
         Box::new(progress.wrap_iter(indexes.iter()))
     } else {
@@ -70,7 +77,8 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
     println!("Raytracing...");
     let start = Instant::now();
     for index in iter {
-        let color = scene.screen_raycast(*index);
+        let (color, r) = scene.screen_raycast(*index);
+        rays += r;
         let color = color.map(|c| clamp(c, 0.0, 1.0));
 
         let index = (index * 4) as usize;
@@ -78,6 +86,10 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
         image_buffer[index + 1] = (color.y * 255.0) as u8;
         image_buffer[index + 2] = (color.z * 255.0) as u8;
         image_buffer[index + 3] = (color.w * 255.0) as u8;
+
+        if let Some(progress) = &progress {
+            progress.set_message(&rays.to_string());
+        }
     }
 
     if let Some(progress) = progress {
@@ -334,7 +346,8 @@ fn main() {
         let progress = ProgressBar::new((width * height).into());
         progress.set_draw_delta((width * height / 200).into());
         progress.set_style(ProgressStyle::default_bar().template(
-            "[{elapsed_precise} elapsed] [{eta_precise} left] {bar:40} {pos}/{len} pixels",
+            "[{elapsed_precise} elapsed] [{eta_precise} left] \
+             {bar:40} {pos}/{len} pixels, {msg} rays",
         ));
         Some(progress)
     };

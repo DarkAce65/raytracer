@@ -42,11 +42,14 @@ impl Scene {
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
-    fn get_color(&self, ray: Ray, depth: u8) -> Vector4<f64> {
+    fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
+        let mut rays = 0;
+
         if depth == 0 {
-            return Vector4::zero();
+            return (Vector4::zero(), rays);
         }
 
+        rays += 1;
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction.into_inner() * intersection.distance;
             let material = intersection.object.material();
@@ -55,6 +58,8 @@ impl Scene {
                 MaterialSide::Front => normal,
                 MaterialSide::Back => -normal,
             };
+
+            let emissive_light = material.emissive;
 
             let mut indirect_light = Vector3::zero();
             if INDIRECT_RAYS > 0 {
@@ -65,10 +70,9 @@ impl Scene {
                         direction,
                     };
 
-                    indirect_light += self
-                        .get_color(diffuse_ray, depth - 1)
-                        .xyz()
-                        .component_mul(&material.color);
+                    let (color, r) = self.get_color(diffuse_ray, depth - 1);
+                    rays += r;
+                    indirect_light += color.xyz().component_mul(&material.color);
                 }
                 indirect_light /= INDIRECT_RAYS as f64;
             }
@@ -91,6 +95,7 @@ impl Scene {
                                 direction: light_dir,
                             };
 
+                            rays += 1;
                             let shadow_intersection = self.raycast(&shadow_ray);
                             if shadow_intersection.is_none()
                                 || shadow_intersection.unwrap().distance > light_distance
@@ -115,13 +120,16 @@ impl Scene {
                 };
             }
 
-            (material.emissive + direct_light + indirect_light).insert_row(3, 1.0)
+            (
+                (emissive_light + direct_light + indirect_light).insert_row(3, 1.0),
+                rays,
+            )
         } else {
-            Vector4::zero()
+            (Vector4::zero(), rays)
         }
     }
 
-    pub fn screen_raycast(&self, index: u32) -> Vector4<f64> {
+    pub fn screen_raycast(&self, index: u32) -> (Vector4<f64>, u64) {
         assert!(index < self.width * self.height);
 
         let (width, height) = (self.width as f64, self.height as f64);
