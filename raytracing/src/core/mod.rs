@@ -1,8 +1,11 @@
+mod transform;
+
 use crate::primitives::Primitive;
-use nalgebra::{Affine3, Matrix4, Point3, Rotation3, Translation3, Unit, Vector3};
+use nalgebra::{Affine3, Point3, Unit, Vector3};
 use rand::Rng;
-use std::default::Default;
 use std::f64::consts::PI;
+
+pub use transform::*;
 
 pub const EPSILON: f64 = 1e-10;
 
@@ -36,58 +39,6 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
 
     let v = normal.cross(&u);
     Unit::new_normalize(u * rs * theta.cos() + v * rs * theta.sin() + (1.0 - r).sqrt() * w)
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Transform {
-    matrix: Affine3<f64>,
-    inv_matrix: Affine3<f64>,
-}
-
-impl Default for Transform {
-    fn default() -> Self {
-        let matrix = Affine3::identity();
-        Self {
-            matrix,
-            inv_matrix: matrix.inverse(),
-        }
-    }
-}
-
-impl Transform {
-    pub fn matrix(&self) -> Affine3<f64> {
-        self.matrix
-    }
-
-    pub fn inverse(&self) -> Affine3<f64> {
-        self.inv_matrix
-    }
-
-    pub fn inverse_transpose(&self) -> Affine3<f64> {
-        Affine3::from_matrix_unchecked(
-            nalgebra::convert::<Affine3<f64>, Matrix4<f64>>(self.inverse()).transpose(),
-        )
-    }
-
-    fn set_matrix(&mut self, m: Affine3<f64>) -> &mut Self {
-        self.matrix = m;
-        self.inv_matrix = self.matrix.inverse();
-        self
-    }
-
-    pub fn translate(&mut self, translation: Vector3<f64>) -> &mut Self {
-        self.set_matrix(Translation3::from(translation) * self.matrix)
-    }
-
-    pub fn rotate(&mut self, angle: f64, axis: Unit<Vector3<f64>>) -> &mut Self {
-        self.set_matrix(Rotation3::from_axis_angle(&axis, angle.to_radians()) * self.matrix)
-    }
-
-    pub fn scale(&mut self, scale: Vector3<f64>) -> &mut Self {
-        self.set_matrix(
-            Affine3::from_matrix_unchecked(Matrix4::new_nonuniform_scaling(&scale)) * self.matrix,
-        )
-    }
 }
 
 pub trait Object3D {
