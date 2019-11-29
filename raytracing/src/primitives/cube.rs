@@ -29,14 +29,14 @@ impl Object3D for Cube {
 
 impl Intersectable for Cube {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let ray_sign = ray.direction.into_inner().map(|c| c.signum());
-        let translated_center = self.transform.position - ray.origin;
+        let ray = &ray.transform(self.transform().inverse());
+        let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
 
-        let d0 = (translated_center.x - ray_sign.x * half) / ray.direction.x;
-        let d1 = (translated_center.x + ray_sign.x * half) / ray.direction.x;
-        let dy_min = (translated_center.y - ray_sign.y * half) / ray.direction.y;
-        let dy_max = (translated_center.y + ray_sign.y * half) / ray.direction.y;
+        let d0 = (-ray.origin.x - ray_sign.x * half) / ray.direction.x;
+        let d1 = (-ray.origin.x + ray_sign.x * half) / ray.direction.x;
+        let dy_min = (-ray.origin.y - ray_sign.y * half) / ray.direction.y;
+        let dy_max = (-ray.origin.y + ray_sign.y * half) / ray.direction.y;
 
         if dy_max < d0 || d1 < dy_min {
             return None;
@@ -45,8 +45,8 @@ impl Intersectable for Cube {
         let d0 = if dy_min > d0 { dy_min } else { d0 };
         let d1 = if d1 > dy_max { dy_max } else { d1 };
 
-        let dz_min = (translated_center.z - ray_sign.z * half) / ray.direction.z;
-        let dz_max = (translated_center.z + ray_sign.z * half) / ray.direction.z;
+        let dz_min = (-ray.origin.z - ray_sign.z * half) / ray.direction.z;
+        let dz_max = (-ray.origin.z + ray_sign.z * half) / ray.direction.z;
 
         if dz_max < d0 || d1 < dz_min {
             return None;
@@ -69,7 +69,7 @@ impl Intersectable for Cube {
     }
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        let normal = hit_point - self.transform.position;
+        let normal = hit_point.coords;
         let normal_sign = normal.map(|c| c.signum());
         let normal = normal.map(|c| c.abs());
         if normal.x > normal.y {

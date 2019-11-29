@@ -1,10 +1,8 @@
 use crate::primitives::Primitive;
-use derive_builder::Builder;
 use nalgebra::{Affine3, Matrix4, Point3, Rotation3, Translation3, Unit, Vector3};
 use rand::Rng;
 use std::default::Default;
 use std::f64::consts::PI;
-use std::result::Result;
 
 pub const EPSILON: f64 = 1e-10;
 
@@ -40,53 +38,55 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
     Unit::new_normalize(u * rs * theta.cos() + v * rs * theta.sin() + (1.0 - r).sqrt() * w)
 }
 
-#[derive(Builder, Copy, Clone, Debug)]
-#[builder(default, build_fn(skip))]
+#[derive(Copy, Clone, Debug)]
 pub struct Transform {
-    pub position: Point3<f64>,
-    rotation: (f64, Unit<Vector3<f64>>),
-    scale: Vector3<f64>,
-
-    #[builder(setter(skip))]
     matrix: Affine3<f64>,
+    inv_matrix: Affine3<f64>,
 }
 
 impl Default for Transform {
     fn default() -> Self {
+        let matrix = Affine3::identity();
         Self {
-            position: Point3::origin(),
-            rotation: (0.0, Vector3::y_axis()),
-            scale: Vector3::repeat(1.0),
-            matrix: Affine3::identity(),
+            matrix,
+            inv_matrix: matrix.inverse(),
         }
     }
 }
 
-impl TransformBuilder {
-    pub fn build(&self) -> Result<Transform, String> {
-        let __default: Transform = Default::default();
-        let position = match self.position {
-            Some(ref value) => Clone::clone(value),
-            None => __default.position,
-        };
-        let rotation = match self.rotation {
-            Some(ref value) => Clone::clone(value),
-            None => __default.rotation,
-        };
-        let scale = match self.scale {
-            Some(ref value) => Clone::clone(value),
-            None => __default.scale,
-        };
-        let matrix: Affine3<f64> = Translation3::from(position.coords)
-            * Rotation3::from_axis_angle(&rotation.1, rotation.0.to_radians())
-            * Affine3::from_matrix_unchecked(Matrix4::new_nonuniform_scaling(&scale));
+impl Transform {
+    pub fn matrix(&self) -> Affine3<f64> {
+        self.matrix
+    }
 
-        Ok(Transform {
-            position,
-            rotation,
-            scale,
-            matrix,
-        })
+    pub fn inverse(&self) -> Affine3<f64> {
+        self.inv_matrix
+    }
+
+    pub fn inverse_transpose(&self) -> Affine3<f64> {
+        Affine3::from_matrix_unchecked(
+            nalgebra::convert::<Affine3<f64>, Matrix4<f64>>(self.inverse()).transpose(),
+        )
+    }
+
+    fn set_matrix(&mut self, m: Affine3<f64>) -> &mut Self {
+        self.matrix = m;
+        self.inv_matrix = self.matrix.inverse();
+        self
+    }
+
+    pub fn translate(&mut self, translation: Vector3<f64>) -> &mut Self {
+        self.set_matrix(Translation3::from(translation) * self.matrix)
+    }
+
+    pub fn rotate(&mut self, angle: f64, axis: Unit<Vector3<f64>>) -> &mut Self {
+        self.set_matrix(Rotation3::from_axis_angle(&axis, angle.to_radians()) * self.matrix)
+    }
+
+    pub fn scale(&mut self, scale: Vector3<f64>) -> &mut Self {
+        self.set_matrix(
+            Affine3::from_matrix_unchecked(Matrix4::new_nonuniform_scaling(&scale)) * self.matrix,
+        )
     }
 }
 

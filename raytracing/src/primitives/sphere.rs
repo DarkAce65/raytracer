@@ -29,7 +29,8 @@ impl Object3D for Sphere {
 
 impl Intersectable for Sphere {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let hypot = ray.origin - self.transform.position;
+        let ray = &ray.transform(self.transform().inverse());
+        let hypot = ray.origin.coords;
         let ray_proj = hypot.dot(&ray.direction);
         let a = ray.direction.magnitude_squared();
         let b = 2.0 * ray_proj;
@@ -53,7 +54,7 @@ impl Intersectable for Sphere {
     }
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        Unit::new_normalize(hit_point - self.transform.position)
+        Unit::new_normalize(hit_point.coords)
     }
 }
 

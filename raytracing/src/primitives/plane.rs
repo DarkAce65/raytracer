@@ -29,10 +29,11 @@ impl Object3D for Plane {
 
 impl Intersectable for Plane {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        let ray = &ray.transform(self.transform().inverse());
         let normal = -self.normal;
         let denom = normal.dot(&ray.direction);
         if denom > EPSILON {
-            let view = self.transform.position - ray.origin;
+            let view = -ray.origin.coords;
             let distance = view.dot(&normal) / denom;
 
             if distance >= 0.0 {

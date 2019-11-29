@@ -53,7 +53,12 @@ impl Scene {
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction * intersection.distance;
             let material = intersection.object.material();
-            let normal = intersection.object.surface_normal(&hit_point);
+            let normal = intersection
+                .object
+                .surface_normal(&(intersection.object.transform().inverse() * hit_point));
+            let normal = Unit::new_normalize(
+                intersection.object.transform().inverse_transpose() * normal.into_inner(),
+            );
             let normal = match material.side {
                 MaterialSide::Front => normal,
                 MaterialSide::Back => -normal,
