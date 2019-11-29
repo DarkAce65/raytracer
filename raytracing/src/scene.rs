@@ -51,7 +51,7 @@ impl Scene {
 
         rays += 1;
         if let Some(intersection) = self.raycast(&ray) {
-            let hit_point = ray.origin + ray.direction.into_inner() * intersection.distance;
+            let hit_point = ray.origin + ray.direction * intersection.distance;
             let material = intersection.object.material();
             let normal = intersection.object.surface_normal(&hit_point);
             let normal = match material.side {
@@ -64,9 +64,9 @@ impl Scene {
             let mut indirect_light = Vector3::zero();
             if INDIRECT_RAYS > 0 {
                 for _ in 0..INDIRECT_RAYS {
-                    let direction = cosine_sample_hemisphere(&normal);
+                    let direction = cosine_sample_hemisphere(&normal).into_inner();
                     let diffuse_ray = Ray {
-                        origin: hit_point + (direction.into_inner() * EPSILON),
+                        origin: hit_point + (direction * EPSILON),
                         direction,
                     };
 
@@ -84,14 +84,14 @@ impl Scene {
                     LightType::Point => {
                         let mut direct_light = Vector3::zero();
 
-                        let light_dir = light.transform().position - hit_point;
+                        let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
                         let light_distance = light_dir.magnitude();
-                        let light_dir = Unit::new_normalize(light_dir);
+                        let light_dir = light_dir.normalize();
 
                         let n_dot_l = normal.dot(&light_dir);
                         if n_dot_l > 0.0 {
                             let shadow_ray = Ray {
-                                origin: hit_point + (light_dir.into_inner() * EPSILON),
+                                origin: hit_point + (light_dir * EPSILON),
                                 direction: light_dir,
                             };
 
@@ -103,9 +103,7 @@ impl Scene {
                                 direct_light +=
                                     light.get_color().component_mul(&material.color) * n_dot_l;
 
-                                let half_vec = (light_dir.into_inner()
-                                    - ray.direction.into_inner())
-                                .normalize();
+                                let half_vec = (light_dir - ray.direction).normalize();
                                 let n_dot_h = normal.dot(&half_vec);
                                 if n_dot_h > 0.0 {
                                     direct_light +=
@@ -146,8 +144,8 @@ impl Scene {
         };
         let (x, y) = (x * fov, y * fov);
 
-        let direction = Vector4::from([x, y, -1.0, 1.0]).normalize();
-        let direction = Unit::new_normalize((self.camera.camera_to_world * direction).xyz());
+        let direction = Vector3::from([x, y, -1.0]).normalize();
+        let direction = (self.camera.camera_to_world * direction.to_homogeneous()).xyz();
 
         let ray = Ray {
             origin: self.camera.position,

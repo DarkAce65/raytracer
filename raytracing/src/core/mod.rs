@@ -97,7 +97,16 @@ pub trait Object3D {
 #[derive(Debug)]
 pub struct Ray {
     pub origin: Point3<f64>,
-    pub direction: Unit<Vector3<f64>>,
+    pub direction: Vector3<f64>,
+}
+
+impl Ray {
+    pub fn transform(&self, transform: Affine3<f64>) -> Ray {
+        let origin = transform * self.origin;
+        let direction = transform * self.direction;
+
+        Ray { origin, direction }
+    }
 }
 
 #[derive(Debug)]
