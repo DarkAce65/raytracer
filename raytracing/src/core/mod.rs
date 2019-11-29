@@ -3,11 +3,9 @@ mod transform;
 use crate::primitives::Primitive;
 use nalgebra::{Affine3, Point3, Unit, Vector3};
 use rand::Rng;
-use std::f64::consts::PI;
+use std::f64::{consts::PI, EPSILON};
 
 pub use transform::*;
-
-pub const EPSILON: f64 = 1e-10;
 
 pub fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
     let discriminant = b * b - 4.0 * a * c;

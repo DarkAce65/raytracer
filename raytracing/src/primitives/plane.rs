@@ -1,7 +1,8 @@
 use super::{Drawable, Intersectable, Material};
-use crate::core::{Intersection, Object3D, Ray, Transform, EPSILON};
+use crate::core::{Intersection, Object3D, Ray, Transform};
 use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
+use std::f64::EPSILON;
 
 #[derive(Builder, Copy, Clone, Debug)]
 #[builder(default)]

@@ -1,10 +1,11 @@
-use crate::core::{cosine_sample_hemisphere, Intersection, Ray, EPSILON};
+use crate::core::{cosine_sample_hemisphere, Intersection, Ray};
 use crate::lights::{Light, LightType};
 use crate::primitives::{MaterialSide, Primitive};
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
 
+const BIAS: f64 = 1e-10;
 const MAX_DEPTH: u8 = 2;
 const INDIRECT_RAYS: u8 = 16;
 
@@ -71,7 +72,7 @@ impl Scene {
                 for _ in 0..INDIRECT_RAYS {
                     let direction = cosine_sample_hemisphere(&normal).into_inner();
                     let diffuse_ray = Ray {
-                        origin: hit_point + (direction * EPSILON),
+                        origin: hit_point + (direction * BIAS),
                         direction,
                     };
 
@@ -96,7 +97,7 @@ impl Scene {
                         let n_dot_l = normal.dot(&light_dir);
                         if n_dot_l > 0.0 {
                             let shadow_ray = Ray {
-                                origin: hit_point + (light_dir * EPSILON),
+                                origin: hit_point + (light_dir * BIAS),
                                 direction: light_dir,
                             };
 
