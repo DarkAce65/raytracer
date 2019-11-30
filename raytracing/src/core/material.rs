@@ -1,4 +1,3 @@
-use derive_builder::Builder;
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
 use serde::{Deserialize, Serialize};
@@ -16,8 +15,7 @@ impl Default for MaterialSide {
     }
 }
 
-#[derive(Builder, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[builder(default)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PhongMaterial {
     pub side: MaterialSide,
