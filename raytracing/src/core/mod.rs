@@ -1,9 +1,11 @@
+mod material;
 mod transform;
 
 use crate::primitives::Primitive;
 use nalgebra::{Affine3, Point2, Point3, Unit, Vector2, Vector3};
 use std::f64::{consts::FRAC_PI_2, consts::FRAC_PI_4, EPSILON};
 
+pub use material::*;
 pub use transform::*;
 
 pub fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {

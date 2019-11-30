@@ -1,6 +1,6 @@
-use crate::core::{cosine_sample_hemisphere, Intersection, Ray};
+use crate::core::{cosine_sample_hemisphere, Intersection, MaterialSide, Ray};
 use crate::lights::{Light, LightType};
-use crate::primitives::{MaterialSide, Primitive};
+use crate::primitives::Primitive;
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use std::cmp::Ordering::Equal;
