@@ -1,4 +1,6 @@
-use crate::core::{cosine_sample_hemisphere, Intersection, MaterialSide, Ray};
+use crate::core::{
+    cosine_sample_hemisphere, Intersection, Material, MaterialSide, PhongMaterial, Ray,
+};
 use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
@@ -43,14 +45,88 @@ impl Scene {
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
-    fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
-        let mut rays = 0;
+    fn get_color_phong(
+        &self,
+        ray: Ray,
+        depth: u8,
+        ray_count: u64,
+        hit_point: Point3<f64>,
+        normal: Unit<Vector3<f64>>,
+        material: PhongMaterial,
+    ) -> (Vector4<f64>, u64) {
+        let mut ray_count = ray_count;
 
-        if depth == 0 {
-            return (Vector4::zero(), rays);
+        let emissive_light = material.emissive;
+
+        let mut indirect_light = Vector3::zero();
+        if INDIRECT_RAYS > 0 {
+            for _ in 0..INDIRECT_RAYS {
+                let direction = cosine_sample_hemisphere(&normal).into_inner();
+                let diffuse_ray = Ray {
+                    origin: hit_point + (direction * BIAS),
+                    direction,
+                };
+
+                let (color, r) = self.get_color(diffuse_ray, depth - 1);
+                ray_count += r;
+                indirect_light += color.xyz().component_mul(&material.color);
+            }
+            indirect_light /= INDIRECT_RAYS as f64;
         }
 
-        rays += 1;
+        let mut direct_light = Vector3::zero();
+        for light in self.lights.iter() {
+            direct_light += match light.get_type() {
+                LightType::Ambient => light.get_color().component_mul(&material.color),
+                LightType::Point => {
+                    let mut direct_light = Vector3::zero();
+
+                    let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
+                    let light_distance = light_dir.magnitude();
+                    let light_dir = light_dir.normalize();
+
+                    let n_dot_l = normal.dot(&light_dir);
+                    if n_dot_l > 0.0 {
+                        let shadow_ray = Ray {
+                            origin: hit_point + (light_dir * BIAS),
+                            direction: light_dir,
+                        };
+
+                        ray_count += 1;
+                        let shadow_intersection = self.raycast(&shadow_ray);
+                        if shadow_intersection.is_none()
+                            || shadow_intersection.unwrap().distance > light_distance
+                        {
+                            direct_light +=
+                                light.get_color().component_mul(&material.color) * n_dot_l;
+
+                            let half_vec = (light_dir - ray.direction).normalize();
+                            let n_dot_h = normal.dot(&half_vec);
+                            if n_dot_h > 0.0 {
+                                direct_light += material.specular.component_mul(&light.get_color())
+                                    * n_dot_h.powf(material.shininess);
+                            }
+                        }
+                    }
+
+                    direct_light
+                }
+            };
+        }
+
+        let color = emissive_light + direct_light + indirect_light;
+
+        (color.insert_row(3, 1.0), ray_count)
+    }
+
+    fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
+        let mut ray_count = 0;
+
+        if depth == 0 {
+            return (Vector4::zero(), ray_count);
+        }
+
+        ray_count += 1;
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction * intersection.distance;
             let material = intersection.object.material();
@@ -60,76 +136,18 @@ impl Scene {
             let normal = Unit::new_normalize(
                 intersection.object.transform().inverse_transpose() * normal.into_inner(),
             );
-            let normal = match material.side {
+            let normal = match material.side() {
                 MaterialSide::Front => normal,
                 MaterialSide::Back => -normal,
             };
 
-            let emissive_light = material.emissive;
-
-            let mut indirect_light = Vector3::zero();
-            if INDIRECT_RAYS > 0 {
-                for _ in 0..INDIRECT_RAYS {
-                    let direction = cosine_sample_hemisphere(&normal).into_inner();
-                    let diffuse_ray = Ray {
-                        origin: hit_point + (direction * BIAS),
-                        direction,
-                    };
-
-                    let (color, r) = self.get_color(diffuse_ray, depth - 1);
-                    rays += r;
-                    indirect_light += color.xyz().component_mul(&material.color);
+            match material {
+                Material::Phong(material) => {
+                    self.get_color_phong(ray, depth, ray_count, hit_point, normal, material)
                 }
-                indirect_light /= INDIRECT_RAYS as f64;
             }
-
-            let mut direct_light = Vector3::zero();
-            for light in self.lights.iter() {
-                direct_light += match light.get_type() {
-                    LightType::Ambient => light.get_color().component_mul(&material.color),
-                    LightType::Point => {
-                        let mut direct_light = Vector3::zero();
-
-                        let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
-                        let light_distance = light_dir.magnitude();
-                        let light_dir = light_dir.normalize();
-
-                        let n_dot_l = normal.dot(&light_dir);
-                        if n_dot_l > 0.0 {
-                            let shadow_ray = Ray {
-                                origin: hit_point + (light_dir * BIAS),
-                                direction: light_dir,
-                            };
-
-                            rays += 1;
-                            let shadow_intersection = self.raycast(&shadow_ray);
-                            if shadow_intersection.is_none()
-                                || shadow_intersection.unwrap().distance > light_distance
-                            {
-                                direct_light +=
-                                    light.get_color().component_mul(&material.color) * n_dot_l;
-
-                                let half_vec = (light_dir - ray.direction).normalize();
-                                let n_dot_h = normal.dot(&half_vec);
-                                if n_dot_h > 0.0 {
-                                    direct_light +=
-                                        material.specular.component_mul(&light.get_color())
-                                            * n_dot_h.powf(material.shininess);
-                                }
-                            }
-                        }
-
-                        direct_light
-                    }
-                };
-            }
-
-            (
-                (emissive_light + direct_light + indirect_light).insert_row(3, 1.0),
-                rays,
-            )
         } else {
-            (Vector4::zero(), rays)
+            (Vector4::zero(), ray_count)
         }
     }
 

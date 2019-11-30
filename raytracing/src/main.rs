@@ -6,7 +6,7 @@ mod primitives;
 mod scene;
 mod scene_json;
 
-use crate::core::{MaterialBuilder, MaterialSide, Transform};
+use crate::core::{Material, MaterialSide, PhongMaterialBuilder, Transform};
 use crate::primitives::{CubeBuilder, SphereBuilder};
 use crate::scene::Scene;
 use crate::scene_json::SceneJSON;
@@ -135,25 +135,25 @@ fn main() {
         CubeBuilder::default()
             .size(120.0)
             .transform(*Transform::default().translate(Vector3::from([30.0, 49.0, -40.0])))
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .side(MaterialSide::Back)
                     .color(Vector3::from([0.6; 3]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
     scene.objects.push(Box::new(
         SphereBuilder::default()
             .transform(*Transform::default().translate(Vector3::from([0.0, 0.0, -5.0])))
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([1.0; 3]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -161,14 +161,14 @@ fn main() {
         SphereBuilder::default()
             .radius(3.0)
             .transform(*Transform::default().translate(Vector3::from([3.0, -2.0, -5.0])))
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([0.0, 0.25, 0.5]))
                     .specular(Vector3::from([1.0; 3]))
                     .shininess(10.0)
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -180,12 +180,12 @@ fn main() {
                     .scale(Vector3::repeat(1.1))
                     .translate(Vector3::from([-6.0, 6.0, -18.0])),
             )
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([1.0, 0.25, 0.1]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -193,14 +193,14 @@ fn main() {
         SphereBuilder::default()
             .radius(4.0)
             .transform(*Transform::default().translate(Vector3::from([-6.0, -9.0, -3.0])))
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([0.4, 0.25, 0.6]))
                     .specular(Vector3::from([0.5; 3]))
                     .shininess(100.0)
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -208,12 +208,12 @@ fn main() {
         SphereBuilder::default()
             .radius(5.0)
             .transform(*Transform::default().translate(Vector3::from([-20.0, -9.0, -40.0])))
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([0.1, 0.5, 0.1]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -221,12 +221,12 @@ fn main() {
         SphereBuilder::default()
             .radius(1.5)
             .transform(*Transform::default().translate(Vector3::from([2.0, -10.0, -2.0])))
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .emissive(Vector3::from([0.0, 1.0, 0.0]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -239,12 +239,12 @@ fn main() {
                     .rotate(45.0, Vector3::y_axis())
                     .translate(Vector3::from([2.5, -4.0, -1.5])),
             )
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([0.2, 0.6, 0.6]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -258,12 +258,12 @@ fn main() {
                     .rotate(45.0, Vector3::y_axis())
                     .translate(Vector3::from([-4.0, -5.0, -2.0])),
             )
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([0.5, 0.1, 0.1]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
@@ -276,12 +276,12 @@ fn main() {
                     .rotate(60.0, Vector3::z_axis())
                     .translate(Vector3::from([1.0, -2.0, -2.0])),
             )
-            .material(
-                MaterialBuilder::default()
+            .material(Material::Phong(
+                PhongMaterialBuilder::default()
                     .color(Vector3::from([0.9, 0.7, 0.1]))
                     .build()
                     .unwrap(),
-            )
+            ))
             .build()
             .unwrap(),
     ));
