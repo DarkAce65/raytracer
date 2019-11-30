@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use std::default::Default;
 use std::fmt;
 
-#[derive(Copy, Clone, Debug, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
 pub struct Transform {
     matrix: Affine3<f64>,
     inv_matrix: Affine3<f64>,
@@ -110,6 +110,7 @@ impl<'de> Deserialize<'de> for Transform {
 mod test {
     use super::*;
     use nalgebra::{Affine3, Matrix4, Vector3};
+    use serde_json::json;
 
     #[test]
     fn it_constructs_matrices() {
@@ -259,6 +260,82 @@ mod test {
         assert_eq!(
             full_identity.inverse_transpose(),
             Affine3::from_matrix_unchecked(Matrix4::identity().transpose()).inverse()
+        );
+    }
+
+    #[test]
+    fn it_deserializes_identity() {
+        let identity = Transform::default();
+
+        assert_eq!(
+            serde_json::from_value::<Transform>(json!([])).unwrap(),
+            identity
+        );
+    }
+
+    #[test]
+    fn it_deserializes_single_transform() {
+        let translation = *Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
+        let rotation = *Transform::default().rotate(50.0, Vector3::y_axis());
+        let scale = *Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
+
+        assert_eq!(
+            serde_json::from_value::<Transform>(json!([
+                { "translate": [1, 2, 3] }
+            ]))
+            .unwrap(),
+            translation
+        );
+        assert_eq!(
+            serde_json::from_value::<Transform>(json!([
+                { "rotate": [50, [0, 1, 0]] }
+            ]))
+            .unwrap(),
+            rotation
+        );
+        assert_eq!(
+            serde_json::from_value::<Transform>(json!([
+                { "scale": [1, 2, 3] }
+            ]))
+            .unwrap(),
+            scale
+        );
+    }
+
+    #[test]
+    fn it_deserializes_complex_transforms() {
+        let full = *Transform::default()
+            .rotate(50.0, Vector3::y_axis())
+            .scale(Vector3::from([3.0, 2.0, 1.0]))
+            .translate(Vector3::from([5.0, 2.0, 3.0]));
+        let full_identity = *Transform::default()
+            .rotate(50.0, Vector3::y_axis())
+            .scale(Vector3::from([1.0, 2.0, 4.0]))
+            .translate(Vector3::from([1.0, 2.0, 3.0]))
+            .translate(Vector3::from([-1.0, -2.0, -3.0]))
+            .scale(Vector3::from([1.0, 0.5, 0.25]))
+            .rotate(-50.0, Vector3::y_axis());
+
+        assert_eq!(
+            serde_json::from_value::<Transform>(json!([
+                { "rotate": [50, [0, 1, 0]] },
+                { "scale": [3, 2, 1] },
+                { "translate": [5, 2, 3] }
+            ]))
+            .unwrap(),
+            full
+        );
+        assert_eq!(
+            serde_json::from_value::<Transform>(json!([
+                { "rotate": [50, [0, 1, 0]] },
+                { "scale": [1, 2, 4] },
+                { "translate": [1, 2, 3] },
+                { "translate": [-1, -2, -3] },
+                { "scale": [1, 0.5, 0.25] },
+                { "rotate": [-50, [0, 1, 0]] }
+            ]))
+            .unwrap(),
+            full_identity
         );
     }
 }
