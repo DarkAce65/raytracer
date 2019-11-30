@@ -1,7 +1,10 @@
 use nalgebra::{Affine3, Matrix4, Rotation3, Translation3, Unit, Vector3};
+use serde::de::{SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::default::Default;
+use std::fmt;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize)]
 pub struct Transform {
     matrix: Affine3<f64>,
     inv_matrix: Affine3<f64>,
@@ -50,6 +53,56 @@ impl Transform {
         self.set_matrix(
             Affine3::from_matrix_unchecked(Matrix4::new_nonuniform_scaling(&scale)) * self.matrix,
         )
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all(deserialize = "lowercase"))]
+enum SubTransform {
+    Translate(Vector3<f64>),
+    Rotate(f64, Unit<Vector3<f64>>),
+    Scale(Vector3<f64>),
+}
+
+struct TransformVisitor;
+
+impl<'de> Visitor<'de> for TransformVisitor {
+    type Value = Transform;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("struct Transform")
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> Result<Transform, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let mut transform = Transform::default();
+        loop {
+            let next: Option<SubTransform> = seq.next_element()?;
+            if let Some(next) = next {
+                match next {
+                    SubTransform::Translate(translation) => {
+                        transform = *transform.translate(translation)
+                    }
+                    SubTransform::Rotate(angle, axis) => transform = *transform.rotate(angle, axis),
+                    SubTransform::Scale(scale) => transform = *transform.scale(scale),
+                }
+            } else {
+                break;
+            }
+        }
+
+        Ok(transform)
+    }
+}
+
+impl<'de> Deserialize<'de> for Transform {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(TransformVisitor)
     }
 }
 

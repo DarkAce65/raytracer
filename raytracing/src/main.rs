@@ -4,17 +4,19 @@ mod core;
 mod lights;
 mod primitives;
 mod scene;
+mod scene_json;
 
 use crate::core::Transform;
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
-use lights::{AmbientLightBuilder, PointLightBuilder};
 use minifb::{Key, Window, WindowOptions};
-use nalgebra::{clamp, Point3, Vector3, Vector4};
+use nalgebra::{clamp, Vector3, Vector4};
 use primitives::{CubeBuilder, MaterialBuilder, MaterialSide, SphereBuilder};
 use rand::{seq::SliceRandom, thread_rng};
-use scene::{Camera, Scene};
+use scene::Scene;
+use scene_json::SceneJSON;
+use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::{Duration, Instant};
@@ -100,13 +102,18 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
 }
 
 fn main() {
-    let matches = App::new("raytracer")
+    let matches = App::new("ray tracer")
         .arg(
-            Arg::with_name("file")
-                .short("f")
-                .long("file")
-                .takes_value(true)
-                .help("Output raytracer image to file"),
+            Arg::with_name("scene")
+            .index(1)
+            .required(true).takes_value(true)
+                .help("Input scene as a json file")
+        )
+        .arg(
+            Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .takes_value(true).help("Output rendered image to file, ray tracer outputs to a window if --output is omitted"),
         )
         .arg(
             Arg::with_name("noprogress")
@@ -115,49 +122,15 @@ fn main() {
         )
         .get_matches();
 
-    let output_filename = matches.value_of("file");
+    let scene_path = matches.value_of("scene").unwrap();
+    let scene_file = File::open(scene_path).expect("File not found");
+    let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
 
-    let mut scene: Scene = Scene {
-        width: 800,
-        height: 800,
-        camera: Camera::from(
-            65.0,
-            Point3::from([2.0, 5.0, 15.0]),
-            Point3::origin(),
-            Vector3::y_axis(),
-        ),
-        lights: Vec::new(),
-        objects: Vec::new(),
-    };
+    let scene: SceneJSON = serde_json::from_reader(scene_file).expect("Failed to parse scene");
+    let mut scene = scene.into_scene();
+
     let (width, height) = (scene.width, scene.height);
-    scene.lights.push(Box::new(
-        AmbientLightBuilder::default()
-            .color(Vector3::from([0.125; 3]))
-            .build()
-            .unwrap(),
-    ));
-    scene.lights.push(Box::new(
-        PointLightBuilder::default()
-            .transform(*Transform::default().translate(Vector3::from([-8.0, 3.0, 0.0])))
-            .color(Vector3::from([0.5, 0.5, 0.5]))
-            .build()
-            .unwrap(),
-    ));
-    scene.lights.push(Box::new(
-        PointLightBuilder::default()
-            .transform(*Transform::default().translate(Vector3::from([-2.0, 5.0, -10.0])))
-            .color(Vector3::from([0.5, 0.0, 0.0]))
-            .build()
-            .unwrap(),
-    ));
-    scene.lights.push(Box::new(
-        PointLightBuilder::default()
-            .transform(*Transform::default().translate(Vector3::from([3.0, 5.0, -3.0])))
-            .color(Vector3::from([0.0, 0.3, 0.5]))
-            .build()
-            .unwrap(),
-    ));
     scene.objects.push(Box::new(
         CubeBuilder::default()
             .size(120.0)

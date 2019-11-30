@@ -3,8 +3,9 @@ use crate::core::{Object3D, Transform};
 use derive_builder::Builder;
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
+use serde::{Deserialize, Serialize};
 
-#[derive(Builder, Copy, Clone, Debug)]
+#[derive(Builder, Copy, Clone, Debug, Serialize, Deserialize)]
 #[builder(default)]
 pub struct AmbientLight {
     color: Vector3<f64>,
