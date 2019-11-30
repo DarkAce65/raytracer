@@ -1,5 +1,6 @@
 use crate::core::{
-    cosine_sample_hemisphere, Intersection, Material, MaterialSide, PhongMaterial, Ray,
+    cosine_sample_hemisphere, Intersection, Material, MaterialSide, PhongMaterial,
+    PhysicalMaterial, Ray,
 };
 use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
@@ -49,12 +50,11 @@ impl Scene {
         &self,
         ray: Ray,
         depth: u8,
-        ray_count: u64,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
         material: PhongMaterial,
     ) -> (Vector4<f64>, u64) {
-        let mut ray_count = ray_count;
+        let mut ray_count = 0;
 
         let emissive_light = material.emissive;
 
@@ -119,6 +119,17 @@ impl Scene {
         (color.insert_row(3, 1.0), ray_count)
     }
 
+    fn get_color_physical(
+        &self,
+        ray: Ray,
+        depth: u8,
+        hit_point: Point3<f64>,
+        normal: Unit<Vector3<f64>>,
+        material: PhysicalMaterial,
+    ) -> (Vector4<f64>, u64) {
+        unimplemented!();
+    }
+
     fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
@@ -143,7 +154,15 @@ impl Scene {
 
             match material {
                 Material::Phong(material) => {
-                    self.get_color_phong(ray, depth, ray_count, hit_point, normal, material)
+                    let (color, r) = self.get_color_phong(ray, depth, hit_point, normal, material);
+
+                    (color, ray_count + r)
+                }
+                Material::Physical(material) => {
+                    let (color, r) =
+                        self.get_color_physical(ray, depth, hit_point, normal, material);
+
+                    (color, ray_count + r)
                 }
             }
         } else {
