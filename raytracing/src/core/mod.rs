@@ -1,9 +1,8 @@
 mod transform;
 
 use crate::primitives::Primitive;
-use nalgebra::{Affine3, Point3, Unit, Vector3};
-use rand::Rng;
-use std::f64::{consts::PI, EPSILON};
+use nalgebra::{Affine3, Point2, Point3, Unit, Vector2, Vector3};
+use std::f64::{consts::FRAC_PI_2, consts::FRAC_PI_4, EPSILON};
 
 pub use transform::*;
 
@@ -21,12 +20,26 @@ pub fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
     }
 }
 
-pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64>> {
-    let mut rng = rand::thread_rng();
+fn concentric_sample_disk() -> Point2<f64> {
+    let rnd: Vector2<f64> = 2.0 * Vector2::new_random() - Vector2::from([1.0, 1.0]);
 
-    let theta = 2.0 * PI * rng.gen::<f64>();
-    let r = rng.gen::<f64>();
-    let rs = r.sqrt();
+    if rnd.x == 0.0 && rnd.y == 0.0 {
+        return Point2::origin();
+    }
+
+    let (r, theta) = if rnd.x.abs() > rnd.y.abs() {
+        (rnd.x, FRAC_PI_2 * (rnd.y / rnd.x))
+    } else {
+        (rnd.y, FRAC_PI_2 - FRAC_PI_4 * (rnd.x / rnd.y))
+    };
+
+    r * Point2::from([theta.cos(), theta.sin()])
+}
+
+// Sample a hemisphere in the direction of the given normal using Malley's method
+pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64>> {
+    let p = concentric_sample_disk();
+    let p = Point3::from([p.x, p.y, (1.0 - p.x * p.x - p.y * p.y).sqrt()]);
 
     let w = normal.into_inner();
     let u = if w.x.abs() > EPSILON {
@@ -34,9 +47,9 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
     } else {
         normal.cross(&Vector3::x_axis())
     };
-
     let v = normal.cross(&u);
-    Unit::new_normalize(u * rs * theta.cos() + v * rs * theta.sin() + (1.0 - r).sqrt() * w)
+
+    Unit::new_normalize(u * p.x + v * p.y + w * p.z)
 }
 
 pub trait Object3D {
@@ -90,7 +103,7 @@ mod test {
             let sampled = cosine_sample_hemisphere(&vec);
             let dot = sampled.dot(&vec);
 
-            assert_le!(0.0, dot,);
+            assert_le!(0.0, dot);
             assert_le!(dot, 1.0);
 
             i += 1;
