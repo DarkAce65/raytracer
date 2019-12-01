@@ -16,7 +16,7 @@ impl Default for MaterialSide {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct PhongMaterial {
     pub side: MaterialSide,
     pub color: Vector3<f64>,
@@ -38,7 +38,7 @@ impl Default for PhongMaterial {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct PhysicalMaterial {
     pub side: MaterialSide,
     pub color: Vector3<f64>,

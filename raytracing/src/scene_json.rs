@@ -5,6 +5,7 @@ use nalgebra::{Point3, Vector3};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SceneJSON {
     lights: Vec<Box<dyn Light>>,
     objects: Vec<Box<dyn Primitive>>,

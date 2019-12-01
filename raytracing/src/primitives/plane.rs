@@ -1,12 +1,11 @@
 use super::{Drawable, Intersectable, Material};
 use crate::core::{Intersection, Object3D, Ray, Transform};
-use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 use serde::{Deserialize, Serialize};
 use std::f64::EPSILON;
 
-#[derive(Builder, Copy, Clone, Debug, Deserialize, Serialize)]
-#[builder(default)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Plane {
     #[serde(default)]
     transform: Transform,

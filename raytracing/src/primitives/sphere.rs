@@ -1,11 +1,10 @@
 use super::{Drawable, Intersectable, Material};
 use crate::core::{quadratic, Intersection, Object3D, Ray, Transform};
-use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 use serde::{Deserialize, Serialize};
 
-#[derive(Builder, Copy, Clone, Debug, Deserialize, Serialize)]
-#[builder(default)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Sphere {
     #[serde(default)]
     transform: Transform,

@@ -1,11 +1,10 @@
 use super::{Drawable, Intersectable, Material};
 use crate::core::{Intersection, Object3D, Ray, Transform};
-use derive_builder::Builder;
 use nalgebra::{Point3, Unit, Vector3};
 use serde::{Deserialize, Serialize};
 
-#[derive(Builder, Copy, Clone, Debug, Serialize, Deserialize)]
-#[builder(default)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Cube {
     #[serde(default)]
     transform: Transform,
