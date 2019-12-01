@@ -4,10 +4,8 @@ mod core;
 mod lights;
 mod primitives;
 mod scene;
-mod scene_json;
 
 use crate::scene::Scene;
-use crate::scene_json::SceneJSON;
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -125,8 +123,7 @@ fn main() {
     let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
 
-    let scene: SceneJSON = serde_json::from_reader(scene_file).expect("Failed to parse scene");
-    let scene = scene.into_scene();
+    let scene: Scene = serde_json::from_reader(scene_file).expect("Failed to parse scene");
     let (width, height) = (scene.width, scene.height);
 
     let progress = if hide_progress {

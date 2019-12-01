@@ -6,13 +6,16 @@ use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
+use serde::de::{self, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::cmp::Ordering::Equal;
+use std::fmt;
 
 const BIAS: f64 = 1e-10;
 const MAX_DEPTH: u8 = 2;
 const INDIRECT_RAYS: u8 = 16;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Camera {
     fov: f64,
     position: Point3<f64>,
@@ -20,22 +23,127 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn from(fov: f64, eye: Point3<f64>, target: Point3<f64>, up: Unit<Vector3<f64>>) -> Self {
+    pub fn new(fov: f64, eye: Point3<f64>, target: Point3<f64>, up: Unit<Vector3<f64>>) -> Self {
         Self {
             fov,
             position: eye,
             camera_to_world: Matrix4::look_at_rh(&eye, &target, &up).transpose(),
         }
     }
+
+    pub fn default_fov() -> f64 {
+        65.0
+    }
+    pub fn default_position() -> Point3<f64> {
+        Point3::from([0.0, 0.0, 1.0])
+    }
+    pub fn default_target() -> Point3<f64> {
+        Point3::origin()
+    }
+    pub fn default_up() -> Unit<Vector3<f64>> {
+        Vector3::y_axis()
+    }
 }
 
-#[derive(Debug)]
+impl<'de> Deserialize<'de> for Camera {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum Field {
+            Fov,
+            Position,
+            Target,
+            Up,
+        }
+
+        struct CameraVisitor;
+
+        impl<'de> Visitor<'de> for CameraVisitor {
+            type Value = Camera;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Camera")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Camera, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut fov = None;
+                let mut position = None;
+                let mut target = None;
+                let mut up = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Fov => {
+                            if fov.is_some() {
+                                return Err(de::Error::duplicate_field("fov"));
+                            }
+                            fov = Some(map.next_value()?);
+                        }
+                        Field::Position => {
+                            if position.is_some() {
+                                return Err(de::Error::duplicate_field("position"));
+                            }
+                            position = Some(map.next_value()?);
+                        }
+                        Field::Target => {
+                            if target.is_some() {
+                                return Err(de::Error::duplicate_field("target"));
+                            }
+                            target = Some(map.next_value()?);
+                        }
+                        Field::Up => {
+                            if up.is_some() {
+                                return Err(de::Error::duplicate_field("up"));
+                            }
+                            up = Some(map.next_value()?);
+                        }
+                    }
+                }
+
+                let fov = fov.unwrap_or_else(Camera::default_fov);
+                let position = position.ok_or_else(|| de::Error::missing_field("position"))?;
+                let target = target.unwrap_or_else(Camera::default_target);
+                let up = up.unwrap_or_else(Camera::default_up);
+
+                Ok(Camera::new(fov, position, target, up))
+            }
+        }
+
+        deserializer.deserialize_map(CameraVisitor)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct Scene {
     pub width: u32,
     pub height: u32,
     pub camera: Camera,
     pub lights: Vec<Box<dyn Light>>,
     pub objects: Vec<Box<dyn Primitive>>,
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Self {
+            width: 100,
+            height: 100,
+            camera: Camera::new(
+                Camera::default_fov(),
+                Camera::default_position(),
+                Camera::default_target(),
+                Camera::default_up(),
+            ),
+            lights: Vec::new(),
+            objects: Vec::new(),
+        }
+    }
 }
 
 impl Scene {
