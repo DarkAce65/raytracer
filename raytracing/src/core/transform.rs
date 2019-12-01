@@ -45,7 +45,7 @@ impl Transform {
         self.set_matrix(Translation3::from(translation) * self.matrix)
     }
 
-    pub fn rotate(&mut self, angle: f64, axis: Unit<Vector3<f64>>) -> &mut Self {
+    pub fn rotate(&mut self, axis: Unit<Vector3<f64>>, angle: f64) -> &mut Self {
         self.set_matrix(Rotation3::from_axis_angle(&axis, angle.to_radians()) * self.matrix)
     }
 
@@ -60,7 +60,7 @@ impl Transform {
 #[serde(rename_all(deserialize = "lowercase"))]
 enum SubTransform {
     Translate(Vector3<f64>),
-    Rotate(f64, Unit<Vector3<f64>>),
+    Rotate(Unit<Vector3<f64>>, f64),
     Scale(Vector3<f64>),
 }
 
@@ -85,7 +85,7 @@ impl<'de> Visitor<'de> for TransformVisitor {
                     SubTransform::Translate(translation) => {
                         transform = *transform.translate(translation)
                     }
-                    SubTransform::Rotate(angle, axis) => transform = *transform.rotate(angle, axis),
+                    SubTransform::Rotate(axis, angle) => transform = *transform.rotate(axis, angle),
                     SubTransform::Scale(scale) => transform = *transform.scale(scale),
                 }
             } else {
@@ -116,7 +116,7 @@ mod test {
     fn it_constructs_matrices() {
         let default = Transform::default();
         let translation = *Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
-        let rotation = *Transform::default().rotate(50.0, Vector3::y_axis());
+        let rotation = *Transform::default().rotate(Vector3::y_axis(), 50.0);
         let scale = *Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
 
         // Base transform matrix
@@ -200,19 +200,19 @@ mod test {
     #[test]
     fn it_constructs_complex_matrices() {
         let full = *Transform::default()
-            .rotate(50.0, Vector3::y_axis())
+            .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([3.0, 2.0, 1.0]))
             .translate(Vector3::from([5.0, 2.0, 3.0]));
         let translation_identity = *Transform::default()
             .translate(Vector3::from([1.0, 2.0, 3.0]))
             .translate(Vector3::from([-1.0, -2.0, -3.0]));
         let full_identity = *Transform::default()
-            .rotate(50.0, Vector3::y_axis())
+            .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([1.0, 2.0, 4.0]))
             .translate(Vector3::from([1.0, 2.0, 3.0]))
             .translate(Vector3::from([-1.0, -2.0, -3.0]))
             .scale(Vector3::from([1.0, 0.5, 0.25]))
-            .rotate(-50.0, Vector3::y_axis());
+            .rotate(Vector3::y_axis(), -50.0);
 
         // Base transform matrix
         assert_eq!(
@@ -276,7 +276,7 @@ mod test {
     #[test]
     fn it_deserializes_single_transform() {
         let translation = *Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
-        let rotation = *Transform::default().rotate(50.0, Vector3::y_axis());
+        let rotation = *Transform::default().rotate(Vector3::y_axis(), 50.0);
         let scale = *Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
 
         assert_eq!(
@@ -288,7 +288,7 @@ mod test {
         );
         assert_eq!(
             serde_json::from_value::<Transform>(json!([
-                { "rotate": [50, [0, 1, 0]] }
+                { "rotate": [[0, 1, 0], 50] }
             ]))
             .unwrap(),
             rotation
@@ -305,20 +305,20 @@ mod test {
     #[test]
     fn it_deserializes_complex_transforms() {
         let full = *Transform::default()
-            .rotate(50.0, Vector3::y_axis())
+            .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([3.0, 2.0, 1.0]))
             .translate(Vector3::from([5.0, 2.0, 3.0]));
         let full_identity = *Transform::default()
-            .rotate(50.0, Vector3::y_axis())
+            .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([1.0, 2.0, 4.0]))
             .translate(Vector3::from([1.0, 2.0, 3.0]))
             .translate(Vector3::from([-1.0, -2.0, -3.0]))
             .scale(Vector3::from([1.0, 0.5, 0.25]))
-            .rotate(-50.0, Vector3::y_axis());
+            .rotate(Vector3::y_axis(), -50.0);
 
         assert_eq!(
             serde_json::from_value::<Transform>(json!([
-                { "rotate": [50, [0, 1, 0]] },
+                { "rotate": [[0, 1, 0], 50] },
                 { "scale": [3, 2, 1] },
                 { "translate": [5, 2, 3] }
             ]))
@@ -327,12 +327,12 @@ mod test {
         );
         assert_eq!(
             serde_json::from_value::<Transform>(json!([
-                { "rotate": [50, [0, 1, 0]] },
+                { "rotate": [[0, 1, 0], 50] },
                 { "scale": [1, 2, 4] },
                 { "translate": [1, 2, 3] },
                 { "translate": [-1, -2, -3] },
                 { "scale": [1, 0.5, 0.25] },
-                { "rotate": [-50, [0, 1, 0]] }
+                { "rotate": [[0, 1, 0], -50] }
             ]))
             .unwrap(),
             full_identity
