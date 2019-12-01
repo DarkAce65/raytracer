@@ -6,6 +6,7 @@ use num_traits::identities::Zero;
 use serde::{Deserialize, Serialize};
 
 #[derive(Builder, Copy, Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 #[builder(default)]
 pub struct AmbientLight {
     color: Vector3<f64>,

@@ -1,4 +1,5 @@
 use crate::lights::Light;
+use crate::primitives::Primitive;
 use crate::scene::{Camera, Scene};
 use nalgebra::{Point3, Vector3};
 use serde::Deserialize;
@@ -6,6 +7,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct SceneJSON {
     lights: Vec<Box<dyn Light>>,
+    objects: Vec<Box<dyn Primitive>>,
 }
 
 impl SceneJSON {
@@ -20,7 +22,7 @@ impl SceneJSON {
                 Vector3::y_axis(),
             ),
             lights: self.lights,
-            objects: Vec::new(),
+            objects: self.objects,
         }
     }
 }

@@ -6,15 +6,13 @@ mod primitives;
 mod scene;
 mod scene_json;
 
-use crate::core::{Material, MaterialSide, PhongMaterial, Transform};
-use crate::primitives::{CubeBuilder, SphereBuilder};
 use crate::scene::Scene;
 use crate::scene_json::SceneJSON;
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
-use nalgebra::{clamp, Vector3, Vector4};
+use nalgebra::{clamp, Vector4};
 use rand::{seq::SliceRandom, thread_rng};
 use std::fs::File;
 use std::sync::{Arc, Mutex};
@@ -128,143 +126,8 @@ fn main() {
     let hide_progress = matches.is_present("noprogress");
 
     let scene: SceneJSON = serde_json::from_reader(scene_file).expect("Failed to parse scene");
-    let mut scene = scene.into_scene();
-
+    let scene = scene.into_scene();
     let (width, height) = (scene.width, scene.height);
-    scene.objects.push(Box::new(
-        CubeBuilder::default()
-            .size(120.0)
-            .transform(*Transform::default().translate(Vector3::from([30.0, 49.0, -40.0])))
-            .material(Material::Phong(PhongMaterial {
-                side: MaterialSide::Back,
-                color: Vector3::from([0.6; 3]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .transform(*Transform::default().translate(Vector3::from([0.0, 0.0, -5.0])))
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([1.0; 3]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .radius(3.0)
-            .transform(*Transform::default().translate(Vector3::from([3.0, -2.0, -5.0])))
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([0.0, 0.25, 0.5]),
-                specular: Vector3::from([1.0; 3]),
-                shininess: 10.0,
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .radius(6.0)
-            .transform(
-                *Transform::default()
-                    .scale(Vector3::repeat(1.1))
-                    .translate(Vector3::from([-6.0, 6.0, -18.0])),
-            )
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([1.0, 0.25, 0.1]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .radius(4.0)
-            .transform(*Transform::default().translate(Vector3::from([-6.0, -9.0, -3.0])))
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([0.4, 0.25, 0.6]),
-                specular: Vector3::from([0.5; 3]),
-                shininess: 100.0,
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .radius(5.0)
-            .transform(*Transform::default().translate(Vector3::from([-20.0, -9.0, -40.0])))
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([0.1, 0.5, 0.1]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .radius(1.5)
-            .transform(*Transform::default().translate(Vector3::from([2.0, -10.0, -2.0])))
-            .material(Material::Phong(PhongMaterial {
-                emissive: Vector3::from([0.0, 1.0, 0.0]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        SphereBuilder::default()
-            .transform(
-                *Transform::default()
-                    .scale(Vector3::from([3.0, 1.0, 1.5]))
-                    .rotate(30.0, Vector3::z_axis())
-                    .rotate(45.0, Vector3::y_axis())
-                    .translate(Vector3::from([2.5, -4.0, -1.5])),
-            )
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([0.2, 0.6, 0.6]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        CubeBuilder::default()
-            .size(2.0)
-            .transform(
-                *Transform::default()
-                    .scale(Vector3::repeat(0.8))
-                    .rotate(45.0, Vector3::z_axis())
-                    .rotate(45.0, Vector3::y_axis())
-                    .translate(Vector3::from([-4.0, -5.0, -2.0])),
-            )
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([0.5, 0.1, 0.1]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
-    scene.objects.push(Box::new(
-        CubeBuilder::default()
-            .size(2.0)
-            .transform(
-                *Transform::default()
-                    .scale(Vector3::repeat(1.2))
-                    .rotate(60.0, Vector3::z_axis())
-                    .translate(Vector3::from([1.0, -2.0, -2.0])),
-            )
-            .material(Material::Phong(PhongMaterial {
-                color: Vector3::from([0.9, 0.7, 0.1]),
-                ..Default::default()
-            }))
-            .build()
-            .unwrap(),
-    ));
 
     let progress = if hide_progress {
         None

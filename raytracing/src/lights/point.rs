@@ -5,6 +5,7 @@ use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 
 #[derive(Builder, Copy, Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 #[builder(default)]
 pub struct PointLight {
     transform: Transform,

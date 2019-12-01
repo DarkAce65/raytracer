@@ -20,8 +20,12 @@ pub trait Drawable {
     fn material(&self) -> Material;
 }
 
+#[typetag::serde(tag = "type")]
 pub trait Primitive: Send + Sync + Debug + Object3D + Intersectable + Drawable {}
 
+#[typetag::serde(name = "cube")]
 impl Primitive for Cube {}
+#[typetag::serde(name = "plane")]
 impl Primitive for Plane {}
+#[typetag::serde(name = "sphere")]
 impl Primitive for Sphere {}
