@@ -1,5 +1,5 @@
-use super::{Drawable, Intersectable, Material};
-use crate::core::{quadratic, Intersection, Object3D, Ray, Transform};
+use super::{Drawable, Intersectable};
+use crate::core::{quadratic, Intersection, Material, Object3D, Ray, Transform};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::{Deserialize, Serialize};
 

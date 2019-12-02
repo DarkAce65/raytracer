@@ -1,7 +1,5 @@
-use crate::core::{
-    cosine_sample_hemisphere, Intersection, Material, MaterialSide, PhongMaterial,
-    PhysicalMaterial, Ray,
-};
+use crate::core::{self, cosine_sample_hemisphere, Intersection, Ray};
+use crate::core::{Material, MaterialSide, PhongMaterial, PhysicalMaterial};
 use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
 use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
@@ -9,6 +7,7 @@ use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::cmp::Ordering::Equal;
+use std::f64::consts::FRAC_1_PI;
 use std::fmt;
 
 const BIAS: f64 = 1e-10;
@@ -182,13 +181,14 @@ impl Scene {
             indirect_light /= INDIRECT_RAYS as f64;
         }
 
-        let mut direct_light = Vector3::zero();
+        let mut ambient_light = Vector3::zero();
+        let mut irradiance = Vector3::zero();
         for light in self.lights.iter() {
-            direct_light += match light.get_type() {
-                LightType::Ambient => light.get_color().component_mul(&material.color),
+            match light.get_type() {
+                LightType::Ambient => {
+                    ambient_light += light.get_color().component_mul(&material.color);
+                }
                 LightType::Point => {
-                    let mut direct_light = Vector3::zero();
-
                     let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
@@ -205,24 +205,22 @@ impl Scene {
                         if shadow_intersection.is_none()
                             || shadow_intersection.unwrap().distance > light_distance
                         {
-                            direct_light +=
+                            irradiance +=
                                 light.get_color().component_mul(&material.color) * n_dot_l;
 
-                            let half_vec = (light_dir - ray.direction).normalize();
+                            let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec);
                             if n_dot_h > 0.0 {
-                                direct_light += material.specular.component_mul(&light.get_color())
+                                irradiance += material.specular.component_mul(&light.get_color())
                                     * n_dot_h.powf(material.shininess);
                             }
                         }
                     }
-
-                    direct_light
                 }
             };
         }
 
-        let color = emissive_light + direct_light + indirect_light;
+        let color = emissive_light + ambient_light + irradiance + indirect_light;
 
         (color.insert_row(3, 1.0), ray_count)
     }
@@ -235,7 +233,86 @@ impl Scene {
         normal: Unit<Vector3<f64>>,
         material: PhysicalMaterial,
     ) -> (Vector4<f64>, u64) {
-        unimplemented!();
+        let mut ray_count = 0;
+
+        let view_dir = Unit::new_normalize(-ray.direction);
+        let n_dot_v = normal.dot(&view_dir).max(0.0);
+
+        let base_reflectivity = Vector3::repeat(0.04).lerp(&material.color, material.metalness);
+        let roughness = material.roughness.max(0.04);
+
+        let emissive_light = material.emissive;
+
+        let mut indirect_light = Vector3::zero();
+        if INDIRECT_RAYS > 0 {
+            for _ in 0..INDIRECT_RAYS {
+                let direction = cosine_sample_hemisphere(&normal).into_inner();
+                let diffuse_ray = Ray {
+                    origin: hit_point + (direction * BIAS),
+                    direction,
+                };
+
+                let (color, r) = self.get_color(diffuse_ray, depth - 1);
+                ray_count += r;
+                indirect_light += color.xyz() * material.reflectivity;
+            }
+            indirect_light /= INDIRECT_RAYS as f64;
+        }
+
+        let diffuse = material.color * FRAC_1_PI;
+
+        let mut ambient_light = Vector3::zero();
+        let mut irradiance = Vector3::zero();
+        for light in self.lights.iter() {
+            match light.get_type() {
+                LightType::Ambient => {
+                    ambient_light += light.get_color().component_mul(&material.color);
+                }
+                LightType::Point => {
+                    let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
+                    let light_distance = light_dir.magnitude();
+                    let light_dir = light_dir.normalize();
+
+                    let n_dot_l = normal.dot(&light_dir);
+                    if n_dot_l > 0.0 {
+                        let shadow_ray = Ray {
+                            origin: hit_point + (light_dir * BIAS),
+                            direction: light_dir,
+                        };
+
+                        ray_count += 1;
+                        let shadow_intersection = self.raycast(&shadow_ray);
+                        if shadow_intersection.is_none()
+                            || shadow_intersection.unwrap().distance > light_distance
+                        {
+                            let half_vec = Unit::new_normalize(light_dir - ray.direction);
+                            let n_dot_h = normal.dot(&half_vec).max(0.0);
+                            let attenuation = 1.0 / light_distance * light_distance;
+
+                            let radiance = light.get_color() * attenuation * n_dot_l;
+
+                            let ndf = core::ndf(n_dot_h, roughness);
+                            let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
+                            let f = core::fresnel(n_dot_v, base_reflectivity);
+
+                            let specular = ndf * g * f / (4.0 * n_dot_v * n_dot_l);
+
+                            let k_s = f;
+                            let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
+
+                            irradiance += (k_d.component_mul(&diffuse) + specular)
+                                .component_mul(&radiance)
+                                * n_dot_l;
+                        }
+                    }
+                }
+            };
+        }
+
+        let color = emissive_light + ambient_light + irradiance + indirect_light;
+        let color = color.map(|c| (c / (c + 1.0)).powf(1.0 / 2.2));
+
+        (color.insert_row(3, 1.0), ray_count)
     }
 
     fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
