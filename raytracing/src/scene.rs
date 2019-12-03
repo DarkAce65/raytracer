@@ -171,7 +171,7 @@ impl Scene {
             origin: hit_point + (reflection_dir * BIAS),
             direction: reflection_dir,
         };
-        let (color, r) = self.get_color(reflection_ray, depth - 1);
+        let (color, r) = self.get_color(reflection_ray, depth + 1);
         ray_count += r;
         let reflection =
             material.reflectivity * FRAC_PI_2 * color.xyz().component_mul(&material.color);
@@ -252,7 +252,7 @@ impl Scene {
                     origin: hit_point + (direction * BIAS),
                     direction,
                 };
-                let (color, r) = self.get_color(reflection_ray, depth - 1);
+                let (color, r) = self.get_color(reflection_ray, depth + 1);
                 ray_count += r;
                 reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
             }
@@ -323,7 +323,7 @@ impl Scene {
     fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
-        if depth == 0 {
+        if depth >= MAX_DEPTH {
             return (Vector4::zero(), ray_count);
         }
 
@@ -385,6 +385,6 @@ impl Scene {
             direction,
         };
 
-        self.get_color(ray, MAX_DEPTH)
+        self.get_color(ray, 0)
     }
 }
