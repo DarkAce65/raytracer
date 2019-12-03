@@ -40,24 +40,25 @@ fn concentric_sample_disk() -> Point2<f64> {
     r * Point2::from([theta.cos(), theta.sin()])
 }
 
-// Sample a hemisphere in the direction of the given normal using Malley's method
-pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64>> {
+// Sample a hemisphere with a cosine weight in the direction of the given direction using Malley's method
+#[allow(dead_code)]
+pub fn cosine_sample_hemisphere(direction: &Unit<Vector3<f64>>) -> Unit<Vector3<f64>> {
     let p = concentric_sample_disk();
     let p = Point3::from([p.x, p.y, (1.0 - p.x * p.x - p.y * p.y).sqrt()]);
 
-    let w = normal.into_inner();
+    let w = direction.into_inner();
     let u = if w.x.abs() > EPSILON {
-        normal.cross(&Vector3::y_axis())
+        direction.cross(&Vector3::y_axis())
     } else {
-        normal.cross(&Vector3::x_axis())
+        direction.cross(&Vector3::x_axis())
     };
-    let v = normal.cross(&u);
+    let v = direction.cross(&u);
 
     Unit::new_normalize(u * p.x + v * p.y + w * p.z)
 }
 
-// Sample a cone in the direction of the given normal
-pub fn uniform_sample_cone(normal: &Unit<Vector3<f64>>, max_angle: f64) -> Unit<Vector3<f64>> {
+// Sample a cone in the direction of the given direction
+pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Unit<Vector3<f64>> {
     let mut rng = rand::thread_rng();
     let rnd: f64 = rng.gen();
     let z = 1.0 - rnd + rnd * max_angle;
@@ -65,13 +66,13 @@ pub fn uniform_sample_cone(normal: &Unit<Vector3<f64>>, max_angle: f64) -> Unit<
 
     let phi = rng.gen::<f64>() * 2.0 * PI;
 
-    let w = normal.into_inner();
+    let w = direction.into_inner();
     let u = if w.x.abs() > EPSILON {
-        normal.cross(&Vector3::y_axis())
+        direction.cross(&Vector3::y_axis())
     } else {
-        normal.cross(&Vector3::x_axis())
+        direction.cross(&Vector3::x_axis())
     };
-    let v = normal.cross(&u);
+    let v = direction.cross(&u);
 
     Unit::new_normalize(u * radius * phi.cos() + v * radius * phi.sin() + w * z)
 }
