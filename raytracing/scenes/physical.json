@@ -3,7 +3,6 @@
   "height": 800,
   "camera": { "fov": 45, "position": [-15, 10, 20] },
   "lights": [
-    { "type": "ambient", "color": [0.03, 0.03, 0.03] },
     {
       "type": "point",
       "transform": [{ "translate": [-10, 10, 10] }],
@@ -26,6 +25,17 @@
     }
   ],
   "objects": [
+    {
+      "type": "plane",
+      "normal": [0, 0, 1],
+      "transform": [{ "translate": [0, 0, -5] }],
+      "material": {
+        "type": "physical",
+        "color": [0, 0, 1],
+        "metalness": 0,
+        "roughness": 0
+      }
+    },
     {
       "type": "sphere",
       "radius": 1,

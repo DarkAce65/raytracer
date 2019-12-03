@@ -7,7 +7,7 @@ use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::cmp::Ordering::Equal;
-use std::f64::consts::{FRAC_1_PI, FRAC_2_PI};
+use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
 
 const BIAS: f64 = 1e-10;
@@ -174,7 +174,7 @@ impl Scene {
         let (color, r) = self.get_color(reflection_ray, depth - 1);
         ray_count += r;
         let reflection =
-            material.reflectivity * FRAC_2_PI * color.xyz().component_mul(&material.color);
+            material.reflectivity * FRAC_PI_2 * color.xyz().component_mul(&material.color);
 
         let mut ambient_light = Vector3::zero();
         let mut irradiance = Vector3::zero();
@@ -233,14 +233,15 @@ impl Scene {
         let view_dir = Unit::new_normalize(-ray.direction);
         let n_dot_v = normal.dot(&view_dir).max(0.0);
 
-        let base_reflectivity = Vector3::repeat(0.04).lerp(&material.color, material.metalness);
         let roughness = material.roughness.max(0.04);
+        let base_reflectivity = Vector3::repeat(0.04).lerp(&material.color, material.metalness);
+        let f = core::fresnel(n_dot_v, base_reflectivity);
 
         let emissive_light = material.emissive;
 
         let mut reflection: Vector3<f64> = Vector3::zero();
 
-        let max_angle = (FRAC_2_PI * roughness).cos();
+        let max_angle = (FRAC_PI_2 * roughness).cos();
         let reflection_dir = Unit::new_normalize(
             ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
         );
@@ -253,7 +254,7 @@ impl Scene {
                 };
                 let (color, r) = self.get_color(reflection_ray, depth - 1);
                 ray_count += r;
-                reflection += FRAC_2_PI * color.xyz();
+                reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
             }
             reflection /= REFLECTED_RAYS as f64;
         }
@@ -292,7 +293,6 @@ impl Scene {
 
                             let ndf = core::ndf(n_dot_h, roughness);
                             let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
-                            let f = core::fresnel(n_dot_v, base_reflectivity);
 
                             let specular = if n_dot_v == 0.0 {
                                 Vector3::zero()
