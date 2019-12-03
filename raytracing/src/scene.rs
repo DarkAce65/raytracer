@@ -244,7 +244,7 @@ impl Scene {
 
         let mut reflection: Vector3<f64> = Vector3::zero();
         if REFLECTED_RAYS > 0 {
-            let max_angle = (FRAC_PI_2 * roughness).cos();
+            let max_angle = (FRAC_PI_2 * material.roughness).cos();
             let reflection_dir = Unit::new_normalize(
                 ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
             );
