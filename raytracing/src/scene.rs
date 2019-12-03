@@ -11,7 +11,7 @@ use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
 
 const BIAS: f64 = 1e-10;
-const MAX_DEPTH: u8 = 2;
+const MAX_DEPTH: u8 = 3;
 const REFLECTED_RAYS: u8 = 16;
 
 #[derive(Debug, Serialize)]
@@ -177,6 +177,7 @@ impl Scene {
             material.reflectivity * FRAC_PI_2 * color.xyz().component_mul(&material.color);
 
         let mut ambient_light = Vector3::zero();
+
         let mut irradiance = Vector3::zero();
         for light in self.lights.iter() {
             match light.get_type() {
@@ -206,7 +207,7 @@ impl Scene {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec);
                             if n_dot_h > 0.0 {
-                                irradiance += material.specular.component_mul(&light.get_color())
+                                irradiance += light.get_color().component_mul(&material.specular)
                                     * n_dot_h.powf(material.shininess);
                             }
                         }
@@ -240,13 +241,14 @@ impl Scene {
         let emissive_light = material.emissive;
 
         let mut reflection: Vector3<f64> = Vector3::zero();
-
-        let max_angle = (FRAC_PI_2 * roughness).cos();
-        let reflection_dir = Unit::new_normalize(
-            ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
-        );
         if REFLECTED_RAYS > 0 {
-            for _ in 0..REFLECTED_RAYS {
+            let max_angle = (FRAC_PI_2 * roughness).cos();
+            let reflection_dir = Unit::new_normalize(
+                ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
+            );
+            let d = depth as f64 / (MAX_DEPTH - 1).max(1) as f64;
+            let reflected_rays = (REFLECTED_RAYS as f64 * (1.0 - d) + d) as u8;
+            for _ in 0..reflected_rays {
                 let direction = uniform_sample_cone(&reflection_dir, max_angle).into_inner();
                 let reflection_ray = Ray {
                     origin: hit_point + (direction * BIAS),
@@ -256,13 +258,13 @@ impl Scene {
                 ray_count += r;
                 reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
             }
-            reflection /= REFLECTED_RAYS as f64;
+            reflection /= reflected_rays as f64;
         }
 
-        let diffuse = material.color * FRAC_1_PI;
-
         let mut ambient_light = Vector3::zero();
+
         let mut irradiance = Vector3::zero();
+        let diffuse = material.color * FRAC_1_PI;
         for light in self.lights.iter() {
             match light.get_type() {
                 LightType::Ambient => {
