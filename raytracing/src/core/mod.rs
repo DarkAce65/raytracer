@@ -3,7 +3,9 @@ mod transform;
 
 use crate::primitives::Primitive;
 use nalgebra::{Affine3, Point2, Point3, Unit, Vector2, Vector3};
-use std::f64::{consts::FRAC_PI_2, consts::FRAC_PI_4, EPSILON};
+use rand::Rng;
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+use std::f64::EPSILON;
 
 pub use material::*;
 pub use transform::*;
@@ -52,6 +54,26 @@ pub fn cosine_sample_hemisphere(normal: &Unit<Vector3<f64>>) -> Unit<Vector3<f64
     let v = normal.cross(&u);
 
     Unit::new_normalize(u * p.x + v * p.y + w * p.z)
+}
+
+// Sample a cone in the direction of the given normal
+pub fn uniform_sample_cone(normal: &Unit<Vector3<f64>>, max_angle: f64) -> Unit<Vector3<f64>> {
+    let mut rng = rand::thread_rng();
+    let rnd: f64 = rng.gen();
+    let z = 1.0 - rnd + rnd * max_angle;
+    let radius = (1.0 - z * z).sqrt();
+
+    let phi = rng.gen::<f64>() * 2.0 * PI;
+
+    let w = normal.into_inner();
+    let u = if w.x.abs() > EPSILON {
+        normal.cross(&Vector3::y_axis())
+    } else {
+        normal.cross(&Vector3::x_axis())
+    };
+    let v = normal.cross(&u);
+
+    Unit::new_normalize(u * radius * phi.cos() + v * radius * phi.sin() + w * z)
 }
 
 pub trait Object3D {

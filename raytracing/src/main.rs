@@ -10,7 +10,7 @@ use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
-use nalgebra::{clamp, Vector4};
+use nalgebra::Vector4;
 use rand::{seq::SliceRandom, thread_rng};
 use std::fs::File;
 use std::sync::{Arc, Mutex};
@@ -18,7 +18,6 @@ use std::thread::{sleep, spawn};
 use std::time::{Duration, Instant};
 
 fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
-    let rgba = rgba.map(|c| clamp(c, 0.0, 1.0));
     let (r, g, b, a) = (
         (rgba.x * 255.0) as u32,
         (rgba.y * 255.0) as u32,
@@ -77,7 +76,6 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
     for index in iter {
         let (color, r) = scene.screen_raycast(*index);
         rays += r;
-        let color = color.map(|c| clamp(c, 0.0, 1.0));
 
         let index = (index * 4) as usize;
         image_buffer[index] = (color.x * 255.0) as u8;

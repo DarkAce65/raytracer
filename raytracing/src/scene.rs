@@ -1,18 +1,19 @@
-use crate::core::{self, cosine_sample_hemisphere, Intersection, Ray};
+use crate::core::{self, cosine_sample_hemisphere, uniform_sample_cone, Intersection, Ray};
 use crate::core::{Material, MaterialSide, PhongMaterial, PhysicalMaterial};
 use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
-use nalgebra::{Matrix4, Point3, Unit, Vector3, Vector4};
+use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::cmp::Ordering::Equal;
-use std::f64::consts::FRAC_1_PI;
+use std::f64::consts::{FRAC_1_PI, FRAC_2_PI, PI};
 use std::fmt;
 
 const BIAS: f64 = 1e-10;
 const MAX_DEPTH: u8 = 2;
 const INDIRECT_RAYS: u8 = 16;
+const REFLECTED_RAYS: u8 = 16;
 
 #[derive(Debug, Serialize)]
 pub struct Camera {
@@ -243,20 +244,24 @@ impl Scene {
 
         let emissive_light = material.emissive;
 
-        let mut indirect_light = Vector3::zero();
-        if INDIRECT_RAYS > 0 {
-            for _ in 0..INDIRECT_RAYS {
-                let direction = cosine_sample_hemisphere(&normal).into_inner();
-                let diffuse_ray = Ray {
+        let mut reflection: Vector3<f64> = Vector3::zero();
+
+        let max_angle = (PI / 2.0 * roughness).cos();
+        let reflection_dir = Unit::new_normalize(
+            ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
+        );
+        if REFLECTED_RAYS > 0 {
+            for _ in 0..REFLECTED_RAYS {
+                let direction = uniform_sample_cone(&reflection_dir, max_angle).into_inner();
+                let reflection_ray = Ray {
                     origin: hit_point + (direction * BIAS),
                     direction,
                 };
-
-                let (color, r) = self.get_color(diffuse_ray, depth - 1);
+                let (color, r) = self.get_color(reflection_ray, depth - 1);
                 ray_count += r;
-                indirect_light += color.xyz() * material.reflectivity;
+                reflection += FRAC_2_PI * color.xyz();
             }
-            indirect_light /= INDIRECT_RAYS as f64;
+            reflection /= REFLECTED_RAYS as f64;
         }
 
         let diffuse = material.color * FRAC_1_PI;
@@ -295,7 +300,11 @@ impl Scene {
                             let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
                             let f = core::fresnel(n_dot_v, base_reflectivity);
 
-                            let specular = ndf * g * f / (4.0 * n_dot_v * n_dot_l);
+                            let specular = if n_dot_v == 0.0 {
+                                Vector3::zero()
+                            } else {
+                                ndf * g * f / (4.0 * n_dot_v * n_dot_l)
+                            };
 
                             let k_s = f;
                             let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
@@ -309,8 +318,10 @@ impl Scene {
             };
         }
 
-        let color = emissive_light + ambient_light + irradiance + indirect_light;
-        let color = color.map(|c| (c / (c + 1.0)).powf(1.0 / 2.2));
+        let color = emissive_light + ambient_light + irradiance + reflection;
+        let color = color
+            .map(|c| (c / (c + 1.0)).powf(1.0 / 2.2))
+            .map(|c| clamp(c, 0.0, 1.0));
 
         (color.insert_row(3, 1.0), ray_count)
     }
