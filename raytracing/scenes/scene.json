@@ -58,6 +58,19 @@
       }
     },
     {
+      "type": "cube",
+      "size": 6,
+      "transform": [
+        { "rotate": [[0, 1, 0], -45] },
+        { "translate": [6, 6, -22] }
+      ],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "reflectivity": 1
+      }
+    },
+    {
       "type": "sphere",
       "radius": 4,
       "transform": [{ "translate": [-6, -9, -3] }],

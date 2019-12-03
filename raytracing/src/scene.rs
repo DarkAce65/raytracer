@@ -173,8 +173,7 @@ impl Scene {
         };
         let (color, r) = self.get_color(reflection_ray, depth + 1);
         ray_count += r;
-        let reflection =
-            material.reflectivity * FRAC_PI_2 * color.xyz().component_mul(&material.color);
+        let reflection = color.xyz().component_mul(&material.color);
 
         let mut ambient_light = Vector3::zero();
 
@@ -216,7 +215,10 @@ impl Scene {
             };
         }
 
-        let color = emissive_light + ambient_light + reflection + irradiance;
+        let color = emissive_light
+            + ambient_light
+            + material.reflectivity * reflection
+            + (1.0 - material.reflectivity) * irradiance;
 
         (color.insert_row(3, 1.0), ray_count)
     }
@@ -289,9 +291,8 @@ impl Scene {
                         {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec).max(0.0);
-                            let attenuation = 1.0 / light_distance * light_distance;
 
-                            let radiance = light.get_color() * attenuation * n_dot_l;
+                            let radiance = light.get_color() * n_dot_l;
 
                             let ndf = core::ndf(n_dot_h, roughness);
                             let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
