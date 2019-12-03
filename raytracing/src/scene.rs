@@ -1,4 +1,4 @@
-use crate::core::{self, cosine_sample_hemisphere, uniform_sample_cone, Intersection, Ray};
+use crate::core::{self, uniform_sample_cone, Intersection, Ray};
 use crate::core::{Material, MaterialSide, PhongMaterial, PhysicalMaterial};
 use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
@@ -7,12 +7,11 @@ use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::cmp::Ordering::Equal;
-use std::f64::consts::{FRAC_1_PI, FRAC_2_PI, PI};
+use std::f64::consts::{FRAC_1_PI, FRAC_2_PI};
 use std::fmt;
 
 const BIAS: f64 = 1e-10;
 const MAX_DEPTH: u8 = 2;
-const INDIRECT_RAYS: u8 = 16;
 const REFLECTED_RAYS: u8 = 16;
 
 #[derive(Debug, Serialize)]
@@ -166,21 +165,16 @@ impl Scene {
 
         let emissive_light = material.emissive;
 
-        let mut indirect_light = Vector3::zero();
-        if INDIRECT_RAYS > 0 {
-            for _ in 0..INDIRECT_RAYS {
-                let direction = cosine_sample_hemisphere(&normal).into_inner();
-                let diffuse_ray = Ray {
-                    origin: hit_point + (direction * BIAS),
-                    direction,
-                };
-
-                let (color, r) = self.get_color(diffuse_ray, depth - 1);
-                ray_count += r;
-                indirect_light += color.xyz().component_mul(&material.color);
-            }
-            indirect_light /= INDIRECT_RAYS as f64;
-        }
+        let reflection_dir =
+            (ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner()).normalize();
+        let reflection_ray = Ray {
+            origin: hit_point + (reflection_dir * BIAS),
+            direction: reflection_dir,
+        };
+        let (color, r) = self.get_color(reflection_ray, depth - 1);
+        ray_count += r;
+        let reflection =
+            material.reflectivity * FRAC_2_PI * color.xyz().component_mul(&material.color);
 
         let mut ambient_light = Vector3::zero();
         let mut irradiance = Vector3::zero();
@@ -221,7 +215,7 @@ impl Scene {
             };
         }
 
-        let color = emissive_light + ambient_light + irradiance + indirect_light;
+        let color = emissive_light + ambient_light + reflection + irradiance;
 
         (color.insert_row(3, 1.0), ray_count)
     }
@@ -246,7 +240,7 @@ impl Scene {
 
         let mut reflection: Vector3<f64> = Vector3::zero();
 
-        let max_angle = (PI / 2.0 * roughness).cos();
+        let max_angle = (FRAC_2_PI * roughness).cos();
         let reflection_dir = Unit::new_normalize(
             ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
         );
@@ -318,7 +312,7 @@ impl Scene {
             };
         }
 
-        let color = emissive_light + ambient_light + irradiance + reflection;
+        let color = emissive_light + ambient_light + reflection + irradiance;
         let color = color
             .map(|c| (c / (c + 1.0)).powf(1.0 / 2.2))
             .map(|c| clamp(c, 0.0, 1.0));

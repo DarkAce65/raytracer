@@ -51,6 +51,7 @@ pub struct PhongMaterial {
     pub color: Vector3<f64>,
     pub emissive: Vector3<f64>,
     pub specular: Vector3<f64>,
+    pub reflectivity: f64,
     pub shininess: f64,
 }
 
@@ -61,6 +62,7 @@ impl Default for PhongMaterial {
             color: Vector3::zero(),
             emissive: Vector3::zero(),
             specular: Vector3::zero(),
+            reflectivity: 0.0,
             shininess: 30.0,
         }
     }
