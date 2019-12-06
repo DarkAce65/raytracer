@@ -1,5 +1,6 @@
-use crate::core::{self, uniform_sample_cone, Intersection, Ray};
-use crate::core::{Material, MaterialSide, PhongMaterial, PhysicalMaterial};
+use crate::core::{
+    self, Intersection, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Ray,
+};
 use crate::lights::{Light, LightType};
 use crate::primitives::Primitive;
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
@@ -11,7 +12,6 @@ use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
 
 const BIAS: f64 = 1e-10;
-const MAX_DEPTH: u8 = 3;
 const REFLECTED_RAYS: u8 = 16;
 
 #[derive(Debug, Serialize)]
@@ -123,14 +123,16 @@ impl<'de> Deserialize<'de> for Camera {
 pub struct Scene {
     pub width: u32,
     pub height: u32,
-    pub camera: Camera,
-    pub lights: Vec<Box<dyn Light>>,
-    pub objects: Vec<Box<dyn Primitive>>,
+    max_depth: u8,
+    camera: Camera,
+    lights: Vec<Box<dyn Light>>,
+    objects: Vec<Box<dyn Primitive>>,
 }
 
 impl Default for Scene {
     fn default() -> Self {
         Self {
+            max_depth: 3,
             width: 100,
             height: 100,
             camera: Camera::new(
@@ -165,11 +167,11 @@ impl Scene {
 
         let emissive_light = material.emissive;
 
-        let reflection_dir =
-            (ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner()).normalize();
+        let reflection_dir = core::reflect(&ray.direction, &normal).into_inner();
         let reflection_ray = Ray {
             origin: hit_point + (reflection_dir * BIAS),
             direction: reflection_dir,
+            refractive_index: 1.0,
         };
         let (color, r) = self.get_color(reflection_ray, depth + 1);
         ray_count += r;
@@ -193,6 +195,7 @@ impl Scene {
                         let shadow_ray = Ray {
                             origin: hit_point + (light_dir * BIAS),
                             direction: light_dir,
+                            refractive_index: 1.0,
                         };
 
                         ray_count += 1;
@@ -239,22 +242,39 @@ impl Scene {
         let roughness = material.roughness.max(0.04);
         let base_reflectivity = Vector3::repeat(0.04).lerp(&material.color, material.metalness);
         let f = core::fresnel(n_dot_v, base_reflectivity);
+        let k_s = f;
+        let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
 
         let emissive_light = material.emissive;
+
+        let mut refraction: Vector3<f64> = Vector3::zero();
+        if material.opacity < 1.0 {
+            let eta = ray.refractive_index / material.refractive_index;
+            if let Some(refraction_dir) = core::refract(&ray.direction, &normal, eta) {
+                let refraction_dir = refraction_dir.into_inner();
+                let refraction_ray = Ray {
+                    origin: hit_point + (refraction_dir * BIAS),
+                    direction: refraction_dir,
+                    refractive_index: material.refractive_index,
+                };
+                let (color, r) = self.get_color(refraction_ray, depth + 1);
+                ray_count += r;
+                refraction += color.xyz().component_mul(&material.color);
+            }
+        }
 
         let mut reflection: Vector3<f64> = Vector3::zero();
         if REFLECTED_RAYS > 0 {
             let max_angle = (FRAC_PI_2 * material.roughness).cos();
-            let reflection_dir = Unit::new_normalize(
-                ray.direction - 2.0 * ray.direction.dot(&normal) * normal.into_inner(),
-            );
-            let d = depth as f64 / (MAX_DEPTH - 1).max(1) as f64;
+            let reflection_dir = core::reflect(&ray.direction, &normal);
+            let d = depth as f64 / (self.max_depth - 1).max(1) as f64;
             let reflected_rays = (REFLECTED_RAYS as f64 * (1.0 - d) + d) as u8;
             for _ in 0..reflected_rays {
-                let direction = uniform_sample_cone(&reflection_dir, max_angle).into_inner();
+                let direction = core::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
                 let reflection_ray = Ray {
                     origin: hit_point + (direction * BIAS),
                     direction,
+                    refractive_index: 1.0,
                 };
                 let (color, r) = self.get_color(reflection_ray, depth + 1);
                 ray_count += r;
@@ -282,6 +302,7 @@ impl Scene {
                         let shadow_ray = Ray {
                             origin: hit_point + (light_dir * BIAS),
                             direction: light_dir,
+                            refractive_index: 1.0,
                         };
 
                         ray_count += 1;
@@ -303,9 +324,6 @@ impl Scene {
                                 ndf * g * f / (4.0 * n_dot_v * n_dot_l)
                             };
 
-                            let k_s = f;
-                            let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
-
                             irradiance += (k_d.component_mul(&diffuse) + specular)
                                 .component_mul(&radiance)
                                 * n_dot_l;
@@ -315,7 +333,8 @@ impl Scene {
             };
         }
 
-        let color = emissive_light + ambient_light + reflection + irradiance;
+        let color = (1.0 - material.opacity) * k_s.component_mul(&refraction)
+            + material.opacity * (emissive_light + ambient_light + reflection + irradiance);
         let color = color
             .map(|c| (c / (c + 1.0)).powf(1.0 / 2.2))
             .map(|c| clamp(c, 0.0, 1.0));
@@ -326,7 +345,7 @@ impl Scene {
     fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
-        if depth >= MAX_DEPTH {
+        if depth >= self.max_depth {
             return (Vector4::zero(), ray_count);
         }
 
@@ -386,6 +405,7 @@ impl Scene {
         let ray = Ray {
             origin: self.camera.position,
             direction,
+            refractive_index: 1.0,
         };
 
         self.get_color(ray, 0)

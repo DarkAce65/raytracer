@@ -73,6 +73,7 @@ impl Default for PhongMaterial {
 pub struct PhysicalMaterial {
     pub side: MaterialSide,
     pub color: Vector3<f64>,
+    pub opacity: f64,
     pub emissive: Vector3<f64>,
     pub emissive_intensity: f64,
     pub roughness: f64,
@@ -85,6 +86,7 @@ impl Default for PhysicalMaterial {
         Self {
             side: MaterialSide::default(),
             color: Vector3::zero(),
+            opacity: 1.0,
             emissive: Vector3::zero(),
             emissive_intensity: 0.0,
             roughness: 0.5,
