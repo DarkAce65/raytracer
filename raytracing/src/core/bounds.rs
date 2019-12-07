@@ -5,13 +5,26 @@ use serde::{Deserialize, Deserializer};
 
 #[derive(Debug)]
 pub struct BoundingVolume {
+    object: Box<dyn Primitive>,
     center: Point3<f64>,
     bounds_min: Point3<f64>,
     bounds_max: Point3<f64>,
-    object: Box<dyn Primitive>,
 }
 
 impl BoundingVolume {
+    pub fn new(
+        object: Box<dyn Primitive>,
+        bounds_min: Point3<f64>,
+        bounds_max: Point3<f64>,
+    ) -> Self {
+        Self {
+            object,
+            center: nalgebra::center(&bounds_min, &bounds_max),
+            bounds_min,
+            bounds_max,
+        }
+    }
+
     pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray_sign = ray.direction.map(|c| c.signum());
         let translated_center = self.center - ray.origin;
@@ -53,12 +66,6 @@ impl<'de> Deserialize<'de> for BoundingVolume {
         D: Deserializer<'de>,
     {
         let object: Box<dyn Primitive> = Deserialize::deserialize(deserializer)?;
-
-        Ok(Self {
-            center: Point3::origin(),
-            bounds_min: Point3::origin(),
-            bounds_max: Point3::origin(),
-            object,
-        })
+        Ok(object.make_bounding_volume())
     }
 }

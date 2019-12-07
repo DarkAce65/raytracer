@@ -1,5 +1,5 @@
 use super::{Drawable, Intersectable};
-use crate::core::{Intersection, Material, Object3D, Ray, Transform};
+use crate::core::{BoundingVolume, Intersection, Material, Object3D, Ray, Transform};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
@@ -30,6 +30,10 @@ impl Object3D for Plane {
 }
 
 impl Intersectable for Plane {
+    fn make_bounding_volume(&self) -> BoundingVolume {
+        BoundingVolume::new(Box::new(*self), Point3::origin(), Point3::origin())
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.transform().inverse());
         let normal = -self.normal;

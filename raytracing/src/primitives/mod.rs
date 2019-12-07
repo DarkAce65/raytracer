@@ -2,7 +2,7 @@ mod cube;
 mod plane;
 mod sphere;
 
-use crate::core::{Intersection, Material, Object3D, Ray};
+use crate::core::{BoundingVolume, Intersection, Material, Object3D, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
@@ -12,6 +12,7 @@ pub use plane::*;
 pub use sphere::*;
 
 pub trait Intersectable {
+    fn make_bounding_volume(&self) -> BoundingVolume;
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>>;
 }

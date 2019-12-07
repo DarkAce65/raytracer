@@ -1,5 +1,5 @@
 use super::{Drawable, Intersectable};
-use crate::core::{quadratic, Intersection, Material, Object3D, Ray, Transform};
+use crate::core::{quadratic, BoundingVolume, Intersection, Material, Object3D, Ray, Transform};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 
@@ -29,6 +29,10 @@ impl Object3D for Sphere {
 }
 
 impl Intersectable for Sphere {
+    fn make_bounding_volume(&self) -> BoundingVolume {
+        BoundingVolume::new(Box::new(*self), Point3::origin(), Point3::origin())
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.transform().inverse());
         let hypot = ray.origin.coords;
