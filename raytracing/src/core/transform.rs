@@ -1,10 +1,10 @@
 use nalgebra::{Affine3, Matrix4, Rotation3, Translation3, Unit, Vector3};
 use serde::de::{SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer};
 use std::default::Default;
 use std::fmt;
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform {
     matrix: Affine3<f64>,
     inv_matrix: Affine3<f64>,
@@ -56,7 +56,7 @@ impl Transform {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all(deserialize = "lowercase"))]
 enum SubTransform {
     Translate(Vector3<f64>),

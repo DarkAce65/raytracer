@@ -18,19 +18,19 @@ pub trait LightColor {
     fn get_color(&self) -> Vector3<f64>;
 }
 
-#[typetag::serde(tag = "type")]
+#[typetag::deserialize(tag = "type")]
 pub trait Light: Send + Sync + Debug + Object3D + LightColor {
     fn get_type(&self) -> LightType;
 }
 
-#[typetag::serde(name = "ambient")]
+#[typetag::deserialize(name = "ambient")]
 impl Light for AmbientLight {
     fn get_type(&self) -> LightType {
         LightType::Ambient
     }
 }
 
-#[typetag::serde(name = "point")]
+#[typetag::deserialize(name = "point")]
 impl Light for PointLight {
     fn get_type(&self) -> LightType {
         LightType::Point

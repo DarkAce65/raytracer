@@ -1,9 +1,9 @@
 use super::LightColor;
 use crate::core::{Object3D, Transform};
 use nalgebra::Vector3;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PointLight {
     transform: Transform,

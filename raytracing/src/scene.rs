@@ -6,7 +6,7 @@ use crate::primitives::Primitive;
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer};
 use std::cmp::Ordering::Equal;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
@@ -14,7 +14,7 @@ use std::fmt;
 const BIAS: f64 = 1e-10;
 const REFLECTED_RAYS: u8 = 16;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Camera {
     fov: f64,
     position: Point3<f64>,
@@ -118,7 +118,7 @@ impl<'de> Deserialize<'de> for Camera {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Scene {
     pub width: u32,

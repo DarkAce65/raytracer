@@ -1,6 +1,6 @@
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 
@@ -32,7 +32,7 @@ pub fn fresnel(n_dot_v: f64, base_reflectivity: Vector3<f64>) -> Vector3<f64> {
     base_reflectivity + (Vector3::repeat(1.0) - base_reflectivity) * (1.0 - n_dot_v).powf(5.0)
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
 pub enum MaterialSide {
     Front,
     Back,
@@ -44,7 +44,7 @@ impl Default for MaterialSide {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhongMaterial {
     pub side: MaterialSide,
@@ -68,7 +68,7 @@ impl Default for PhongMaterial {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhysicalMaterial {
     pub side: MaterialSide,
@@ -96,7 +96,7 @@ impl Default for PhysicalMaterial {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all(deserialize = "lowercase"))]
 pub enum Material {
     Phong(PhongMaterial),
