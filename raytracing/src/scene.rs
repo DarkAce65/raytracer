@@ -1,8 +1,8 @@
 use crate::core::{
-    self, Intersection, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Ray,
+    self, BoundingVolume, Intersection, Material, MaterialSide, PhongMaterial, PhysicalMaterial,
+    Ray,
 };
 use crate::lights::{Light, LightType};
-use crate::primitives::Primitive;
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
@@ -126,7 +126,7 @@ pub struct Scene {
     max_depth: u8,
     camera: Camera,
     lights: Vec<Box<dyn Light>>,
-    objects: Vec<Box<dyn Primitive>>,
+    objects: Vec<BoundingVolume>,
 }
 
 impl Default for Scene {

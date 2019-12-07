@@ -1,3 +1,4 @@
+mod bounds;
 mod material;
 mod transform;
 
@@ -7,6 +8,7 @@ use rand::Rng;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 use std::f64::EPSILON;
 
+pub use bounds::*;
 pub use material::*;
 pub use transform::*;
 
