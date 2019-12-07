@@ -64,44 +64,46 @@ enum SubTransform {
     Scale(Vector3<f64>),
 }
 
-struct TransformVisitor;
-
-impl<'de> Visitor<'de> for TransformVisitor {
-    type Value = Transform;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("struct Transform")
-    }
-
-    fn visit_seq<V>(self, mut seq: V) -> Result<Transform, V::Error>
-    where
-        V: SeqAccess<'de>,
-    {
-        let mut transform = Transform::default();
-        loop {
-            let next: Option<SubTransform> = seq.next_element()?;
-            if let Some(next) = next {
-                match next {
-                    SubTransform::Translate(translation) => {
-                        transform = *transform.translate(translation)
-                    }
-                    SubTransform::Rotate(axis, angle) => transform = *transform.rotate(axis, angle),
-                    SubTransform::Scale(scale) => transform = *transform.scale(scale),
-                }
-            } else {
-                break;
-            }
-        }
-
-        Ok(transform)
-    }
-}
-
 impl<'de> Deserialize<'de> for Transform {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
+        struct TransformVisitor;
+
+        impl<'de> Visitor<'de> for TransformVisitor {
+            type Value = Transform;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Transform")
+            }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<Transform, V::Error>
+            where
+                V: SeqAccess<'de>,
+            {
+                let mut transform = Transform::default();
+                loop {
+                    let next: Option<SubTransform> = seq.next_element()?;
+                    if let Some(next) = next {
+                        match next {
+                            SubTransform::Translate(translation) => {
+                                transform = *transform.translate(translation)
+                            }
+                            SubTransform::Rotate(axis, angle) => {
+                                transform = *transform.rotate(axis, angle)
+                            }
+                            SubTransform::Scale(scale) => transform = *transform.scale(scale),
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                Ok(transform)
+            }
+        }
+
         deserializer.deserialize_seq(TransformVisitor)
     }
 }
