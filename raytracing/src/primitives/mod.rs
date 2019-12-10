@@ -13,17 +13,14 @@ pub use plane::*;
 pub use sphere::*;
 
 pub trait Intersectable {
-    fn make_bounding_volume(&self) -> BoundingVolume;
+    fn make_bounding_volume(&self) -> Option<BoundingVolume>;
+    fn get_material(&self) -> Material;
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>>;
 }
 
-pub trait Drawable {
-    fn get_material(&self) -> Material;
-}
-
 #[typetag::deserialize(tag = "type")]
-pub trait Primitive: Send + Sync + Debug + Transformed + Intersectable + Drawable {}
+pub trait Primitive: Send + Sync + Debug + Transformed + Intersectable {}
 
 #[typetag::deserialize(name = "cube")]
 impl Primitive for Cube {}

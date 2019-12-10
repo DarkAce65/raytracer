@@ -1,5 +1,6 @@
-use crate::core::{self, BoundingVolume, Material, MaterialSide, PhongMaterial, PhysicalMaterial};
+use crate::core::{self, Material, MaterialSide, PhongMaterial, PhysicalMaterial};
 use crate::lights::{Light, LightType};
+use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
@@ -124,7 +125,7 @@ pub struct Scene {
     max_depth: u8,
     camera: Camera,
     lights: Vec<Box<dyn Light>>,
-    objects: Vec<BoundingVolume>,
+    objects: Vec<Object3D>,
 }
 
 impl Default for Scene {

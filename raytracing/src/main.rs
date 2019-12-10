@@ -2,6 +2,7 @@
 
 mod core;
 mod lights;
+mod object3d;
 mod primitives;
 mod ray_intersection;
 mod scene;

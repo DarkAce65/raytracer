@@ -1,4 +1,4 @@
-use super::{Drawable, Intersectable};
+use super::Intersectable;
 use crate::core::{quadratic, BoundingVolume, Material, Transform, Transformed};
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
@@ -30,8 +30,12 @@ impl Transformed for Sphere {
 }
 
 impl Intersectable for Sphere {
-    fn make_bounding_volume(&self) -> BoundingVolume {
-        BoundingVolume::new(Box::new(*self), Point3::origin(), Point3::origin())
+    fn make_bounding_volume(&self) -> Option<BoundingVolume> {
+        None
+    }
+
+    fn get_material(&self) -> Material {
+        self.material
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
@@ -61,11 +65,5 @@ impl Intersectable for Sphere {
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         Unit::new_normalize(hit_point.coords)
-    }
-}
-
-impl Drawable for Sphere {
-    fn get_material(&self) -> Material {
-        self.material
     }
 }
