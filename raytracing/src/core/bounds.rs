@@ -1,3 +1,4 @@
+use super::Transform;
 use crate::ray_intersection::Ray;
 use nalgebra::Point3;
 
@@ -10,6 +11,46 @@ pub struct BoundingVolume {
 
 impl BoundingVolume {
     pub fn from_bounds(bounds_min: Point3<f64>, bounds_max: Point3<f64>) -> Self {
+        assert!(bounds_max > bounds_min);
+
+        Self {
+            center: nalgebra::center(&bounds_min, &bounds_max),
+            bounds_min,
+            bounds_max,
+        }
+    }
+
+    pub fn from_bounds_and_transform(
+        bounds_min: Point3<f64>,
+        bounds_max: Point3<f64>,
+        transform: Transform,
+    ) -> Self {
+        assert!(bounds_max > bounds_min);
+
+        let mut vertices: Vec<Point3<f64>> = Vec::new();
+        for x in &[bounds_min.x, bounds_max.x] {
+            for y in &[bounds_min.y, bounds_max.y] {
+                for z in &[bounds_min.z, bounds_max.z] {
+                    vertices.push(Point3::new(*x, *y, *z));
+                }
+            }
+        }
+
+        let mut min = *vertices.get_mut(0).unwrap();
+        let mut max = *vertices.get_mut(0).unwrap();
+        for vertex in vertices.iter() {
+            let transformed_vertex = transform.matrix() * vertex;
+            min.x = min.x.min(transformed_vertex.x);
+            min.y = min.y.min(transformed_vertex.y);
+            min.z = min.z.min(transformed_vertex.z);
+
+            max.x = max.x.max(transformed_vertex.x);
+            max.y = max.y.max(transformed_vertex.y);
+            max.z = max.z.max(transformed_vertex.z);
+        }
+
+        let (bounds_min, bounds_max) = (min, max);
+
         Self {
             center: nalgebra::center(&bounds_min, &bounds_max),
             bounds_min,

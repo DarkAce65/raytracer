@@ -31,7 +31,13 @@ impl Transformed for Cube {
 
 impl Intersectable for Cube {
     fn make_bounding_volume(&self) -> Option<BoundingVolume> {
-        None
+        let half = self.size / 2.0;
+
+        Some(BoundingVolume::from_bounds_and_transform(
+            Point3::from([-half; 3]),
+            Point3::from([half; 3]),
+            self.transform,
+        ))
     }
 
     fn get_material(&self) -> Material {
