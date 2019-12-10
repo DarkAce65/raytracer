@@ -2,8 +2,7 @@ mod bounds;
 mod material;
 mod transform;
 
-use crate::primitives::Primitive;
-use nalgebra::{Affine3, Point2, Point3, Unit, Vector2, Vector3};
+use nalgebra::{Point2, Point3, Unit, Vector2, Vector3};
 use rand::Rng;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 use std::f64::EPSILON;
@@ -102,36 +101,6 @@ pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Un
     let v = direction.cross(&u);
 
     Unit::new_normalize(u * radius * phi.cos() + v * radius * phi.sin() + w * z)
-}
-
-pub trait Object3D {
-    fn transform(&self) -> Transform;
-}
-
-#[derive(Debug)]
-pub struct Ray {
-    pub origin: Point3<f64>,
-    pub direction: Vector3<f64>,
-    pub refractive_index: f64,
-}
-
-impl Ray {
-    pub fn transform(&self, transform: Affine3<f64>) -> Ray {
-        let origin = transform * self.origin;
-        let direction = transform * self.direction;
-
-        Ray {
-            origin,
-            direction,
-            refractive_index: self.refractive_index,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct Intersection {
-    pub distance: f64,
-    pub object: Box<dyn Primitive>,
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 use super::LightColor;
-use crate::core::{Object3D, Transform};
+use crate::core::{Transform, Transformed};
 use nalgebra::Vector3;
 use serde::Deserialize;
 
@@ -19,8 +19,8 @@ impl Default for PointLight {
     }
 }
 
-impl Object3D for PointLight {
-    fn transform(&self) -> Transform {
+impl Transformed for PointLight {
+    fn get_transform(&self) -> Transform {
         self.transform
     }
 }

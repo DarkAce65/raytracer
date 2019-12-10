@@ -2,7 +2,8 @@ mod cube;
 mod plane;
 mod sphere;
 
-use crate::core::{BoundingVolume, Intersection, Material, Object3D, Ray};
+use crate::core::{BoundingVolume, Material, Transformed};
+use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
@@ -18,11 +19,11 @@ pub trait Intersectable {
 }
 
 pub trait Drawable {
-    fn material(&self) -> Material;
+    fn get_material(&self) -> Material;
 }
 
 #[typetag::deserialize(tag = "type")]
-pub trait Primitive: Send + Sync + Debug + Object3D + Intersectable + Drawable {}
+pub trait Primitive: Send + Sync + Debug + Transformed + Intersectable + Drawable {}
 
 #[typetag::deserialize(name = "cube")]
 impl Primitive for Cube {}

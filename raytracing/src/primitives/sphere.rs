@@ -1,5 +1,6 @@
 use super::{Drawable, Intersectable};
-use crate::core::{quadratic, BoundingVolume, Intersection, Material, Object3D, Ray, Transform};
+use crate::core::{quadratic, BoundingVolume, Material, Transform, Transformed};
+use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 
@@ -22,8 +23,8 @@ impl Default for Sphere {
     }
 }
 
-impl Object3D for Sphere {
-    fn transform(&self) -> Transform {
+impl Transformed for Sphere {
+    fn get_transform(&self) -> Transform {
         self.transform
     }
 }
@@ -34,7 +35,7 @@ impl Intersectable for Sphere {
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let ray = &ray.transform(self.transform().inverse());
+        let ray = &ray.transform(self.get_transform().inverse());
         let hypot = ray.origin.coords;
         let ray_proj = hypot.dot(&ray.direction);
         let a = ray.direction.magnitude_squared();
@@ -64,7 +65,7 @@ impl Intersectable for Sphere {
 }
 
 impl Drawable for Sphere {
-    fn material(&self) -> Material {
+    fn get_material(&self) -> Material {
         self.material
     }
 }

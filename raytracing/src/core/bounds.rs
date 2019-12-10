@@ -1,5 +1,5 @@
-use super::{Intersection, Ray};
 use crate::primitives::Primitive;
+use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::Point3;
 use serde::{Deserialize, Deserializer};
 
@@ -66,6 +66,7 @@ impl<'de> Deserialize<'de> for BoundingVolume {
         D: Deserializer<'de>,
     {
         let object: Box<dyn Primitive> = Deserialize::deserialize(deserializer)?;
+
         Ok(object.make_bounding_volume())
     }
 }

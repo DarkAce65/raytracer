@@ -1,7 +1,7 @@
 mod ambient;
 mod point;
 
-use crate::core::Object3D;
+use crate::core::Transformed;
 use nalgebra::Vector3;
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
@@ -19,7 +19,7 @@ pub trait LightColor {
 }
 
 #[typetag::deserialize(tag = "type")]
-pub trait Light: Send + Sync + Debug + Object3D + LightColor {
+pub trait Light: Send + Sync + Debug + Transformed + LightColor {
     fn get_type(&self) -> LightType;
 }
 

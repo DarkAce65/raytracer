@@ -4,6 +4,10 @@ use serde::{Deserialize, Deserializer};
 use std::default::Default;
 use std::fmt;
 
+pub trait Transformed {
+    fn get_transform(&self) -> Transform;
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform {
     matrix: Affine3<f64>,

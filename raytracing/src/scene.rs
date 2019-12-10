@@ -1,8 +1,6 @@
-use crate::core::{
-    self, BoundingVolume, Intersection, Material, MaterialSide, PhongMaterial, PhysicalMaterial,
-    Ray,
-};
+use crate::core::{self, BoundingVolume, Material, MaterialSide, PhongMaterial, PhysicalMaterial};
 use crate::lights::{Light, LightType};
+use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
@@ -186,7 +184,7 @@ impl Scene {
                     ambient_light += light.get_color().component_mul(&material.color);
                 }
                 LightType::Point => {
-                    let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
+                    let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
 
@@ -293,7 +291,7 @@ impl Scene {
                     ambient_light += light.get_color().component_mul(&material.color);
                 }
                 LightType::Point => {
-                    let light_dir = light.transform().matrix() * Point3::origin() - hit_point;
+                    let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
 
@@ -352,12 +350,12 @@ impl Scene {
         ray_count += 1;
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction * intersection.distance;
-            let material = intersection.object.material();
+            let material = intersection.object.get_material();
             let normal = intersection
                 .object
-                .surface_normal(&(intersection.object.transform().inverse() * hit_point));
+                .surface_normal(&(intersection.object.get_transform().inverse() * hit_point));
             let normal = Unit::new_normalize(
-                intersection.object.transform().inverse_transpose() * normal.into_inner(),
+                intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
             );
             let normal = match material.side() {
                 MaterialSide::Front => normal,

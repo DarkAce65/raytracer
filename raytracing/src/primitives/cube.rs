@@ -1,5 +1,6 @@
 use super::{Drawable, Intersectable};
-use crate::core::{BoundingVolume, Intersection, Material, Object3D, Ray, Transform};
+use crate::core::{BoundingVolume, Material, Transform, Transformed};
+use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 
@@ -22,8 +23,8 @@ impl Default for Cube {
     }
 }
 
-impl Object3D for Cube {
-    fn transform(&self) -> Transform {
+impl Transformed for Cube {
+    fn get_transform(&self) -> Transform {
         self.transform
     }
 }
@@ -34,7 +35,7 @@ impl Intersectable for Cube {
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let ray = &ray.transform(self.transform().inverse());
+        let ray = &ray.transform(self.get_transform().inverse());
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
 
@@ -104,7 +105,7 @@ impl Intersectable for Cube {
 }
 
 impl Drawable for Cube {
-    fn material(&self) -> Material {
+    fn get_material(&self) -> Material {
         self.material
     }
 }

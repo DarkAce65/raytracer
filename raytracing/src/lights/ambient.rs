@@ -1,5 +1,5 @@
 use super::LightColor;
-use crate::core::{Object3D, Transform};
+use crate::core::{Transform, Transformed};
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
 use serde::Deserialize;
@@ -18,8 +18,8 @@ impl Default for AmbientLight {
     }
 }
 
-impl Object3D for AmbientLight {
-    fn transform(&self) -> Transform {
+impl Transformed for AmbientLight {
+    fn get_transform(&self) -> Transform {
         unimplemented!()
     }
 }

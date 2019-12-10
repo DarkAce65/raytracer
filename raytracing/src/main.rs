@@ -3,6 +3,7 @@
 mod core;
 mod lights;
 mod primitives;
+mod ray_intersection;
 mod scene;
 
 use crate::scene::Scene;

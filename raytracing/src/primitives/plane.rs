@@ -1,5 +1,6 @@
 use super::{Drawable, Intersectable};
-use crate::core::{BoundingVolume, Intersection, Material, Object3D, Ray, Transform};
+use crate::core::{BoundingVolume, Material, Transform, Transformed};
+use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
@@ -23,8 +24,8 @@ impl Default for Plane {
     }
 }
 
-impl Object3D for Plane {
-    fn transform(&self) -> Transform {
+impl Transformed for Plane {
+    fn get_transform(&self) -> Transform {
         self.transform
     }
 }
@@ -35,7 +36,7 @@ impl Intersectable for Plane {
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let ray = &ray.transform(self.transform().inverse());
+        let ray = &ray.transform(self.get_transform().inverse());
         let normal = -self.normal;
         let denom = normal.dot(&ray.direction);
         if denom > EPSILON {
@@ -59,7 +60,7 @@ impl Intersectable for Plane {
 }
 
 impl Drawable for Plane {
-    fn material(&self) -> Material {
+    fn get_material(&self) -> Material {
         self.material
     }
 }
