@@ -1,16 +1,19 @@
 use super::Intersectable;
+use super::Primitive;
 use crate::core::{BoundingVolume, Material, Transform, Transformed};
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Cube {
     #[serde(default)]
     transform: Transform,
     size: f64,
     material: Material,
+
+    children: Option<Vec<Box<dyn Primitive>>>,
 }
 
 impl Default for Cube {
@@ -19,6 +22,8 @@ impl Default for Cube {
             transform: Transform::default(),
             size: 1.0,
             material: Material::default(),
+
+            children: None,
         }
     }
 }
@@ -42,6 +47,10 @@ impl Intersectable for Cube {
 
     fn get_material(&self) -> Material {
         self.material
+    }
+
+    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
+        self.children.as_ref()
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
@@ -78,7 +87,7 @@ impl Intersectable for Cube {
 
         let intersection = Intersection {
             distance: d,
-            object: Box::new(*self),
+            object: self,
         };
 
         Some(intersection)

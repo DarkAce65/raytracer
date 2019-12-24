@@ -1,17 +1,20 @@
 use super::Intersectable;
+use super::Primitive;
 use crate::core::{BoundingVolume, Material, Transform, Transformed};
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Plane {
     #[serde(default)]
     transform: Transform,
     normal: Unit<Vector3<f64>>,
     material: Material,
+
+    children: Option<Vec<Box<dyn Primitive>>>,
 }
 
 impl Default for Plane {
@@ -20,6 +23,8 @@ impl Default for Plane {
             transform: Transform::default(),
             normal: Vector3::y_axis(),
             material: Material::default(),
+
+            children: None,
         }
     }
 }
@@ -39,6 +44,10 @@ impl Intersectable for Plane {
         self.material
     }
 
+    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
+        self.children.as_ref()
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
         let normal = -self.normal;
@@ -50,7 +59,7 @@ impl Intersectable for Plane {
             if distance >= 0.0 {
                 return Some(Intersection {
                     distance,
-                    object: Box::new(*self),
+                    object: self,
                 });
             }
         }

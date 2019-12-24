@@ -22,7 +22,7 @@ impl Ray {
 }
 
 #[derive(Debug)]
-pub struct Intersection {
+pub struct Intersection<'a> {
     pub distance: f64,
-    pub object: Box<dyn Primitive>,
+    pub object: &'a dyn Primitive,
 }

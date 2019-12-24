@@ -1,16 +1,19 @@
 use super::Intersectable;
+use super::Primitive;
 use crate::core::{quadratic, BoundingVolume, Material, Transform, Transformed};
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Sphere {
     #[serde(default)]
     transform: Transform,
     radius: f64,
     material: Material,
+
+    children: Option<Vec<Box<dyn Primitive>>>,
 }
 
 impl Default for Sphere {
@@ -19,6 +22,8 @@ impl Default for Sphere {
             transform: Transform::default(),
             radius: 1.0,
             material: Material::default(),
+
+            children: None,
         }
     }
 }
@@ -42,6 +47,10 @@ impl Intersectable for Sphere {
         self.material
     }
 
+    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
+        self.children.as_ref()
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
         let hypot = ray.origin.coords;
@@ -60,7 +69,7 @@ impl Intersectable for Sphere {
             let distance = t;
             return Some(Intersection {
                 distance,
-                object: Box::new(*self),
+                object: self,
             });
         }
 
