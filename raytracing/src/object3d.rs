@@ -38,7 +38,15 @@ impl<'de> Deserialize<'de> for Object3D {
         D: Deserializer<'de>,
     {
         let object: Box<dyn Primitive> = Deserialize::deserialize(deserializer)?;
+
         let bounding_box = object.make_bounding_volume();
+        let bounding_box = if let Some(children) = object.get_children() {
+            children.iter().fold(bounding_box, |acc, child| {
+                BoundingVolume::merge(acc, child.bounding_box)
+            })
+        } else {
+            bounding_box
+        };
 
         Ok(Self {
             object,

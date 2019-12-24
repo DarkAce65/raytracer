@@ -2,7 +2,7 @@ use super::Transform;
 use crate::ray_intersection::Ray;
 use nalgebra::Point3;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct BoundingVolume {
     center: Point3<f64>,
     bounds_min: Point3<f64>,
@@ -51,13 +51,28 @@ impl BoundingVolume {
             max.z = max.z.max(transformed_vertex.z);
         }
 
-        let (bounds_min, bounds_max) = (min, max);
+        BoundingVolume::from_bounds(min, max)
+    }
 
-        Self {
-            center: nalgebra::center(&bounds_min, &bounds_max),
-            bounds_min,
-            bounds_max,
+    pub fn merge(a: Option<BoundingVolume>, b: Option<BoundingVolume>) -> Option<BoundingVolume> {
+        if a.is_none() || b.is_none() {
+            return None;
         }
+
+        let a = a.unwrap();
+        let b = b.unwrap();
+
+        let mut min = a.bounds_min;
+        let mut max = a.bounds_max;
+        min.x = min.x.min(b.bounds_min.x);
+        min.y = min.y.min(b.bounds_min.y);
+        min.z = min.z.min(b.bounds_min.z);
+
+        max.x = max.x.max(b.bounds_max.x);
+        max.y = max.y.max(b.bounds_max.y);
+        max.z = max.z.max(b.bounds_max.z);
+
+        Some(BoundingVolume::from_bounds(min, max))
     }
 
     pub fn intersect(&self, ray: &Ray) -> bool {
