@@ -2,6 +2,7 @@ use crate::core::BoundingVolume;
 use crate::primitives::Primitive;
 use crate::ray_intersection::{Intersection, Ray};
 use serde::{Deserialize, Deserializer};
+use std::cmp::Ordering::Equal;
 
 #[derive(Debug)]
 pub struct Object3D {
@@ -17,7 +18,17 @@ impl Object3D {
             }
         }
 
-        self.object.intersect(ray)
+        let child_intersections = self
+            .object
+            .get_children()
+            .into_iter()
+            .flat_map(|children| children.iter().filter_map(|object| object.intersect(&ray)));
+
+        self.object
+            .intersect(ray)
+            .into_iter()
+            .chain(child_intersections)
+            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 }
 

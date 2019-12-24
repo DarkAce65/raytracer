@@ -35,17 +35,6 @@
     },
     {
       "type": "sphere",
-      "radius": 3,
-      "transform": [{ "translate": [3, -2, -5] }],
-      "material": {
-        "type": "phong",
-        "color": [0, 0.25, 0.5],
-        "specular": [1, 1, 1],
-        "shininess": 10
-      }
-    },
-    {
-      "type": "sphere",
       "radius": 6,
       "transform": [
         { "scale": [1.1, 1.1, 1.1] },
@@ -80,7 +69,20 @@
         "specular": [0.5, 0.5, 0.5],
         "shininess": 100,
         "reflectivity": 0.3
-      }
+      },
+      "children": [
+        {
+          "type": "cube",
+          "size": 2,
+          "transform": [
+            { "scale": [0.8, 0.8, 0.8] },
+            { "rotate": [[0, 0, 1], 45] },
+            { "rotate": [[0, 1, 0], 45] },
+            { "translate": [-4, -5, -2] }
+          ],
+          "material": { "type": "phong", "color": [0.5, 0.1, 0.1] }
+        }
+      ]
     },
     {
       "type": "sphere",
@@ -95,28 +97,6 @@
       "material": { "type": "phong", "emissive": [0, 1, 0] }
     },
     {
-      "type": "sphere",
-      "radius": 1,
-      "transform": [
-        { "scale": [3, 1, 1.5] },
-        { "rotate": [[0, 0, 1], 30] },
-        { "rotate": [[0, 1, 0], 45] },
-        { "translate": [2.5, -4, -1.5] }
-      ],
-      "material": { "type": "phong", "color": [0.2, 0.6, 0.6] }
-    },
-    {
-      "type": "cube",
-      "size": 2,
-      "transform": [
-        { "scale": [0.8, 0.8, 0.8] },
-        { "rotate": [[0, 0, 1], 45] },
-        { "rotate": [[0, 1, 0], 45] },
-        { "translate": [-4, -5, -2] }
-      ],
-      "material": { "type": "phong", "color": [0.5, 0.1, 0.1] }
-    },
-    {
       "type": "cube",
       "size": 2,
       "transform": [
@@ -124,7 +104,31 @@
         { "rotate": [[0, 0, 1], 60] },
         { "translate": [1, -2, -2] }
       ],
-      "material": { "type": "phong", "color": [0.9, 0.7, 0.1] }
+      "material": { "type": "phong", "color": [0.9, 0.7, 0.1] },
+      "children": [
+        {
+          "type": "sphere",
+          "radius": 1,
+          "transform": [
+            { "scale": [3, 1, 1.5] },
+            { "rotate": [[0, 0, 1], 30] },
+            { "rotate": [[0, 1, 0], 45] },
+            { "translate": [2.5, -4, -1.5] }
+          ],
+          "material": { "type": "phong", "color": [0.2, 0.6, 0.6] }
+        },
+        {
+          "type": "sphere",
+          "radius": 3,
+          "transform": [{ "translate": [3, -2, -5] }],
+          "material": {
+            "type": "phong",
+            "color": [0, 0.25, 0.5],
+            "specular": [1, 1, 1],
+            "shininess": 10
+          }
+        }
+      ]
     }
   ]
 }
