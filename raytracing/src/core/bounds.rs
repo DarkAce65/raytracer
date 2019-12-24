@@ -27,18 +27,20 @@ impl BoundingVolume {
     ) -> Self {
         assert!(bounds_max > bounds_min);
 
-        let mut vertices: Vec<Point3<f64>> = Vec::new();
+        let mut vertices = [Point3::origin(); 8];
+        let mut i = 0;
         for x in &[bounds_min.x, bounds_max.x] {
             for y in &[bounds_min.y, bounds_max.y] {
                 for z in &[bounds_min.z, bounds_max.z] {
-                    vertices.push(Point3::new(*x, *y, *z));
+                    vertices[i] = Point3::new(*x, *y, *z);
+                    i += 1;
                 }
             }
         }
 
-        let mut min = *vertices.get_mut(0).unwrap();
-        let mut max = *vertices.get_mut(0).unwrap();
-        for vertex in vertices.iter() {
+        let mut min = transform.matrix() * vertices[0];
+        let mut max = min;
+        for vertex in vertices[1..7].iter() {
             let transformed_vertex = transform.matrix() * vertex;
             min.x = min.x.min(transformed_vertex.x);
             min.y = min.y.min(transformed_vertex.y);
