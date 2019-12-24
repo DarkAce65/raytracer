@@ -13,8 +13,6 @@ pub struct Plane {
     transform: Transform,
     normal: Unit<Vector3<f64>>,
     material: Material,
-
-    children: Option<Vec<Object3D>>,
 }
 
 impl Default for Plane {
@@ -23,8 +21,6 @@ impl Default for Plane {
             transform: Transform::default(),
             normal: Vector3::y_axis(),
             material: Material::default(),
-
-            children: None,
         }
     }
 }
@@ -45,7 +41,7 @@ impl Intersectable for Plane {
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {
-        self.children.as_ref()
+        None
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
