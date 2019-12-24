@@ -1,6 +1,6 @@
 use super::Intersectable;
-use super::Primitive;
 use crate::core::{BoundingVolume, Material, Transform, Transformed};
+use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector3};
 use serde::Deserialize;
@@ -14,7 +14,7 @@ pub struct Plane {
     normal: Unit<Vector3<f64>>,
     material: Material,
 
-    children: Option<Vec<Box<dyn Primitive>>>,
+    children: Option<Vec<Object3D>>,
 }
 
 impl Default for Plane {
@@ -44,7 +44,7 @@ impl Intersectable for Plane {
         self.material
     }
 
-    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
+    fn get_children(&self) -> Option<&Vec<Object3D>> {
         self.children.as_ref()
     }
 
