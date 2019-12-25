@@ -55,6 +55,10 @@ impl Intersectable for Sphere {
         self.children.as_ref()
     }
 
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+        self.children.as_mut()
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
         let hypot = ray.origin.coords;

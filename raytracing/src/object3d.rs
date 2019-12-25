@@ -14,6 +14,12 @@ pub struct Object3D {
 impl Object3D {
     pub fn load_textures(&mut self, asset_base: &Path) {
         self.object.get_material_mut().load_textures(asset_base);
+
+        if let Some(children) = self.object.get_children_mut() {
+            for child in children.iter_mut() {
+                child.load_textures(asset_base);
+            }
+        }
     }
 
     pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {

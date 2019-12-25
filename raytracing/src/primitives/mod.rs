@@ -19,6 +19,7 @@ pub trait Intersectable {
     fn get_material(&self) -> &Material;
     fn get_material_mut(&mut self) -> &mut Material;
     fn get_children(&self) -> Option<&Vec<Object3D>>;
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>>;
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>>;

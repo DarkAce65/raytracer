@@ -48,6 +48,10 @@ impl Intersectable for Plane {
         None
     }
 
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+        None
+    }
+
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
         let normal = -self.normal;
