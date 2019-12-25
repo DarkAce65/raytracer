@@ -19,6 +19,7 @@ The following options may be passed through `cargo` like so: `cargo run -- [FLAG
 
 ```
 ray tracer
+A ray tracer written in Rust
 
 USAGE:
     raytrace [FLAGS] [OPTIONS] <scene>
@@ -26,6 +27,8 @@ USAGE:
 FLAGS:
     -h, --help           Prints help information
         --no-progress    Hide progress bar
+        --no-random      Render to window sequentially instead of randomly
+                         If --output is specified, --no-random has no effect
     -V, --version        Prints version information
 
 OPTIONS:

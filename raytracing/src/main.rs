@@ -30,10 +30,17 @@ fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     a << 24 | r << 16 | g << 8 | b
 }
 
-fn raytrace_fb(scene: Scene, buffer_mutex: &Arc<Mutex<Vec<u32>>>, progress: Option<ProgressBar>) {
+fn raytrace_fb(
+    scene: Scene,
+    buffer_mutex: &Arc<Mutex<Vec<u32>>>,
+    progress: Option<ProgressBar>,
+    render_sequentially: bool,
+) {
     let buffer_mutex = Arc::clone(&buffer_mutex);
     let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
-    indexes.shuffle(&mut thread_rng());
+    if !render_sequentially {
+        indexes.shuffle(&mut thread_rng());
+    }
 
     spawn(move || {
         let mut rays = 0;
@@ -100,6 +107,7 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
 
 fn main() {
     let matches = App::new("ray tracer")
+        .about("A ray tracer written in Rust")
         .arg(
             Arg::with_name("scene")
                 .index(1)
@@ -122,12 +130,17 @@ fn main() {
                 .long("no-progress")
                 .help("Hide progress bar"),
         )
+        .arg(Arg::with_name("norandom").long("no-random").help(
+            "Render to window sequentially instead of randomly\n\
+             If --output is specified, --no-random has no effect",
+        ))
         .get_matches();
 
     let scene_path = Path::new(matches.value_of("scene").unwrap());
     let scene_file = File::open(scene_path).expect("File not found");
     let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
+    let render_sequentially = matches.is_present("norandom");
 
     let mut scene: Scene = serde_json::from_reader(scene_file).expect("Failed to parse scene");
     scene.load_textures(scene_path.parent().unwrap_or_else(|| Path::new("")));
@@ -173,7 +186,7 @@ fn main() {
 
     let image_buffer: Vec<u32> = vec![0; (width * height) as usize];
     let buffer_mutex = Arc::new(Mutex::new(image_buffer));
-    raytrace_fb(scene, &buffer_mutex, progress);
+    raytrace_fb(scene, &buffer_mutex, progress, render_sequentially);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let buffer = buffer_mutex.lock().unwrap();
