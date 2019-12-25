@@ -2,8 +2,9 @@ use super::Intersectable;
 use crate::core::{quadratic, BoundingVolume, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
-use nalgebra::{Point3, Unit, Vector3};
+use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
+use std::f64::consts::FRAC_1_PI;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -86,5 +87,14 @@ impl Intersectable for Sphere {
 
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         Unit::new_normalize(hit_point.coords)
+    }
+
+    fn uv(&self, hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
+        let hit_point = hit_point.coords.map(|c| c / self.radius / 2.0);
+
+        Vector2::new(
+            0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
+            0.5 - (2.0 * hit_point.y).asin() * FRAC_1_PI,
+        )
     }
 }

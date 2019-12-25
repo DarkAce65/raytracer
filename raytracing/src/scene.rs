@@ -2,7 +2,7 @@ use crate::core::{self, Material, MaterialSide, PhongMaterial, PhysicalMaterial}
 use crate::lights::{Light, LightType};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
-use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
+use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -167,9 +167,12 @@ impl Scene {
         depth: u8,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
+        uv: Vector2<f64>,
         material: &PhongMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
+
+        let material_color = material.get_color(uv);
 
         let emissive_light = material.emissive;
 
@@ -181,7 +184,7 @@ impl Scene {
         };
         let (color, r) = self.get_color(reflection_ray, depth + 1);
         ray_count += r;
-        let reflection = color.xyz().component_mul(&material.color);
+        let reflection = color.xyz().component_mul(&material_color);
 
         let mut ambient_light = Vector3::zero();
 
@@ -189,7 +192,7 @@ impl Scene {
         for light in self.lights.iter() {
             match light.get_type() {
                 LightType::Ambient => {
-                    ambient_light += light.get_color().component_mul(&material.color);
+                    ambient_light += light.get_color().component_mul(&material_color);
                 }
                 LightType::Point => {
                     let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
@@ -210,7 +213,7 @@ impl Scene {
                             || shadow_intersection.unwrap().distance > light_distance
                         {
                             irradiance +=
-                                light.get_color().component_mul(&material.color) * n_dot_l;
+                                light.get_color().component_mul(&material_color) * n_dot_l;
 
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec);
@@ -238,15 +241,18 @@ impl Scene {
         depth: u8,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
+        uv: Vector2<f64>,
         material: &PhysicalMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
+
+        let material_color = material.get_color(uv);
 
         let view_dir = Unit::new_normalize(-ray.direction);
         let n_dot_v = normal.dot(&view_dir).max(0.0);
 
         let roughness = material.roughness.max(0.04);
-        let base_reflectivity = Vector3::repeat(0.04).lerp(&material.color, material.metalness);
+        let base_reflectivity = Vector3::repeat(0.04).lerp(&material_color, material.metalness);
         let f = core::fresnel(n_dot_v, base_reflectivity);
         let k_s = f;
         let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
@@ -265,7 +271,7 @@ impl Scene {
                 };
                 let (color, r) = self.get_color(refraction_ray, depth + 1);
                 ray_count += r;
-                refraction += color.xyz().component_mul(&material.color);
+                refraction += color.xyz().component_mul(&material_color);
             }
         }
 
@@ -292,11 +298,11 @@ impl Scene {
         let mut ambient_light = Vector3::zero();
 
         let mut irradiance = Vector3::zero();
-        let diffuse = material.color * FRAC_1_PI;
+        let diffuse = material_color * FRAC_1_PI;
         for light in self.lights.iter() {
             match light.get_type() {
                 LightType::Ambient => {
-                    ambient_light += light.get_color().component_mul(&material.color);
+                    ambient_light += light.get_color().component_mul(&material_color);
                 }
                 LightType::Point => {
                     let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
@@ -358,10 +364,12 @@ impl Scene {
         ray_count += 1;
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = ray.origin + ray.direction * intersection.distance;
+            let object_hit_point = intersection.object.get_transform().inverse() * hit_point;
+
             let material = intersection.object.get_material();
-            let normal = intersection
-                .object
-                .surface_normal(&(intersection.object.get_transform().inverse() * hit_point));
+            let normal = intersection.object.surface_normal(&object_hit_point);
+            let uv = intersection.object.uv(&object_hit_point, &normal);
+
             let normal = Unit::new_normalize(
                 intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
             );
@@ -372,13 +380,14 @@ impl Scene {
 
             match material {
                 Material::Phong(material) => {
-                    let (color, r) = self.get_color_phong(ray, depth, hit_point, normal, material);
+                    let (color, r) =
+                        self.get_color_phong(ray, depth, hit_point, normal, uv, material);
 
                     (color, ray_count + r)
                 }
                 Material::Physical(material) => {
                     let (color, r) =
-                        self.get_color_physical(ray, depth, hit_point, normal, material);
+                        self.get_color_physical(ray, depth, hit_point, normal, uv, material);
 
                     (color, ray_count + r)
                 }

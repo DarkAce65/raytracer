@@ -2,7 +2,7 @@ use super::Intersectable;
 use crate::core::{BoundingVolume, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
-use nalgebra::{Point3, Unit, Vector3};
+use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -127,6 +127,22 @@ impl Intersectable for Cube {
             -Vector3::z_axis()
         } else {
             Vector3::z_axis()
+        }
+    }
+
+    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
+        let hit_point = hit_point.coords.map(|c| c / self.size);
+
+        if normal.x > normal.y {
+            if normal.x > normal.z {
+                Vector2::new(hit_point.y + 0.5, hit_point.z + 0.5)
+            } else {
+                Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+            }
+        } else if normal.y > normal.z {
+            Vector2::new(hit_point.x + 0.5, hit_point.z + 0.5)
+        } else {
+            Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
         }
     }
 }

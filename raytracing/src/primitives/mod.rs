@@ -5,7 +5,7 @@ mod sphere;
 use crate::core::{BoundingVolume, Material, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
-use nalgebra::{Point3, Unit, Vector3};
+use nalgebra::{Point3, Unit, Vector2, Vector3};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 
@@ -23,6 +23,7 @@ pub trait Intersectable {
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
     fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>>;
+    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64>;
 }
 
 #[typetag::deserialize(tag = "type")]

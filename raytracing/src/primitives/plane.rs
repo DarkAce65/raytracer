@@ -2,7 +2,7 @@ use super::Intersectable;
 use crate::core::{BoundingVolume, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
-use nalgebra::{Point3, Unit, Vector3};
+use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
 
@@ -73,5 +73,9 @@ impl Intersectable for Plane {
 
     fn surface_normal(&self, _: &Point3<f64>) -> Unit<Vector3<f64>> {
         self.normal
+    }
+
+    fn uv(&self, _hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
+        Vector2::new(0.0, 0.0)
     }
 }

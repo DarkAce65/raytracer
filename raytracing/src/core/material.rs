@@ -1,5 +1,5 @@
 use super::Texture;
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::f64::consts::PI;
@@ -74,6 +74,16 @@ impl Default for PhongMaterial {
     }
 }
 
+impl PhongMaterial {
+    pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
+        if let Some(texture) = &self.texture {
+            texture.get_color(uv)
+        } else {
+            self.color
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhysicalMaterial {
@@ -102,6 +112,16 @@ impl Default for PhysicalMaterial {
             refractive_index: 1.0,
 
             texture: None,
+        }
+    }
+}
+
+impl PhysicalMaterial {
+    pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
+        if let Some(texture) = &self.texture {
+            texture.get_color(uv)
+        } else {
+            self.color
         }
     }
 }
@@ -135,25 +155,6 @@ impl Material {
         match self {
             Material::Phong(material) => material.side,
             Material::Physical(material) => material.side,
-        }
-    }
-
-    pub fn get_color(&self, uv: (f64, f64)) -> Vector3<f64> {
-        match self {
-            Material::Phong(material) => {
-                if let Some(texture) = &material.texture {
-                    texture.get_color(uv)
-                } else {
-                    material.color
-                }
-            }
-            Material::Physical(material) => {
-                if let Some(texture) = &material.texture {
-                    texture.get_color(uv)
-                } else {
-                    material.color
-                }
-            }
         }
     }
 }
