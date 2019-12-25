@@ -99,22 +99,23 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
 }
 
 fn main() {
-    let output_help =
-        "Output rendered image to file, ray tracer outputs to a window if --output is omitted";
     let matches = App::new("ray tracer")
         .arg(
             Arg::with_name("scene")
                 .index(1)
                 .required(true)
                 .takes_value(true)
-                .help("Input scene as a json file"),
+                .help("input scene as a json file"),
         )
         .arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
                 .takes_value(true)
-                .help(output_help),
+                .help(
+                    "Output rendered image to file\n\
+                     If omitted, image is rendered to a window",
+                ),
         )
         .arg(
             Arg::with_name("noprogress")
