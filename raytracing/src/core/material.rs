@@ -1,8 +1,10 @@
+use super::Texture;
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::f64::consts::PI;
 use std::fmt::Debug;
+use std::path::Path;
 
 // Trowbridge-Reitz GGX normal distribution function
 pub fn ndf(n_dot_h: f64, roughness: f64) -> f64 {
@@ -53,6 +55,8 @@ pub struct PhongMaterial {
     pub specular: Vector3<f64>,
     pub reflectivity: f64,
     pub shininess: f64,
+
+    pub texture: Option<Texture>,
 }
 
 impl Default for PhongMaterial {
@@ -64,6 +68,8 @@ impl Default for PhongMaterial {
             specular: Vector3::zero(),
             reflectivity: 0.0,
             shininess: 30.0,
+
+            texture: None,
         }
     }
 }
@@ -79,6 +85,8 @@ pub struct PhysicalMaterial {
     pub roughness: f64,
     pub metalness: f64,
     pub refractive_index: f64,
+
+    pub texture: Option<Texture>,
 }
 
 impl Default for PhysicalMaterial {
@@ -92,6 +100,8 @@ impl Default for PhysicalMaterial {
             roughness: 0.5,
             metalness: 0.0,
             refractive_index: 1.0,
+
+            texture: None,
         }
     }
 }
@@ -110,10 +120,40 @@ impl Default for Material {
 }
 
 impl Material {
+    pub fn load_textures(&mut self, asset_base: &Path) {
+        let texture = match self {
+            Material::Phong(material) => material.texture.as_mut(),
+            Material::Physical(material) => material.texture.as_mut(),
+        };
+
+        if let Some(texture) = texture {
+            texture.load(asset_base).expect("Failed to load texture");
+        }
+    }
+
     pub fn side(&self) -> MaterialSide {
         match self {
             Material::Phong(material) => material.side,
             Material::Physical(material) => material.side,
+        }
+    }
+
+    pub fn get_color(&self, uv: (f64, f64)) -> Vector3<f64> {
+        match self {
+            Material::Phong(material) => {
+                if let Some(texture) = &material.texture {
+                    texture.get_color(uv)
+                } else {
+                    material.color
+                }
+            }
+            Material::Physical(material) => {
+                if let Some(texture) = &material.texture {
+                    texture.get_color(uv)
+                } else {
+                    material.color
+                }
+            }
         }
     }
 }

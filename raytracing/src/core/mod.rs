@@ -1,5 +1,6 @@
 mod bounds;
 mod material;
+mod texture;
 mod transform;
 
 use nalgebra::{Point2, Point3, Unit, Vector2, Vector3};
@@ -9,6 +10,7 @@ use std::f64::EPSILON;
 
 pub use bounds::*;
 pub use material::*;
+pub use texture::*;
 pub use transform::*;
 
 pub fn reflect(incident: &Vector3<f64>, normal: &Vector3<f64>) -> Unit<Vector3<f64>> {

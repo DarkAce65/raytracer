@@ -43,8 +43,12 @@ impl Intersectable for Sphere {
         ))
     }
 
-    fn get_material(&self) -> Material {
-        self.material
+    fn get_material(&self) -> &Material {
+        &self.material
+    }
+
+    fn get_material_mut(&mut self) -> &mut Material {
+        &mut self.material
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {

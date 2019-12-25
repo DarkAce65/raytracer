@@ -15,6 +15,7 @@ use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector4;
 use rand::{seq::SliceRandom, thread_rng};
 use std::fs::File;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::{Duration, Instant};
@@ -122,12 +123,13 @@ fn main() {
         )
         .get_matches();
 
-    let scene_path = matches.value_of("scene").unwrap();
+    let scene_path = Path::new(matches.value_of("scene").unwrap());
     let scene_file = File::open(scene_path).expect("File not found");
     let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
 
-    let scene: Scene = serde_json::from_reader(scene_file).expect("Failed to parse scene");
+    let mut scene: Scene = serde_json::from_reader(scene_file).expect("Failed to parse scene");
+    scene.load_textures(scene_path.parent().unwrap_or_else(|| Path::new("")));
     let (width, height) = (scene.width, scene.height);
 
     let progress = if hide_progress {

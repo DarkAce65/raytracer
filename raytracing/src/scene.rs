@@ -9,6 +9,7 @@ use serde::{Deserialize, Deserializer};
 use std::cmp::Ordering::Equal;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
+use std::path::Path;
 
 const BIAS: f64 = 1e-10;
 const REFLECTED_RAYS: u8 = 16;
@@ -147,6 +148,12 @@ impl Default for Scene {
 }
 
 impl Scene {
+    pub fn load_textures(&mut self, asset_base: &Path) {
+        for object in self.objects.iter_mut() {
+            object.load_textures(asset_base);
+        }
+    }
+
     fn raycast(&self, ray: &Ray) -> Option<Intersection> {
         self.objects
             .iter()
@@ -160,7 +167,7 @@ impl Scene {
         depth: u8,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
-        material: PhongMaterial,
+        material: &PhongMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
@@ -231,7 +238,7 @@ impl Scene {
         depth: u8,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
-        material: PhysicalMaterial,
+        material: &PhysicalMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 

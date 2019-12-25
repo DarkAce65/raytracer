@@ -16,7 +16,8 @@ pub use sphere::*;
 pub trait Intersectable {
     fn make_bounding_volume(&self) -> Option<BoundingVolume>;
 
-    fn get_material(&self) -> Material;
+    fn get_material(&self) -> &Material;
+    fn get_material_mut(&mut self) -> &mut Material;
     fn get_children(&self) -> Option<&Vec<Object3D>>;
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;

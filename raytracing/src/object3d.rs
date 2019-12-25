@@ -3,6 +3,7 @@ use crate::primitives::Primitive;
 use crate::ray_intersection::{Intersection, Ray};
 use serde::{Deserialize, Deserializer};
 use std::cmp::Ordering::Equal;
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct Object3D {
@@ -11,6 +12,10 @@ pub struct Object3D {
 }
 
 impl Object3D {
+    pub fn load_textures(&mut self, asset_base: &Path) {
+        self.object.get_material_mut().load_textures(asset_base);
+    }
+
     pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         if let Some(bounding_box) = &self.bounding_box {
             if !bounding_box.intersect(ray) {
