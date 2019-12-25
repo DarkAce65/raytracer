@@ -4,19 +4,30 @@ version = "0.1.0"
 authors = ["DarkAce65 <tvdood99@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+opt-level = 3
 
 [dev-dependencies]
 more-asserts = "0.2"
 
 [dependencies]
 clap = "2.33"
-image = "0.22"
 indicatif = "0.13"
 minifb = "0.13"
-nalgebra = { version = "0.19", features = ["serde-serialize"] }
 num-traits = "0.2"
 rand = "0.7"
-serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 typetag = "0.1"
+
+[dependencies.image]
+version = "0.22"
+default-features = false
+features = ["jpeg", "png_codec", "bmp", "jpeg_rayon"]
+
+[dependencies.nalgebra]
+version = "0.19"
+features = ["serde-serialize"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
