@@ -21,10 +21,10 @@ use std::time::{Duration, Instant};
 
 fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     let (r, g, b, a) = (
-        (rgba.x * 255.0) as u32,
-        (rgba.y * 255.0) as u32,
-        (rgba.z * 255.0) as u32,
-        (rgba.w * 255.0) as u32,
+        (rgba.x.max(0.0).min(1.0) * 255.0) as u32,
+        (rgba.y.max(0.0).min(1.0) * 255.0) as u32,
+        (rgba.z.max(0.0).min(1.0) * 255.0) as u32,
+        (rgba.w.max(0.0).min(1.0) * 255.0) as u32,
     );
     a << 24 | r << 16 | g << 8 | b
 }
@@ -98,18 +98,22 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
 }
 
 fn main() {
+    let output_help =
+        "Output rendered image to file, ray tracer outputs to a window if --output is omitted";
     let matches = App::new("ray tracer")
         .arg(
             Arg::with_name("scene")
-            .index(1)
-            .required(true).takes_value(true)
-                .help("Input scene as a json file")
+                .index(1)
+                .required(true)
+                .takes_value(true)
+                .help("Input scene as a json file"),
         )
         .arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
-                .takes_value(true).help("Output rendered image to file, ray tracer outputs to a window if --output is omitted"),
+                .takes_value(true)
+                .help(output_help),
         )
         .arg(
             Arg::with_name("noprogress")

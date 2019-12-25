@@ -32,7 +32,7 @@ pub fn fresnel(n_dot_v: f64, base_reflectivity: Vector3<f64>) -> Vector3<f64> {
     base_reflectivity + (Vector3::repeat(1.0) - base_reflectivity) * (1.0 - n_dot_v).powf(5.0)
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq)]
 pub enum MaterialSide {
     Front,
     Back,
@@ -44,7 +44,7 @@ impl Default for MaterialSide {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhongMaterial {
     pub side: MaterialSide,
@@ -68,7 +68,7 @@ impl Default for PhongMaterial {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhysicalMaterial {
     pub side: MaterialSide,
@@ -96,7 +96,7 @@ impl Default for PhysicalMaterial {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all(deserialize = "lowercase"))]
 pub enum Material {
     Phong(PhongMaterial),
@@ -122,6 +122,41 @@ impl Material {
 mod test {
     use super::*;
     use serde_json::json;
+
+    impl PartialEq for PhongMaterial {
+        fn eq(&self, other: &PhongMaterial) -> bool {
+            self.side == other.side
+                && self.color == other.color
+                && self.emissive == other.emissive
+                && self.specular == other.specular
+                && self.reflectivity == other.reflectivity
+                && self.shininess == other.shininess
+        }
+    }
+
+    impl PartialEq for PhysicalMaterial {
+        fn eq(&self, other: &PhysicalMaterial) -> bool {
+            self.side == other.side
+                && self.color == other.color
+                && self.opacity == other.opacity
+                && self.emissive == other.emissive
+                && self.emissive_intensity == other.emissive_intensity
+                && self.roughness == other.roughness
+                && self.metalness == other.metalness
+                && self.refractive_index == other.refractive_index
+        }
+    }
+
+    impl PartialEq for Material {
+        fn eq(&self, other: &Material) -> bool {
+            use Material::*;
+            match (self, other) {
+                (Phong(a), Phong(b)) => a == b,
+                (Physical(a), Physical(b)) => a == b,
+                _ => false,
+            }
+        }
+    }
 
     #[test]
     fn it_deserializes_defaults() {
