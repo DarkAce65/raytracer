@@ -77,7 +77,7 @@ impl Default for PhongMaterial {
 impl PhongMaterial {
     pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
         if let Some(texture) = &self.texture {
-            texture.get_color(uv)
+            self.color.component_mul(&texture.get_color(uv))
         } else {
             self.color
         }
@@ -119,7 +119,7 @@ impl Default for PhysicalMaterial {
 impl PhysicalMaterial {
     pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
         if let Some(texture) = &self.texture {
-            texture.get_color(uv)
+            self.color.component_mul(&texture.get_color(uv))
         } else {
             self.color
         }

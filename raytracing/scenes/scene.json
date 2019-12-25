@@ -37,7 +37,11 @@
       "type": "sphere",
       "radius": 4,
       "transform": [{ "translate": [-9, -6, -10] }],
-      "material": { "type": "phong", "color": [0.8, 0.8, 0.8] ,"texture":"textures/test.jpg"}
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
     },
     {
       "type": "sphere",
