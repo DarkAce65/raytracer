@@ -1,6 +1,7 @@
 mod cube;
 mod plane;
 mod sphere;
+mod triangle;
 
 use crate::core::{BoundingVolume, Material, Transformed};
 use crate::object3d::Object3D;
@@ -12,6 +13,7 @@ use std::marker::{Send, Sync};
 pub use cube::*;
 pub use plane::*;
 pub use sphere::*;
+pub use triangle::*;
 
 pub trait Intersectable {
     fn make_bounding_volume(&self) -> Option<BoundingVolume>;
@@ -35,3 +37,5 @@ impl Primitive for Cube {}
 impl Primitive for Plane {}
 #[typetag::deserialize(name = "sphere")]
 impl Primitive for Sphere {}
+#[typetag::deserialize(name = "triangle")]
+impl Primitive for Triangle {}
