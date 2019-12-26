@@ -1,5 +1,5 @@
-use crate::core::{self, Material, MaterialSide, PhongMaterial, PhysicalMaterial};
-use crate::lights::{Light, LightType};
+use crate::core::{self, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Transformed};
+use crate::lights::Light;
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
@@ -125,7 +125,7 @@ pub struct Scene {
     pub height: u32,
     max_depth: u8,
     camera: Camera,
-    lights: Vec<Box<dyn Light>>,
+    lights: Vec<Light>,
     objects: Vec<Object3D>,
 }
 
@@ -190,11 +190,11 @@ impl Scene {
 
         let mut irradiance = Vector3::zero();
         for light in self.lights.iter() {
-            match light.get_type() {
-                LightType::Ambient => {
-                    ambient_light += light.get_color().component_mul(&material_color);
+            match light {
+                Light::Ambient(light) => {
+                    ambient_light += light.color.component_mul(&material_color);
                 }
-                LightType::Point => {
+                Light::Point(light) => {
                     let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
@@ -212,13 +212,12 @@ impl Scene {
                         if shadow_intersection.is_none()
                             || shadow_intersection.unwrap().distance > light_distance
                         {
-                            irradiance +=
-                                light.get_color().component_mul(&material_color) * n_dot_l;
+                            irradiance += light.color.component_mul(&material_color) * n_dot_l;
 
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec);
                             if n_dot_h > 0.0 {
-                                irradiance += light.get_color().component_mul(&material.specular)
+                                irradiance += light.color.component_mul(&material.specular)
                                     * n_dot_h.powf(material.shininess);
                             }
                         }
@@ -300,11 +299,11 @@ impl Scene {
         let mut irradiance = Vector3::zero();
         let diffuse = material_color * FRAC_1_PI;
         for light in self.lights.iter() {
-            match light.get_type() {
-                LightType::Ambient => {
-                    ambient_light += light.get_color().component_mul(&material_color);
+            match light {
+                Light::Ambient(light) => {
+                    ambient_light += light.color.component_mul(&material_color);
                 }
-                LightType::Point => {
+                Light::Point(light) => {
                     let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
@@ -325,7 +324,7 @@ impl Scene {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec).max(0.0);
 
-                            let radiance = light.get_color() * n_dot_l;
+                            let radiance = light.color * n_dot_l;
 
                             let ndf = core::ndf(n_dot_h, roughness);
                             let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
