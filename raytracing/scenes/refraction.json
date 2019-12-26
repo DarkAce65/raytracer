@@ -52,7 +52,7 @@
       "radius": 1,
       "material": {
         "type": "physical",
-        "color": [1, 1, 1],
+        "color": [1, 1, 0.4],
         "metalness": 0,
         "roughness": 0,
         "opacity": 0,
@@ -73,10 +73,14 @@
     {
       "type": "cube",
       "size": 1,
-      "transform": [{ "scale": [1, 1, 0.1] }, { "translate": [1.4, -0.5, 3] }],
+      "transform": [
+        { "scale": [1, 1, 0.1] },
+        { "rotate": [[0, 0, 1], -30] },
+        { "translate": [1.2, -0.4, 3] }
+      ],
       "material": {
         "type": "physical",
-        "color": [1, 1, 1],
+        "color": [1, 0, 0],
         "metalness": 0,
         "roughness": 0,
         "opacity": 0.2,
