@@ -3,7 +3,7 @@ use crate::core::{BoundingVolume, Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::f64::EPSILON;
 
 #[derive(Debug, Deserialize)]
@@ -27,7 +27,8 @@ impl Default for TriangleData {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(from = "TriangleData")]
 pub struct Triangle {
     transform: Transform,
     vertices: [Point3<f64>; 3],
@@ -156,15 +157,5 @@ impl Intersectable for Triangle {
 
     fn uv(&self, _hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
         Vector2::new(0.0, 0.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for Triangle {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let data: TriangleData = Deserialize::deserialize(deserializer)?;
-        Ok(data.into())
     }
 }
