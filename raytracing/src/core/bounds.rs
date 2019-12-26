@@ -11,7 +11,7 @@ pub struct BoundingVolume {
 
 impl BoundingVolume {
     pub fn from_bounds(bounds_min: Point3<f64>, bounds_max: Point3<f64>) -> Self {
-        assert!(bounds_max > bounds_min);
+        assert!(bounds_max >= bounds_min);
 
         Self {
             center: nalgebra::center(&bounds_min, &bounds_max),
@@ -25,7 +25,7 @@ impl BoundingVolume {
         bounds_max: Point3<f64>,
         transform: Transform,
     ) -> Self {
-        assert!(bounds_max > bounds_min);
+        assert!(bounds_max >= bounds_min);
 
         let mut vertices = [Point3::origin(); 8];
         let mut i = 0;
@@ -40,7 +40,7 @@ impl BoundingVolume {
 
         let mut min = transform.matrix() * vertices[0];
         let mut max = min;
-        for vertex in vertices[1..7].iter() {
+        for vertex in vertices[1..8].iter() {
             let transformed_vertex = transform.matrix() * vertex;
             min.x = min.x.min(transformed_vertex.x);
             min.y = min.y.min(transformed_vertex.y);
