@@ -2,7 +2,7 @@
   "width": 800,
   "height": 800,
   "max_depth": 3,
-  "camera": { "fov": 45, "position": [4, 1, 10] },
+  "camera": { "fov": 45, "position": [3, 1.25, 7] },
   "lights": [
     {
       "type": "point",
@@ -38,7 +38,7 @@
       "size": 1,
       "transform": [
         { "rotate": [[1, 0, 0], 30] },
-        { "translate": [-2, 0, -3] }
+        { "translate": [-2, 0.75, -3] }
       ],
       "material": {
         "type": "physical",
@@ -73,7 +73,7 @@
     {
       "type": "cube",
       "size": 1,
-      "transform": [{ "scale": [1, 1, 0.1] }, { "translate": [1.4, -0.8, 3] }],
+      "transform": [{ "scale": [1, 1, 0.1] }, { "translate": [1.4, -0.5, 3] }],
       "material": {
         "type": "physical",
         "color": [1, 1, 1],
