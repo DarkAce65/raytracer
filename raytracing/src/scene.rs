@@ -148,9 +148,9 @@ impl Default for Scene {
 }
 
 impl Scene {
-    pub fn load_textures(&mut self, asset_base: &Path) {
+    pub fn load_assets(&mut self, asset_base: &Path) {
         for object in self.objects.iter_mut() {
-            object.load_textures(asset_base);
+            object.load_assets(asset_base);
         }
     }
 

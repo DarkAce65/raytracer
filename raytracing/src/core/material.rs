@@ -46,7 +46,7 @@ impl Default for MaterialSide {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhongMaterial {
     pub side: MaterialSide,
@@ -84,7 +84,7 @@ impl PhongMaterial {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PhysicalMaterial {
     pub side: MaterialSide,
@@ -126,7 +126,7 @@ impl PhysicalMaterial {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", rename_all(deserialize = "lowercase"))]
 pub enum Material {
     Phong(PhongMaterial),

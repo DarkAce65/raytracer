@@ -1,22 +1,31 @@
 mod cube;
+mod mesh;
 mod plane;
 mod sphere;
 mod triangle;
 
-use crate::core::{BoundingVolume, Material, Transformed};
+use crate::core::{Bounds, Material, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
+use std::path::Path;
 
 pub use cube::*;
+pub use mesh::*;
 pub use plane::*;
 pub use sphere::*;
 pub use triangle::*;
 
+pub trait Loadable {
+    fn load_assets(&mut self, _asset_base: &Path) -> bool {
+        false
+    }
+}
+
 pub trait Intersectable {
-    fn make_bounding_volume(&self) -> Option<BoundingVolume>;
+    fn make_bounding_volume(&self) -> Bounds;
 
     fn get_material(&self) -> &Material;
     fn get_material_mut(&mut self) -> &mut Material;
@@ -29,7 +38,7 @@ pub trait Intersectable {
 }
 
 #[typetag::deserialize(tag = "type")]
-pub trait Primitive: Send + Sync + Debug + Transformed + Intersectable {}
+pub trait Primitive: Send + Sync + Debug + Loadable + Transformed + Intersectable {}
 
 #[typetag::deserialize(name = "cube")]
 impl Primitive for Cube {}
@@ -39,3 +48,6 @@ impl Primitive for Plane {}
 impl Primitive for Sphere {}
 #[typetag::deserialize(name = "triangle")]
 impl Primitive for Triangle {}
+
+#[typetag::deserialize(name = "mesh")]
+impl Primitive for Mesh {}

@@ -1,9 +1,41 @@
-use crate::core::BoundingVolume;
+use crate::core::{BoundingVolume, Bounds};
 use crate::primitives::Primitive;
 use crate::ray_intersection::{Intersection, Ray};
 use serde::{Deserialize, Deserializer};
 use std::cmp::Ordering::Equal;
 use std::path::Path;
+
+fn compute_bounding_box(object: &dyn Primitive) -> Option<BoundingVolume> {
+    let bounding_box = object.make_bounding_volume();
+
+    match bounding_box {
+        Bounds::Unbounded => None,
+        Bounds::Children => {
+            if let Some(children) = object.get_children() {
+                if !children.is_empty() {
+                    children[1..]
+                        .iter()
+                        .fold(children[0].bounding_box, |acc, child| {
+                            BoundingVolume::merge(acc, child.bounding_box)
+                        })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        Bounds::Bounded(bounding_box) => {
+            if let Some(children) = object.get_children() {
+                children.iter().fold(Some(bounding_box), |acc, child| {
+                    BoundingVolume::merge(acc, child.bounding_box)
+                })
+            } else {
+                Some(bounding_box)
+            }
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Object3D {
@@ -12,14 +44,32 @@ pub struct Object3D {
 }
 
 impl Object3D {
-    pub fn load_textures(&mut self, asset_base: &Path) {
+    pub fn new(object: Box<dyn Primitive>) -> Self {
+        let bounding_box = compute_bounding_box(object.as_ref());
+        Self {
+            object,
+            bounding_box,
+        }
+    }
+
+    pub fn load_assets(&mut self, asset_base: &Path) -> bool {
+        let mut should_recompute_bb = self.object.load_assets(asset_base);
         self.object.get_material_mut().load_textures(asset_base);
 
         if let Some(children) = self.object.get_children_mut() {
             for child in children.iter_mut() {
-                child.load_textures(asset_base);
+                if child.load_assets(asset_base) {
+                    child.bounding_box = compute_bounding_box(child.object.as_ref());
+                    should_recompute_bb = true;
+                }
             }
         }
+
+        if should_recompute_bb {
+            self.bounding_box = compute_bounding_box(self.object.as_ref());
+        }
+
+        should_recompute_bb
     }
 
     pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
@@ -49,19 +99,6 @@ impl<'de> Deserialize<'de> for Object3D {
         D: Deserializer<'de>,
     {
         let object: Box<dyn Primitive> = Deserialize::deserialize(deserializer)?;
-
-        let bounding_box = object.make_bounding_volume();
-        let bounding_box = if let Some(children) = object.get_children() {
-            children.iter().fold(bounding_box, |acc, child| {
-                BoundingVolume::merge(acc, child.bounding_box)
-            })
-        } else {
-            bounding_box
-        };
-
-        Ok(Self {
-            object,
-            bounding_box,
-        })
+        Ok(Object3D::new(object))
     }
 }

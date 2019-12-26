@@ -2,6 +2,12 @@ use super::Transform;
 use crate::ray_intersection::Ray;
 use nalgebra::Point3;
 
+pub enum Bounds {
+    Unbounded,
+    Children,
+    Bounded(BoundingVolume),
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct BoundingVolume {
     center: Point3<f64>,

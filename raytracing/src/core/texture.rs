@@ -4,7 +4,7 @@ use nalgebra::{clamp, Vector2, Vector3};
 use serde::{Deserialize, Deserializer};
 use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Texture {
     texture_path: String,
     width: u32,

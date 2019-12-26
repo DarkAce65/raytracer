@@ -1,5 +1,5 @@
-use super::Intersectable;
-use crate::core::{BoundingVolume, Material, Transform, Transformed};
+use super::{Intersectable, Loadable};
+use crate::core::{BoundingVolume, Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -22,7 +22,6 @@ impl Default for TriangleData {
             transform: Transform::default(),
             vertices: [Point3::origin(), Point3::origin(), Point3::origin()],
             material: Material::default(),
-
             children: None,
         }
     }
@@ -50,6 +49,22 @@ impl From<TriangleData> for Triangle {
 }
 
 impl Triangle {
+    pub fn new(
+        transform: Transform,
+        vertices: [Point3<f64>; 3],
+        material: Material,
+        children: Option<Vec<Object3D>>,
+    ) -> Self {
+        let data = TriangleData {
+            transform,
+            vertices,
+            material,
+            children,
+        };
+
+        data.into()
+    }
+
     fn compute_normal(vertices: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
         let edge1 = vertices[1] - vertices[0];
         let edge2 = vertices[2] - vertices[0];
@@ -58,6 +73,8 @@ impl Triangle {
     }
 }
 
+impl Loadable for Triangle {}
+
 impl Transformed for Triangle {
     fn get_transform(&self) -> Transform {
         self.transform
@@ -65,7 +82,7 @@ impl Transformed for Triangle {
 }
 
 impl Intersectable for Triangle {
-    fn make_bounding_volume(&self) -> Option<BoundingVolume> {
+    fn make_bounding_volume(&self) -> Bounds {
         let mut min = self.vertices[0];
         let mut max = self.vertices[0];
         for vertex in self.vertices[1..3].iter() {
@@ -78,7 +95,7 @@ impl Intersectable for Triangle {
             max.z = max.z.max(vertex.z);
         }
 
-        Some(BoundingVolume::from_bounds_and_transform(
+        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             min,
             max,
             self.transform,
@@ -133,7 +150,7 @@ impl Intersectable for Triangle {
         None
     }
 
-    fn surface_normal(&self, _: &Point3<f64>) -> Unit<Vector3<f64>> {
+    fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         self.normal
     }
 
@@ -148,7 +165,6 @@ impl<'de> Deserialize<'de> for Triangle {
         D: Deserializer<'de>,
     {
         let data: TriangleData = Deserialize::deserialize(deserializer)?;
-
         Ok(data.into())
     }
 }

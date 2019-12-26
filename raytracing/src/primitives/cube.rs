@@ -1,5 +1,5 @@
-use super::Intersectable;
-use crate::core::{BoundingVolume, Material, Transform, Transformed};
+use super::{Intersectable, Loadable};
+use crate::core::{BoundingVolume, Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -12,7 +12,6 @@ pub struct Cube {
     transform: Transform,
     size: f64,
     material: Material,
-
     children: Option<Vec<Object3D>>,
 }
 
@@ -22,11 +21,12 @@ impl Default for Cube {
             transform: Transform::default(),
             size: 1.0,
             material: Material::default(),
-
             children: None,
         }
     }
 }
+
+impl Loadable for Cube {}
 
 impl Transformed for Cube {
     fn get_transform(&self) -> Transform {
@@ -35,10 +35,10 @@ impl Transformed for Cube {
 }
 
 impl Intersectable for Cube {
-    fn make_bounding_volume(&self) -> Option<BoundingVolume> {
+    fn make_bounding_volume(&self) -> Bounds {
         let half = self.size / 2.0;
 
-        Some(BoundingVolume::from_bounds_and_transform(
+        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             Point3::from([-half; 3]),
             Point3::from([half; 3]),
             self.transform,

@@ -1,5 +1,5 @@
-use super::Intersectable;
-use crate::core::{quadratic, BoundingVolume, Material, Transform, Transformed};
+use super::{Intersectable, Loadable};
+use crate::core::{quadratic, BoundingVolume, Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -13,7 +13,6 @@ pub struct Sphere {
     transform: Transform,
     radius: f64,
     material: Material,
-
     children: Option<Vec<Object3D>>,
 }
 
@@ -23,11 +22,12 @@ impl Default for Sphere {
             transform: Transform::default(),
             radius: 1.0,
             material: Material::default(),
-
             children: None,
         }
     }
 }
+
+impl Loadable for Sphere {}
 
 impl Transformed for Sphere {
     fn get_transform(&self) -> Transform {
@@ -36,8 +36,8 @@ impl Transformed for Sphere {
 }
 
 impl Intersectable for Sphere {
-    fn make_bounding_volume(&self) -> Option<BoundingVolume> {
-        Some(BoundingVolume::from_bounds_and_transform(
+    fn make_bounding_volume(&self) -> Bounds {
+        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             Point3::from([-self.radius; 3]),
             Point3::from([self.radius; 3]),
             self.transform,

@@ -1,5 +1,5 @@
-use super::Intersectable;
-use crate::core::{BoundingVolume, Material, Transform, Transformed};
+use super::{Intersectable, Loadable};
+use crate::core::{Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -13,7 +13,6 @@ pub struct Plane {
     transform: Transform,
     normal: Unit<Vector3<f64>>,
     material: Material,
-
     children: Option<Vec<Object3D>>,
 }
 
@@ -23,11 +22,12 @@ impl Default for Plane {
             transform: Transform::default(),
             normal: Vector3::y_axis(),
             material: Material::default(),
-
             children: None,
         }
     }
 }
+
+impl Loadable for Plane {}
 
 impl Transformed for Plane {
     fn get_transform(&self) -> Transform {
@@ -36,8 +36,8 @@ impl Transformed for Plane {
 }
 
 impl Intersectable for Plane {
-    fn make_bounding_volume(&self) -> Option<BoundingVolume> {
-        None
+    fn make_bounding_volume(&self) -> Bounds {
+        Bounds::Unbounded
     }
 
     fn get_material(&self) -> &Material {
@@ -75,7 +75,7 @@ impl Intersectable for Plane {
         None
     }
 
-    fn surface_normal(&self, _: &Point3<f64>) -> Unit<Vector3<f64>> {
+    fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
         self.normal
     }
 
