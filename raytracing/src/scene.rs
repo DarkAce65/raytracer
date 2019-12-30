@@ -353,9 +353,7 @@ impl Scene {
 
         let color = (1.0 - material.opacity) * k_s.component_mul(&refraction)
             + material.opacity * (emissive_light + ambient_light + reflection + irradiance);
-        let color = color
-            .map(|c| (c / (c + 1.0)).powf(1.0 / 2.2))
-            .map(|c| clamp(c, 0.0, 1.0));
+        let color = color.map(|c| (c / (c + 1.0)).powf(1.0 / 2.2));
 
         (color.insert_row(3, 1.0), ray_count)
     }
@@ -391,18 +389,16 @@ impl Scene {
                 MaterialSide::Back => -normal,
             };
 
-            match material {
+            let (color, r) = match material {
                 Material::Phong(material) => {
-                    let (color, r) = self.get_color_phong(ray, hit_point, normal, uv, material);
-
-                    (color, ray_count + r)
+                    self.get_color_phong(ray, hit_point, normal, uv, material)
                 }
                 Material::Physical(material) => {
-                    let (color, r) = self.get_color_physical(ray, hit_point, normal, uv, material);
-
-                    (color, ray_count + r)
+                    self.get_color_physical(ray, hit_point, normal, uv, material)
                 }
-            }
+            };
+
+            (color.map(|c| clamp(c, 0.0, 1.0)), ray_count + r)
         } else {
             (Vector4::zero(), ray_count)
         }
