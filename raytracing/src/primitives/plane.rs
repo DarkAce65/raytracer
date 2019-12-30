@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable};
-use crate::core::{Bounds, Material, Transform, Transformed};
+use crate::core::{Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
@@ -58,18 +58,23 @@ impl Intersectable for Plane {
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
-        let normal = -self.normal;
-        let denom = normal.dot(&ray.direction);
-        if denom > EPSILON {
-            let view = -ray.origin.coords;
-            let distance = view.dot(&normal) / denom;
 
-            if distance >= 0.0 {
-                return Some(Intersection {
-                    distance,
-                    object: self,
-                });
-            }
+        let n_dot_v = self.normal.dot(&-ray.direction);
+
+        if match (self.material.side(), ray.ray_type) {
+            (MaterialSide::Both, _) | (_, RayType::Shadow) => n_dot_v.abs() < EPSILON,
+            (MaterialSide::Front, _) => n_dot_v < EPSILON,
+            (MaterialSide::Back, _) => -n_dot_v < EPSILON,
+        } {
+            return None;
+        }
+
+        let distance = ray.origin.coords.dot(&self.normal) / n_dot_v;
+        if distance >= 0.0 {
+            return Some(Intersection {
+                distance,
+                object: self,
+            });
         }
 
         None
