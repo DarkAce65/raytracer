@@ -43,7 +43,7 @@ pub enum MaterialSide {
 
 impl Default for MaterialSide {
     fn default() -> Self {
-        MaterialSide::Both
+        MaterialSide::Front
     }
 }
 

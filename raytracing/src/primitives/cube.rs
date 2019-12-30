@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 
@@ -90,28 +90,16 @@ impl Intersectable for Cube {
 
         debug_assert!(d0 <= d1);
 
-        let d = match self.material.side() {
-            MaterialSide::Both => {
+        let d = match (self.material.side(), ray.ray_type) {
+            (MaterialSide::Both, _) | (_, RayType::Shadow) => {
                 if d0 < 0.0 {
                     d1
                 } else {
                     d0
                 }
             }
-            MaterialSide::Front => {
-                if d0 < 0.0 {
-                    return None;
-                } else {
-                    d0
-                }
-            }
-            MaterialSide::Back => {
-                if d1 < 0.0 {
-                    return None;
-                } else {
-                    d1
-                }
-            }
+            (MaterialSide::Front, _) => d0,
+            (MaterialSide::Back, _) => d1,
         };
         if d < 0.0 {
             return None;

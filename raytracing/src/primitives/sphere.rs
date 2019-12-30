@@ -3,7 +3,7 @@ use crate::core::{
     quadratic, BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed,
 };
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::consts::FRAC_1_PI;
@@ -73,28 +73,16 @@ impl Intersectable for Sphere {
         if let Some((t0, t1)) = quadratic(a, b, c) {
             debug_assert!(t0 <= t1);
 
-            let t = match self.material.side() {
-                MaterialSide::Both => {
+            let t = match (self.material.side(), ray.ray_type) {
+                (MaterialSide::Both, _) | (_, RayType::Shadow) => {
                     if t0 < 0.0 {
                         t1
                     } else {
                         t0
                     }
                 }
-                MaterialSide::Front => {
-                    if t0 < 0.0 {
-                        return None;
-                    } else {
-                        t0
-                    }
-                }
-                MaterialSide::Back => {
-                    if t1 < 0.0 {
-                        return None;
-                    } else {
-                        t1
-                    }
-                }
+                (MaterialSide::Front, _) => t0,
+                (MaterialSide::Back, _) => t1,
             };
             if t < 0.0 {
                 return None;
