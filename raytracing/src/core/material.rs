@@ -36,13 +36,14 @@ pub fn fresnel(n_dot_v: f64, base_reflectivity: Vector3<f64>) -> Vector3<f64> {
 
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq)]
 pub enum MaterialSide {
+    Both,
     Front,
     Back,
 }
 
 impl Default for MaterialSide {
     fn default() -> Self {
-        MaterialSide::Front
+        MaterialSide::Both
     }
 }
 

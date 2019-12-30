@@ -1,5 +1,7 @@
 use super::{Intersectable, Loadable};
-use crate::core::{quadratic, BoundingVolume, Bounds, Material, Transform, Transformed};
+use crate::core::{
+    quadratic, BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed,
+};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -69,15 +71,37 @@ impl Intersectable for Sphere {
         let c = hypot.magnitude_squared() - self.radius * self.radius;
 
         if let Some((t0, t1)) = quadratic(a, b, c) {
-            let t = if t0 < 0.0 { t1 } else { t0 };
+            debug_assert!(t0 <= t1);
 
+            let t = match self.material.side() {
+                MaterialSide::Both => {
+                    if t0 < 0.0 {
+                        t1
+                    } else {
+                        t0
+                    }
+                }
+                MaterialSide::Front => {
+                    if t0 < 0.0 {
+                        return None;
+                    } else {
+                        t0
+                    }
+                }
+                MaterialSide::Back => {
+                    if t1 < 0.0 {
+                        return None;
+                    } else {
+                        t1
+                    }
+                }
+            };
             if t < 0.0 {
                 return None;
             }
 
-            let distance = t;
             return Some(Intersection {
-                distance,
+                distance: t,
                 object: self,
             });
         }

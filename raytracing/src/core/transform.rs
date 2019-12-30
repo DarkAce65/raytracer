@@ -1,4 +1,4 @@
-use nalgebra::{Affine3, Matrix4, Rotation3, Translation3, Unit, Vector3};
+use nalgebra::{Affine3, Matrix4, Point3, Rotation3, Translation3, Unit, Vector3};
 use serde::de::{SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::default::Default;
@@ -6,6 +6,9 @@ use std::fmt;
 
 pub trait Transformed {
     fn get_transform(&self) -> Transform;
+    fn get_position(&self) -> Point3<f64> {
+        self.get_transform().matrix() * Point3::origin()
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

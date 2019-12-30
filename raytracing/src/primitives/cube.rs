@@ -1,5 +1,5 @@
 use super::{Intersectable, Loadable};
-use crate::core::{BoundingVolume, Bounds, Material, Transform, Transformed};
+use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -88,7 +88,31 @@ impl Intersectable for Cube {
         let d0 = if dz_min > d0 { dz_min } else { d0 };
         let d1 = if d1 > dz_max { dz_max } else { d1 };
 
-        let d = if d0 < 0.0 { d1 } else { d0 };
+        debug_assert!(d0 <= d1);
+
+        let d = match self.material.side() {
+            MaterialSide::Both => {
+                if d0 < 0.0 {
+                    d1
+                } else {
+                    d0
+                }
+            }
+            MaterialSide::Front => {
+                if d0 < 0.0 {
+                    return None;
+                } else {
+                    d0
+                }
+            }
+            MaterialSide::Back => {
+                if d1 < 0.0 {
+                    return None;
+                } else {
+                    d1
+                }
+            }
+        };
         if d < 0.0 {
             return None;
         }

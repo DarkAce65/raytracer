@@ -196,7 +196,8 @@ impl Scene {
                     ambient_light += light.color.component_mul(&material_color);
                 }
                 Light::Point(light) => {
-                    let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
+                    let light_position = light.get_position();
+                    let light_dir = light_position - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
 
@@ -204,15 +205,15 @@ impl Scene {
                     if n_dot_l > 0.0 {
                         let shadow_ray = Ray {
                             ray_type: RayType::Shadow,
-                            origin: hit_point + (light_dir * BIAS),
-                            direction: light_dir,
+                            origin: light_position,
+                            direction: -light_dir,
                             refractive_index: 1.0,
                         };
 
                         ray_count += 1;
                         let shadow_intersection = self.raycast(&shadow_ray);
                         if shadow_intersection.is_none()
-                            || shadow_intersection.unwrap().distance > light_distance
+                            || shadow_intersection.unwrap().distance > light_distance - BIAS
                         {
                             irradiance += light.color.component_mul(&material_color) * n_dot_l;
 
@@ -308,7 +309,8 @@ impl Scene {
                     ambient_light += light.color.component_mul(&material_color);
                 }
                 Light::Point(light) => {
-                    let light_dir = light.get_transform().matrix() * Point3::origin() - hit_point;
+                    let light_position = light.get_position();
+                    let light_dir = light_position - hit_point;
                     let light_distance = light_dir.magnitude();
                     let light_dir = light_dir.normalize();
 
@@ -316,15 +318,15 @@ impl Scene {
                     if n_dot_l > 0.0 {
                         let shadow_ray = Ray {
                             ray_type: RayType::Shadow,
-                            origin: hit_point + (light_dir * BIAS),
-                            direction: light_dir,
+                            origin: light_position,
+                            direction: -light_dir,
                             refractive_index: 1.0,
                         };
 
                         ray_count += 1;
                         let shadow_intersection = self.raycast(&shadow_ray);
                         if shadow_intersection.is_none()
-                            || shadow_intersection.unwrap().distance > light_distance
+                            || shadow_intersection.unwrap().distance > light_distance - BIAS
                         {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec).max(0.0);
@@ -374,13 +376,20 @@ impl Scene {
             let normal = intersection.object.surface_normal(&object_hit_point);
             let uv = intersection.object.uv(&object_hit_point, &normal);
 
-            let normal = match material.side() {
-                MaterialSide::Front => normal,
-                MaterialSide::Back => -normal,
-            };
             let normal = Unit::new_normalize(
                 intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
             );
+            let normal = match material.side() {
+                MaterialSide::Both => {
+                    if normal.dot(&ray.direction) > 0.0 {
+                        -normal
+                    } else {
+                        normal
+                    }
+                }
+                MaterialSide::Front => normal,
+                MaterialSide::Back => -normal,
+            };
 
             match material {
                 Material::Phong(material) => {
