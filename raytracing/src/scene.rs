@@ -1,7 +1,7 @@
 use crate::core::{self, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Transformed};
 use crate::lights::Light;
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
@@ -164,13 +164,13 @@ impl Scene {
     fn get_color_phong(
         &self,
         ray: Ray,
-        depth: u8,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
         uv: Vector2<f64>,
         material: &PhongMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
+        let depth = ray.get_depth();
 
         let material_color = material.get_color(uv);
 
@@ -178,11 +178,12 @@ impl Scene {
 
         let reflection_dir = core::reflect(&ray.direction, &normal).into_inner();
         let reflection_ray = Ray {
+            ray_type: RayType::Secondary(depth + 1),
             origin: hit_point + (reflection_dir * BIAS),
             direction: reflection_dir,
             refractive_index: 1.0,
         };
-        let (color, r) = self.get_color(reflection_ray, depth + 1);
+        let (color, r) = self.get_color(reflection_ray);
         ray_count += r;
         let reflection = color.xyz().component_mul(&material_color);
 
@@ -202,6 +203,7 @@ impl Scene {
                     let n_dot_l = normal.dot(&light_dir);
                     if n_dot_l > 0.0 {
                         let shadow_ray = Ray {
+                            ray_type: RayType::Shadow,
                             origin: hit_point + (light_dir * BIAS),
                             direction: light_dir,
                             refractive_index: 1.0,
@@ -237,13 +239,13 @@ impl Scene {
     fn get_color_physical(
         &self,
         ray: Ray,
-        depth: u8,
         hit_point: Point3<f64>,
         normal: Unit<Vector3<f64>>,
         uv: Vector2<f64>,
         material: &PhysicalMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
+        let depth = ray.get_depth();
 
         let material_color = material.get_color(uv);
 
@@ -264,11 +266,12 @@ impl Scene {
             if let Some(refraction_dir) = core::refract(&ray.direction, &normal, eta) {
                 let refraction_dir = refraction_dir.into_inner();
                 let refraction_ray = Ray {
+                    ray_type: RayType::Secondary(depth + 1),
                     origin: hit_point + (refraction_dir * BIAS),
                     direction: refraction_dir,
                     refractive_index: material.refractive_index,
                 };
-                let (color, r) = self.get_color(refraction_ray, depth + 1);
+                let (color, r) = self.get_color(refraction_ray);
                 ray_count += r;
                 refraction += color.xyz().component_mul(&material_color);
             }
@@ -283,11 +286,12 @@ impl Scene {
             for _ in 0..reflected_rays {
                 let direction = core::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
                 let reflection_ray = Ray {
+                    ray_type: RayType::Secondary(depth + 1),
                     origin: hit_point + (direction * BIAS),
                     direction,
                     refractive_index: 1.0,
                 };
-                let (color, r) = self.get_color(reflection_ray, depth + 1);
+                let (color, r) = self.get_color(reflection_ray);
                 ray_count += r;
                 reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
             }
@@ -311,6 +315,7 @@ impl Scene {
                     let n_dot_l = normal.dot(&light_dir);
                     if n_dot_l > 0.0 {
                         let shadow_ray = Ray {
+                            ray_type: RayType::Shadow,
                             origin: hit_point + (light_dir * BIAS),
                             direction: light_dir,
                             refractive_index: 1.0,
@@ -353,10 +358,10 @@ impl Scene {
         (color.insert_row(3, 1.0), ray_count)
     }
 
-    fn get_color(&self, ray: Ray, depth: u8) -> (Vector4<f64>, u64) {
+    fn get_color(&self, ray: Ray) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
-        if depth >= self.max_depth {
+        if ray.get_depth() >= self.max_depth {
             return (Vector4::zero(), ray_count);
         }
 
@@ -369,24 +374,22 @@ impl Scene {
             let normal = intersection.object.surface_normal(&object_hit_point);
             let uv = intersection.object.uv(&object_hit_point, &normal);
 
-            let normal = Unit::new_normalize(
-                intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
-            );
             let normal = match material.side() {
                 MaterialSide::Front => normal,
                 MaterialSide::Back => -normal,
             };
+            let normal = Unit::new_normalize(
+                intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
+            );
 
             match material {
                 Material::Phong(material) => {
-                    let (color, r) =
-                        self.get_color_phong(ray, depth, hit_point, normal, uv, material);
+                    let (color, r) = self.get_color_phong(ray, hit_point, normal, uv, material);
 
                     (color, ray_count + r)
                 }
                 Material::Physical(material) => {
-                    let (color, r) =
-                        self.get_color_physical(ray, depth, hit_point, normal, uv, material);
+                    let (color, r) = self.get_color_physical(ray, hit_point, normal, uv, material);
 
                     (color, ray_count + r)
                 }
@@ -417,11 +420,12 @@ impl Scene {
         let direction = (self.camera.camera_to_world * direction.to_homogeneous()).xyz();
 
         let ray = Ray {
+            ray_type: RayType::Primary,
             origin: self.camera.position,
             direction,
             refractive_index: 1.0,
         };
 
-        self.get_color(ray, 0)
+        self.get_color(ray)
     }
 }
