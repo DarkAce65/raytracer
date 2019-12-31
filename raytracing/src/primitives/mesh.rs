@@ -25,31 +25,50 @@ impl Loadable for Mesh {
         for model in models.iter() {
             let mesh = &model.mesh;
 
-            let positions: Vec<f64> = mesh.positions.iter().map(|p| (*p).into()).collect();
+            let positions: Vec<Point3<f64>> = mesh
+                .positions
+                .chunks_exact(3)
+                .map(|position| {
+                    Point3::new(position[0] as f64, position[1] as f64, position[2] as f64)
+                })
+                .collect();
+            let normals: Vec<Vector3<f64>> = mesh
+                .normals
+                .chunks_exact(3)
+                .map(|normal| {
+                    Vector3::new(normal[0] as f64, normal[1] as f64, normal[2] as f64).normalize()
+                })
+                .collect();
 
-            for f in 0..mesh.indices.len() / 3 {
+            for face_indices in mesh.indices.chunks_exact(3) {
                 let (idx0, idx1, idx2) = (
-                    mesh.indices[3 * f] as usize,
-                    mesh.indices[3 * f + 1] as usize,
-                    mesh.indices[3 * f + 2] as usize,
-                );
-                let p0 = Point3::new(
-                    positions[3 * idx0],
-                    positions[3 * idx0 + 1],
-                    positions[3 * idx0 + 2],
-                );
-                let p1 = Point3::new(
-                    positions[3 * idx1],
-                    positions[3 * idx1 + 1],
-                    positions[3 * idx1 + 2],
-                );
-                let p2 = Point3::new(
-                    positions[3 * idx2],
-                    positions[3 * idx2 + 1],
-                    positions[3 * idx2 + 2],
+                    face_indices[0] as usize,
+                    face_indices[1] as usize,
+                    face_indices[2] as usize,
                 );
 
-                let face = Triangle::new(self.transform, [p0, p1, p2], self.material.clone(), None);
+                let p0 = positions[idx0];
+                let p1 = positions[idx1];
+                let p2 = positions[idx2];
+
+                let normal = if mesh.normals.is_empty() {
+                    Triangle::compute_normal([p0, p1, p2])
+                } else {
+                    let n0 = normals[idx0];
+                    let n1 = normals[idx1];
+                    let n2 = normals[idx2];
+
+                    Unit::new_normalize(n0 + n1 + n2)
+                };
+
+                let face = Triangle::new(
+                    self.transform,
+                    [p0, p1, p2],
+                    normal,
+                    self.material.clone(),
+                    None,
+                );
+
                 children.push(Object3D::new(Box::new(face)));
             }
         }

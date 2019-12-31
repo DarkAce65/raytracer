@@ -53,24 +53,24 @@ impl Triangle {
     pub fn new(
         transform: Transform,
         vertices: [Point3<f64>; 3],
+        normal: Unit<Vector3<f64>>,
         material: Material,
         children: Option<Vec<Object3D>>,
     ) -> Self {
-        let data = TriangleData {
+        Self {
             transform,
             vertices,
+            normal,
             material,
             children,
-        };
-
-        data.into()
+        }
     }
 
-    fn compute_normal(vertices: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
+    pub fn compute_normal(vertices: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
         let edge1 = vertices[1] - vertices[0];
         let edge2 = vertices[2] - vertices[0];
 
-        Unit::new_normalize(edge2.cross(&edge1))
+        Unit::new_normalize(edge1.cross(&edge2))
     }
 }
 
