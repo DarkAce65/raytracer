@@ -176,57 +176,62 @@ impl Scene {
 
         let emissive_light = material.emissive;
 
-        let reflection_dir = core::reflect(&ray.direction, &normal).into_inner();
-        let reflection_ray = Ray {
-            ray_type: RayType::Secondary(depth + 1),
-            origin: hit_point + (reflection_dir * BIAS),
-            direction: reflection_dir,
-            refractive_index: 1.0,
+        let reflection = if material.reflectivity > 0.0 {
+            let reflection_dir = core::reflect(&ray.direction, &normal).into_inner();
+            let reflection_ray = Ray {
+                ray_type: RayType::Secondary(depth + 1),
+                origin: hit_point + (reflection_dir * BIAS),
+                direction: reflection_dir,
+                refractive_index: 1.0,
+            };
+            let (color, r) = self.get_color(reflection_ray);
+            ray_count += r;
+            color.xyz().component_mul(&material_color)
+        } else {
+            Vector3::zero()
         };
-        let (color, r) = self.get_color(reflection_ray);
-        ray_count += r;
-        let reflection = color.xyz().component_mul(&material_color);
 
         let mut ambient_light = Vector3::zero();
-
         let mut irradiance = Vector3::zero();
-        for light in self.lights.iter() {
-            match light {
-                Light::Ambient(light) => {
-                    ambient_light += light.color.component_mul(&material_color);
-                }
-                Light::Point(light) => {
-                    let light_position = light.get_position();
-                    let light_dir = light_position - hit_point;
-                    let light_distance = light_dir.magnitude();
-                    let light_dir = light_dir.normalize();
+        if material.reflectivity < 1.0 {
+            for light in self.lights.iter() {
+                match light {
+                    Light::Ambient(light) => {
+                        ambient_light += light.color.component_mul(&material_color);
+                    }
+                    Light::Point(light) => {
+                        let light_position = light.get_position();
+                        let light_dir = light_position - hit_point;
+                        let light_distance = light_dir.magnitude();
+                        let light_dir = light_dir.normalize();
 
-                    let n_dot_l = normal.dot(&light_dir);
-                    if n_dot_l > 0.0 {
-                        let shadow_ray = Ray {
-                            ray_type: RayType::Shadow,
-                            origin: light_position,
-                            direction: -light_dir,
-                            refractive_index: 1.0,
-                        };
+                        let n_dot_l = normal.dot(&light_dir);
+                        if n_dot_l > 0.0 {
+                            let shadow_ray = Ray {
+                                ray_type: RayType::Shadow,
+                                origin: light_position,
+                                direction: -light_dir,
+                                refractive_index: 1.0,
+                            };
 
-                        ray_count += 1;
-                        let shadow_intersection = self.raycast(&shadow_ray);
-                        if shadow_intersection.is_none()
-                            || shadow_intersection.unwrap().distance > light_distance - BIAS
-                        {
-                            irradiance += light.color.component_mul(&material_color) * n_dot_l;
+                            ray_count += 1;
+                            let shadow_intersection = self.raycast(&shadow_ray);
+                            if shadow_intersection.is_none()
+                                || shadow_intersection.unwrap().distance > light_distance - BIAS
+                            {
+                                irradiance += light.color.component_mul(&material_color) * n_dot_l;
 
-                            let half_vec = Unit::new_normalize(light_dir - ray.direction);
-                            let n_dot_h = normal.dot(&half_vec);
-                            if n_dot_h > 0.0 {
-                                irradiance += light.color.component_mul(&material.specular)
-                                    * n_dot_h.powf(material.shininess);
+                                let half_vec = Unit::new_normalize(light_dir - ray.direction);
+                                let n_dot_h = normal.dot(&half_vec);
+                                if n_dot_h > 0.0 {
+                                    irradiance += light.color.component_mul(&material.specular)
+                                        * n_dot_h.powf(material.shininess);
+                                }
                             }
                         }
                     }
                 }
-            };
+            }
         }
 
         let color = emissive_light
@@ -300,7 +305,6 @@ impl Scene {
         }
 
         let mut ambient_light = Vector3::zero();
-
         let mut irradiance = Vector3::zero();
         let diffuse = material_color * FRAC_1_PI;
         for light in self.lights.iter() {
