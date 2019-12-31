@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable};
-use crate::core::{BoundingVolume, Bounds, Material, Transform, Transformed};
+use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
@@ -121,34 +121,38 @@ impl Intersectable for Triangle {
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
-        let normal = -self.normal;
-        let denom = normal.dot(&ray.direction);
-        if denom > EPSILON {
-            let view = -ray.origin.coords;
-            let distance = view.dot(&normal) / denom;
 
-            if distance >= 0.0 {
-                let hit_point = ray.origin + ray.direction * distance;
+        let edge1 = self.vertices[1] - self.vertices[0];
+        let edge2 = self.vertices[2] - self.vertices[0];
+        let p_vec = ray.direction.cross(&edge2);
+        let det = edge1.dot(&p_vec);
 
-                let edge0 = self.vertices[1] - self.vertices[0];
-                let edge1 = self.vertices[2] - self.vertices[1];
-                let edge2 = self.vertices[0] - self.vertices[2];
-                let c0 = hit_point - self.vertices[0];
-                let c1 = hit_point - self.vertices[1];
-                let c2 = hit_point - self.vertices[2];
-                if normal.dot(&edge0.cross(&c0)) > 0.0
-                    && normal.dot(&edge1.cross(&c1)) > 0.0
-                    && normal.dot(&edge2.cross(&c2)) > 0.0
-                {
-                    return Some(Intersection {
-                        distance,
-                        object: self,
-                    });
-                }
-            }
+        if match (self.material.side(), ray.ray_type) {
+            (MaterialSide::Both, _) | (_, RayType::Shadow) => det.abs() < EPSILON,
+            (MaterialSide::Front, _) => det < EPSILON,
+            (MaterialSide::Back, _) => -det < EPSILON,
+        } {
+            return None;
         }
 
-        None
+        let t_vec = ray.origin - self.vertices[0];
+        let u = t_vec.dot(&p_vec) / det;
+        if u < 0.0 || 1.0 < u {
+            return None;
+        }
+
+        let q_vec = t_vec.cross(&edge1);
+        let v = ray.direction.dot(&q_vec) / det;
+        if v < 0.0 || 1.0 < u + v {
+            return None;
+        }
+
+        let distance = edge2.dot(&q_vec) / det;
+
+        Some(Intersection {
+            distance,
+            object: self,
+        })
     }
 
     fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
