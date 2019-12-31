@@ -41,7 +41,7 @@ impl Intersectable for Cube {
         Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             Point3::from([-half; 3]),
             Point3::from([half; 3]),
-            self.transform,
+            &self.transform,
         ))
     }
 

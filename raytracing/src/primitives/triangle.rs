@@ -85,8 +85,8 @@ impl Transformed for Triangle {
 impl Intersectable for Triangle {
     fn make_bounding_volume(&self) -> Bounds {
         let mut min = self.vertices[0];
-        let mut max = self.vertices[0];
-        for vertex in self.vertices[1..3].iter() {
+        let mut max = min;
+        for vertex in self.vertices[1..].iter() {
             min.x = min.x.min(vertex.x);
             min.y = min.y.min(vertex.y);
             min.z = min.z.min(vertex.z);
@@ -99,7 +99,7 @@ impl Intersectable for Triangle {
         Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             min,
             max,
-            self.transform,
+            &self.transform,
         ))
     }
 

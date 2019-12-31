@@ -42,7 +42,7 @@ impl Intersectable for Sphere {
         Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             Point3::from([-self.radius; 3]),
             Point3::from([self.radius; 3]),
-            self.transform,
+            &self.transform,
         ))
     }
 

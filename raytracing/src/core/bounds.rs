@@ -29,7 +29,7 @@ impl BoundingVolume {
     pub fn from_bounds_and_transform(
         bounds_min: Point3<f64>,
         bounds_max: Point3<f64>,
-        transform: Transform,
+        transform: &Transform,
     ) -> Self {
         assert!(bounds_max >= bounds_min);
 
@@ -46,7 +46,7 @@ impl BoundingVolume {
 
         let mut min = transform.matrix() * vertices[0];
         let mut max = min;
-        for vertex in vertices[1..8].iter() {
+        for vertex in vertices[1..].iter() {
             let transformed_vertex = transform.matrix() * vertex;
             min.x = min.x.min(transformed_vertex.x);
             min.y = min.y.min(transformed_vertex.y);

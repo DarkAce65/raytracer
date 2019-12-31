@@ -13,17 +13,15 @@ fn compute_bounding_box(object: &dyn Primitive) -> Option<BoundingVolume> {
         Bounds::Children => {
             if let Some(children) = object.get_children() {
                 if !children.is_empty() {
-                    children[1..]
+                    return children[1..]
                         .iter()
                         .fold(children[0].bounding_box, |acc, child| {
                             BoundingVolume::merge(acc, child.bounding_box)
-                        })
-                } else {
-                    None
+                        });
                 }
-            } else {
-                None
             }
+
+            None
         }
         Bounds::Bounded(bounding_box) => {
             if let Some(children) = object.get_children() {
