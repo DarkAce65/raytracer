@@ -21,7 +21,7 @@ impl Ray {
         match self.ray_type {
             RayType::Primary => 0,
             RayType::Secondary(depth) => depth,
-            RayType::Shadow => panic!("Trying to get color of a shadow ray"),
+            RayType::Shadow => panic!("shadow rays have no depth"),
         }
     }
 
