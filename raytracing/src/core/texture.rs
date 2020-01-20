@@ -44,8 +44,6 @@ impl Texture {
     }
 
     pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
-        assert!(self.texture.is_some());
-
         let (w, h) = (self.width - 1, self.height - 1);
 
         let (x, y) = (uv.x % 1.0, uv.y % 1.0);
@@ -54,7 +52,11 @@ impl Texture {
         let (x, y) = (x * w as f64, y * h as f64);
         let (x, y) = (clamp(x as u32, 0, w), clamp(y as u32, 0, h));
 
-        let pixel = self.texture.as_ref().unwrap().get_pixel(x, y);
+        let pixel = self
+            .texture
+            .as_ref()
+            .expect("texture not loaded")
+            .get_pixel(x, y);
         let channels = pixel.channels();
 
         let norm = std::u8::MAX as f64;
