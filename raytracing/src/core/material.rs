@@ -2,6 +2,7 @@ use super::Texture;
 use nalgebra::{Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::path::Path;
@@ -56,8 +57,8 @@ pub struct PhongMaterial {
     pub specular: Vector3<f64>,
     pub reflectivity: f64,
     pub shininess: f64,
-
-    pub texture: Option<Texture>,
+    #[serde(rename = "texture")]
+    pub texture_path: Option<String>,
 }
 
 impl Default for PhongMaterial {
@@ -69,16 +70,19 @@ impl Default for PhongMaterial {
             specular: Vector3::zero(),
             reflectivity: 0.0,
             shininess: 30.0,
-
-            texture: None,
+            texture_path: None,
         }
     }
 }
 
 impl PhongMaterial {
-    pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
-        if let Some(texture) = &self.texture {
-            self.color.component_mul(&texture.get_color(uv))
+    pub fn get_color(&self, uv: Vector2<f64>, textures: &HashMap<String, Texture>) -> Vector3<f64> {
+        if let Some(texture_path) = &self.texture_path {
+            if let Some(texture) = textures.get(texture_path) {
+                self.color.component_mul(&texture.get_color(uv))
+            } else {
+                panic!("texture at \"{}\" not found", texture_path)
+            }
         } else {
             self.color
         }
@@ -96,8 +100,8 @@ pub struct PhysicalMaterial {
     pub roughness: f64,
     pub metalness: f64,
     pub refractive_index: f64,
-
-    pub texture: Option<Texture>,
+    #[serde(rename = "texture")]
+    pub texture_path: Option<String>,
 }
 
 impl Default for PhysicalMaterial {
@@ -111,16 +115,19 @@ impl Default for PhysicalMaterial {
             roughness: 0.5,
             metalness: 0.0,
             refractive_index: 1.0,
-
-            texture: None,
+            texture_path: None,
         }
     }
 }
 
 impl PhysicalMaterial {
-    pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
-        if let Some(texture) = &self.texture {
-            self.color.component_mul(&texture.get_color(uv))
+    pub fn get_color(&self, uv: Vector2<f64>, textures: &HashMap<String, Texture>) -> Vector3<f64> {
+        if let Some(texture_path) = &self.texture_path {
+            if let Some(texture) = textures.get(texture_path) {
+                self.color.component_mul(&texture.get_color(uv))
+            } else {
+                panic!("texture at \"{}\" not found", texture_path)
+            }
         } else {
             self.color
         }
@@ -141,14 +148,19 @@ impl Default for Material {
 }
 
 impl Material {
-    pub fn load_textures(&mut self, asset_base: &Path) {
-        let texture = match self {
-            Material::Phong(material) => material.texture.as_mut(),
-            Material::Physical(material) => material.texture.as_mut(),
+    pub fn load_textures(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) {
+        let texture_path = match self {
+            Material::Phong(material) => material.texture_path.as_ref(),
+            Material::Physical(material) => material.texture_path.as_ref(),
         };
 
-        if let Some(texture) = texture {
-            texture.load(asset_base).expect("Failed to load texture");
+        if let Some(texture_path) = texture_path {
+            if !textures.contains_key(texture_path) {
+                let texture_path = texture_path.to_string();
+                let mut texture = Texture::new(&texture_path);
+                texture.load(asset_base).expect("Failed to load texture");
+                textures.insert(texture_path, texture);
+            }
         }
     }
 

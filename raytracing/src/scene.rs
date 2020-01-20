@@ -1,4 +1,6 @@
-use crate::core::{self, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Transformed};
+use crate::core::{
+    self, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Texture, Transformed,
+};
 use crate::lights::Light;
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
@@ -7,6 +9,7 @@ use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::cmp::Ordering::Equal;
+use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
 use std::path::Path;
@@ -127,6 +130,8 @@ pub struct Scene {
     camera: Camera,
     lights: Vec<Light>,
     objects: Vec<Object3D>,
+    #[serde(skip_deserializing)]
+    pub textures: HashMap<String, Texture>,
 }
 
 impl Default for Scene {
@@ -143,6 +148,7 @@ impl Default for Scene {
             ),
             lights: Vec::new(),
             objects: Vec::new(),
+            textures: HashMap::new(),
         }
     }
 }
@@ -150,7 +156,7 @@ impl Default for Scene {
 impl Scene {
     pub fn load_assets(&mut self, asset_base: &Path) {
         for object in self.objects.iter_mut() {
-            object.load_assets(asset_base);
+            object.load_assets(asset_base, &mut self.textures);
         }
     }
 
@@ -172,7 +178,7 @@ impl Scene {
         let mut ray_count = 0;
         let depth = ray.get_depth();
 
-        let material_color = material.get_color(uv);
+        let material_color = material.get_color(uv, &self.textures);
 
         let emissive_light = material.emissive;
 
@@ -253,7 +259,7 @@ impl Scene {
         let mut ray_count = 0;
         let depth = ray.get_depth();
 
-        let material_color = material.get_color(uv);
+        let material_color = material.get_color(uv, &self.textures);
 
         let view_dir = Unit::new_normalize(-ray.direction);
         let n_dot_v = normal.dot(&view_dir).max(0.0);

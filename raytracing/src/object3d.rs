@@ -1,8 +1,9 @@
-use crate::core::{BoundingVolume, Bounds};
+use crate::core::{BoundingVolume, Bounds, Texture};
 use crate::primitives::Primitive;
 use crate::ray_intersection::{Intersection, Ray};
 use serde::{Deserialize, Deserializer};
 use std::cmp::Ordering::Equal;
+use std::collections::HashMap;
 use std::path::Path;
 
 fn compute_bounding_box(object: &dyn Primitive) -> Option<BoundingVolume> {
@@ -50,13 +51,19 @@ impl Object3D {
         }
     }
 
-    pub fn load_assets(&mut self, asset_base: &Path) -> bool {
+    pub fn load_assets(
+        &mut self,
+        asset_base: &Path,
+        textures: &mut HashMap<String, Texture>,
+    ) -> bool {
         let mut should_recompute_bb = self.object.load_assets(asset_base);
-        self.object.get_material_mut().load_textures(asset_base);
+        self.object
+            .get_material_mut()
+            .load_textures(asset_base, textures);
 
         if let Some(children) = self.object.get_children_mut() {
             for child in children.iter_mut() {
-                if child.load_assets(asset_base) {
+                if child.load_assets(asset_base, textures) {
                     child.bounding_box = compute_bounding_box(child.object.as_ref());
                     should_recompute_bb = true;
                 }

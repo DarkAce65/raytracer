@@ -1,10 +1,10 @@
 use image::Pixel;
 use image::RgbImage;
 use nalgebra::{clamp, Vector2, Vector3};
-use serde::{Deserialize, Deserializer};
+use std::fmt;
 use std::path::Path;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Texture {
     texture_path: String,
     width: u32,
@@ -12,8 +12,29 @@ pub struct Texture {
     texture: Option<RgbImage>,
 }
 
+impl fmt::Debug for Texture {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Texture {{ width: {}, height: {}, texture_path: {} }}",
+            self.width, self.height, self.texture_path
+        )
+    }
+}
+
 impl Texture {
+    pub fn new(texture_path: &str) -> Self {
+        Self {
+            texture_path: texture_path.to_string(),
+            width: 0,
+            height: 0,
+            texture: None,
+        }
+    }
+
     pub fn load(&mut self, asset_base: &Path) -> Result<(), image::ImageError> {
+        assert!(self.texture.is_none());
+
         let texture = image::open(asset_base.join(self.texture_path.clone()))?.to_rgb();
         self.width = texture.width();
         self.height = texture.height();
@@ -42,21 +63,5 @@ impl Texture {
             channels[1] as f64 / norm,
             channels[2] as f64 / norm,
         )
-    }
-}
-
-impl<'de> Deserialize<'de> for Texture {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let texture_path: String = Deserialize::deserialize(deserializer)?;
-
-        Ok(Texture {
-            texture_path: texture_path.to_string(),
-            width: 0,
-            height: 0,
-            texture: None,
-        })
     }
 }
