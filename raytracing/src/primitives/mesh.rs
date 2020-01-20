@@ -3,6 +3,7 @@ use crate::core::{Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
+use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::path::Path;
 use tobj::load_obj;
@@ -32,12 +33,21 @@ impl Loadable for Mesh {
                     Point3::new(position[0] as f64, position[1] as f64, position[2] as f64)
                 })
                 .collect();
-            let normals: Vec<Vector3<f64>> = mesh
+            let normals: Vec<Unit<Vector3<f64>>> = mesh
                 .normals
                 .chunks_exact(3)
                 .map(|normal| {
-                    Vector3::new(normal[0] as f64, normal[1] as f64, normal[2] as f64).normalize()
+                    Unit::new_normalize(Vector3::new(
+                        normal[0] as f64,
+                        normal[1] as f64,
+                        normal[2] as f64,
+                    ))
                 })
+                .collect();
+            let texcoords: Vec<Vector2<f64>> = mesh
+                .texcoords
+                .chunks_exact(2)
+                .map(|texcoords| Vector2::new(texcoords[0] as f64, texcoords[1] as f64))
                 .collect();
 
             for face_indices in mesh.indices.chunks_exact(3) {
@@ -51,20 +61,31 @@ impl Loadable for Mesh {
                 let p1 = positions[idx1];
                 let p2 = positions[idx2];
 
-                let normal = if mesh.normals.is_empty() {
-                    Triangle::compute_normal([p0, p1, p2])
+                let normals = if mesh.normals.is_empty() {
+                    [Triangle::compute_normal([p0, p1, p2]); 3]
                 } else {
                     let n0 = normals[idx0];
                     let n1 = normals[idx1];
                     let n2 = normals[idx2];
 
-                    Unit::new_normalize(n0 + n1 + n2)
+                    [n0, n1, n2]
+                };
+
+                let texcoords = if mesh.texcoords.is_empty() {
+                    [Vector2::zero(); 3]
+                } else {
+                    let uv0 = texcoords[idx0];
+                    let uv1 = texcoords[idx1];
+                    let uv2 = texcoords[idx2];
+
+                    [uv0, uv1, uv2]
                 };
 
                 let face = Triangle::new(
                     self.transform,
                     [p0, p1, p2],
-                    normal,
+                    normals,
+                    texcoords,
                     self.material.clone(),
                     None,
                 );

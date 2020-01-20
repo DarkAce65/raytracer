@@ -3,8 +3,26 @@ use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Tra
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
+use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::f64::EPSILON;
+
+#[derive(Debug)]
+struct VertexPNT {
+    position: Point3<f64>,
+    normal: Unit<Vector3<f64>>,
+    texcoords: Vector2<f64>,
+}
+
+impl VertexPNT {
+    fn new(position: Point3<f64>, normal: Unit<Vector3<f64>>, texcoords: Vector2<f64>) -> Self {
+        Self {
+            position,
+            normal,
+            texcoords,
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -31,36 +49,45 @@ impl Default for TriangleData {
 #[serde(from = "TriangleData")]
 pub struct Triangle {
     transform: Transform,
-    vertices: [Point3<f64>; 3],
-    normal: Unit<Vector3<f64>>,
+    vertex_data: [VertexPNT; 3],
     material: Material,
     children: Option<Vec<Object3D>>,
 }
 
 impl From<TriangleData> for Triangle {
     fn from(data: TriangleData) -> Self {
-        Self {
-            transform: data.transform,
-            vertices: data.vertices,
-            normal: Triangle::compute_normal(data.vertices),
-            material: data.material,
-            children: data.children,
-        }
+        let normals = [Triangle::compute_normal(data.vertices); 3];
+        let texcoords = [Vector2::zero(); 3];
+
+        Triangle::new(
+            data.transform,
+            data.vertices,
+            normals,
+            texcoords,
+            data.material,
+            data.children,
+        )
     }
 }
 
 impl Triangle {
     pub fn new(
         transform: Transform,
-        vertices: [Point3<f64>; 3],
-        normal: Unit<Vector3<f64>>,
+        positions: [Point3<f64>; 3],
+        normals: [Unit<Vector3<f64>>; 3],
+        texcoords: [Vector2<f64>; 3],
         material: Material,
         children: Option<Vec<Object3D>>,
     ) -> Self {
+        let vertex_data = [
+            VertexPNT::new(positions[0], normals[0], texcoords[0]),
+            VertexPNT::new(positions[1], normals[1], texcoords[1]),
+            VertexPNT::new(positions[2], normals[2], texcoords[2]),
+        ];
+
         Self {
             transform,
-            vertices,
-            normal,
+            vertex_data,
             material,
             children,
         }
@@ -84,16 +111,16 @@ impl Transformed for Triangle {
 
 impl Intersectable for Triangle {
     fn make_bounding_volume(&self) -> Bounds {
-        let mut min = self.vertices[0];
+        let mut min = self.vertex_data[0].position;
         let mut max = min;
-        for vertex in self.vertices[1..].iter() {
-            min.x = min.x.min(vertex.x);
-            min.y = min.y.min(vertex.y);
-            min.z = min.z.min(vertex.z);
+        for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
+            min.x = min.x.min(position.x);
+            min.y = min.y.min(position.y);
+            min.z = min.z.min(position.z);
 
-            max.x = max.x.max(vertex.x);
-            max.y = max.y.max(vertex.y);
-            max.z = max.z.max(vertex.z);
+            max.x = max.x.max(position.x);
+            max.y = max.y.max(position.y);
+            max.z = max.z.max(position.z);
         }
 
         Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
@@ -122,8 +149,8 @@ impl Intersectable for Triangle {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
 
-        let edge1 = self.vertices[1] - self.vertices[0];
-        let edge2 = self.vertices[2] - self.vertices[0];
+        let edge1 = self.vertex_data[1].position - self.vertex_data[0].position;
+        let edge2 = self.vertex_data[2].position - self.vertex_data[0].position;
         let p_vec = ray.direction.cross(&edge2);
         let det = edge1.dot(&p_vec);
 
@@ -135,7 +162,7 @@ impl Intersectable for Triangle {
             return None;
         }
 
-        let t_vec = ray.origin - self.vertices[0];
+        let t_vec = ray.origin - self.vertex_data[0].position;
         let u = t_vec.dot(&p_vec) / det;
         if u < 0.0 || 1.0 < u {
             return None;
@@ -156,10 +183,10 @@ impl Intersectable for Triangle {
     }
 
     fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        self.normal
+        self.vertex_data[0].normal
     }
 
     fn uv(&self, _hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        Vector2::new(0.0, 0.0)
+        self.vertex_data[0].texcoords
     }
 }
