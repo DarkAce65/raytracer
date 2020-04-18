@@ -377,26 +377,10 @@ impl Scene {
 
         ray_count += 1;
         if let Some(intersection) = self.raycast(&ray) {
-            let hit_point = intersection.object.get_transform().matrix() * intersection.hit_point;
-
-            let material = intersection.object.get_material();
-            let normal = intersection.normal;
+            let hit_point = intersection.get_hit_point();
+            let normal = intersection.get_normal(&ray);
             let uv = intersection.uv;
-
-            let normal = Unit::new_normalize(
-                intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
-            );
-            let normal = match material.side() {
-                MaterialSide::Both => {
-                    if normal.dot(&ray.direction) > 0.0 {
-                        -normal
-                    } else {
-                        normal
-                    }
-                }
-                MaterialSide::Front => normal,
-                MaterialSide::Back => -normal,
-            };
+            let material = intersection.object.get_material();
 
             let (color, r) = match material {
                 Material::Phong(material) => {
@@ -406,7 +390,6 @@ impl Scene {
                     self.get_color_physical(ray, hit_point, normal, uv, material)
                 }
             };
-            // let (color, r) = (Vector4::new(uv.x, uv.y, 1.0 - uv.x - uv.y, 0.0), 0);
 
             (color.map(|c| clamp(c, 0.0, 1.0)), ray_count + r)
         } else {
