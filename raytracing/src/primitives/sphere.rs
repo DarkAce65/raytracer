@@ -104,13 +104,13 @@ impl Intersectable for Sphere {
             }
 
             let hit_point = ray.origin + ray.direction * t;
-            return Some(Intersection {
-                object: self,
-                distance: t,
+            return Some(Intersection::new(
+                self,
+                t,
                 hit_point,
-                normal: self.surface_normal(&hit_point),
-                uv: self.uv(&hit_point),
-            });
+                self.surface_normal(&hit_point),
+                self.uv(&hit_point),
+            ));
         }
 
         None

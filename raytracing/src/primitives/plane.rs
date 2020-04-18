@@ -84,13 +84,13 @@ impl Intersectable for Plane {
         let distance = ray.origin.coords.dot(&self.normal) / n_dot_v;
         if distance >= 0.0 {
             let hit_point = ray.origin + ray.direction * distance;
-            return Some(Intersection {
-                object: self,
+            return Some(Intersection::new(
+                self,
                 distance,
                 hit_point,
-                normal: self.surface_normal(),
-                uv: self.uv(&hit_point, &self.surface_normal()),
-            });
+                self.surface_normal(),
+                self.uv(&hit_point, &self.surface_normal()),
+            ));
         }
 
         None

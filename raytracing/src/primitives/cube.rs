@@ -153,13 +153,13 @@ impl Intersectable for Cube {
         }
 
         let hit_point = ray.origin + ray.direction * d;
-        let intersection = Intersection {
-            object: self,
-            distance: d,
+        let intersection = Intersection::new(
+            self,
+            d,
             hit_point,
-            normal: self.surface_normal(&hit_point),
-            uv: self.uv(&hit_point, &self.surface_normal(&hit_point)),
-        };
+            self.surface_normal(&hit_point),
+            self.uv(&hit_point, &self.surface_normal(&hit_point)),
+        );
 
         Some(intersection)
     }

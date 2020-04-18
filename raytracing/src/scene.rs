@@ -379,7 +379,7 @@ impl Scene {
         if let Some(intersection) = self.raycast(&ray) {
             let hit_point = intersection.get_hit_point();
             let normal = intersection.get_normal(&ray);
-            let uv = intersection.uv;
+            let uv = intersection.get_uv();
             let material = intersection.object.get_material();
 
             let (color, r) = match material {

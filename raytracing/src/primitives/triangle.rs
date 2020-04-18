@@ -196,12 +196,12 @@ impl Intersectable for Triangle {
                 + w * self.vertex_data[2].position.coords,
         );
 
-        Some(Intersection {
-            object: self,
+        Some(Intersection::new(
+            self,
             distance,
             hit_point,
-            normal: self.surface_normal(u, v, w),
-            uv: self.uv(u, v, w),
-        })
+            self.surface_normal(u, v, w),
+            self.uv(u, v, w),
+        ))
     }
 }
