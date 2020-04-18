@@ -29,6 +29,21 @@ impl Default for Sphere {
     }
 }
 
+impl Sphere {
+    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
+        Unit::new_normalize(hit_point.coords)
+    }
+
+    fn uv(&self, hit_point: &Point3<f64>) -> Vector2<f64> {
+        let hit_point = hit_point.coords.map(|c| c / self.radius / 2.0);
+
+        Vector2::new(
+            0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
+            0.5 + (2.0 * hit_point.y).asin() * FRAC_1_PI,
+        )
+    }
+}
+
 impl Loadable for Sphere {}
 
 impl Transformed for Sphere {
@@ -88,25 +103,16 @@ impl Intersectable for Sphere {
                 return None;
             }
 
+            let hit_point = ray.origin + ray.direction * t;
             return Some(Intersection {
-                distance: t,
                 object: self,
+                distance: t,
+                hit_point,
+                normal: self.surface_normal(&hit_point),
+                uv: self.uv(&hit_point),
             });
         }
 
         None
-    }
-
-    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        Unit::new_normalize(hit_point.coords)
-    }
-
-    fn uv(&self, hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        let hit_point = hit_point.coords.map(|c| c / self.radius / 2.0);
-
-        Vector2::new(
-            0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
-            0.5 + (2.0 * hit_point.y).asin() * FRAC_1_PI,
-        )
     }
 }

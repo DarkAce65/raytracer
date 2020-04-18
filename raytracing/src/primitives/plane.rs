@@ -27,6 +27,18 @@ impl Default for Plane {
     }
 }
 
+impl Plane {
+    fn surface_normal(&self) -> Unit<Vector3<f64>> {
+        self.normal
+    }
+
+    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
+        let p = Rotation3::rotation_between(&normal, &Vector3::y_axis()).unwrap() * hit_point;
+
+        Vector2::new(p.x, p.z)
+    }
+}
+
 impl Loadable for Plane {}
 
 impl Transformed for Plane {
@@ -71,22 +83,16 @@ impl Intersectable for Plane {
 
         let distance = ray.origin.coords.dot(&self.normal) / n_dot_v;
         if distance >= 0.0 {
+            let hit_point = ray.origin + ray.direction * distance;
             return Some(Intersection {
-                distance,
                 object: self,
+                distance,
+                hit_point,
+                normal: self.surface_normal(),
+                uv: self.uv(&hit_point, &self.surface_normal()),
             });
         }
 
         None
-    }
-
-    fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        self.normal
-    }
-
-    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        let p = Rotation3::rotation_between(&normal, &Vector3::y_axis()).unwrap() * hit_point;
-
-        Vector2::new(p.x, p.z)
     }
 }

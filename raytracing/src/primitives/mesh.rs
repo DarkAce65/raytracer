@@ -130,12 +130,4 @@ impl Intersectable for Mesh {
     fn intersect(&self, _ray: &Ray) -> Option<Intersection> {
         None
     }
-
-    fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        unimplemented!()
-    }
-
-    fn uv(&self, _hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        unimplemented!()
-    }
 }

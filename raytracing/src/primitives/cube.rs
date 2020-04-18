@@ -26,6 +26,53 @@ impl Default for Cube {
     }
 }
 
+impl Cube {
+    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
+        let normal = hit_point.coords;
+        let normal_sign = normal.map(|c| c.signum());
+        let normal = normal.map(|c| c.abs());
+        if normal.x > normal.y {
+            if normal.x > normal.z {
+                if normal_sign.x < 0.0 {
+                    -Vector3::x_axis()
+                } else {
+                    Vector3::x_axis()
+                }
+            } else if normal_sign.z < 0.0 {
+                -Vector3::z_axis()
+            } else {
+                Vector3::z_axis()
+            }
+        } else if normal.y > normal.z {
+            if normal_sign.y < 0.0 {
+                -Vector3::y_axis()
+            } else {
+                Vector3::y_axis()
+            }
+        } else if normal_sign.z < 0.0 {
+            -Vector3::z_axis()
+        } else {
+            Vector3::z_axis()
+        }
+    }
+
+    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
+        let hit_point = hit_point.coords.map(|c| c / self.size);
+
+        if normal.x > normal.y {
+            if normal.x > normal.z {
+                Vector2::new(hit_point.y + 0.5, hit_point.z + 0.5)
+            } else {
+                Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+            }
+        } else if normal.y > normal.z {
+            Vector2::new(hit_point.x + 0.5, hit_point.z + 0.5)
+        } else {
+            Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+        }
+    }
+}
+
 impl Loadable for Cube {}
 
 impl Transformed for Cube {
@@ -105,56 +152,15 @@ impl Intersectable for Cube {
             return None;
         }
 
+        let hit_point = ray.origin + ray.direction * d;
         let intersection = Intersection {
-            distance: d,
             object: self,
+            distance: d,
+            hit_point,
+            normal: self.surface_normal(&hit_point),
+            uv: self.uv(&hit_point, &self.surface_normal(&hit_point)),
         };
 
         Some(intersection)
-    }
-
-    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        let normal = hit_point.coords;
-        let normal_sign = normal.map(|c| c.signum());
-        let normal = normal.map(|c| c.abs());
-        if normal.x > normal.y {
-            if normal.x > normal.z {
-                if normal_sign.x < 0.0 {
-                    -Vector3::x_axis()
-                } else {
-                    Vector3::x_axis()
-                }
-            } else if normal_sign.z < 0.0 {
-                -Vector3::z_axis()
-            } else {
-                Vector3::z_axis()
-            }
-        } else if normal.y > normal.z {
-            if normal_sign.y < 0.0 {
-                -Vector3::y_axis()
-            } else {
-                Vector3::y_axis()
-            }
-        } else if normal_sign.z < 0.0 {
-            -Vector3::z_axis()
-        } else {
-            Vector3::z_axis()
-        }
-    }
-
-    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        let hit_point = hit_point.coords.map(|c| c / self.size);
-
-        if normal.x > normal.y {
-            if normal.x > normal.z {
-                Vector2::new(hit_point.y + 0.5, hit_point.z + 0.5)
-            } else {
-                Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
-            }
-        } else if normal.y > normal.z {
-            Vector2::new(hit_point.x + 0.5, hit_point.z + 0.5)
-        } else {
-            Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
-        }
     }
 }

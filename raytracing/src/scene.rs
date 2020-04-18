@@ -377,12 +377,11 @@ impl Scene {
 
         ray_count += 1;
         if let Some(intersection) = self.raycast(&ray) {
-            let hit_point = ray.origin + ray.direction * intersection.distance;
-            let object_hit_point = intersection.object.get_transform().inverse() * hit_point;
+            let hit_point = intersection.object.get_transform().matrix() * intersection.hit_point;
 
             let material = intersection.object.get_material();
-            let normal = intersection.object.surface_normal(&object_hit_point);
-            let uv = intersection.object.uv(&object_hit_point, &normal);
+            let normal = intersection.normal;
+            let uv = intersection.uv;
 
             let normal = Unit::new_normalize(
                 intersection.object.get_transform().inverse_transpose() * normal.into_inner(),
@@ -407,6 +406,7 @@ impl Scene {
                     self.get_color_physical(ray, hit_point, normal, uv, material)
                 }
             };
+            // let (color, r) = (Vector4::new(uv.x, uv.y, 1.0 - uv.x - uv.y, 0.0), 0);
 
             (color.map(|c| clamp(c, 0.0, 1.0)), ray_count + r)
         } else {

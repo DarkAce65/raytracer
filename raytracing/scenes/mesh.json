@@ -1,12 +1,12 @@
 {
   "width": 800,
   "height": 800,
-  "camera": { "position": [9, 5, 11], "target": [0, 2, 0] },
+  "camera": { "position": [6, 5, 16], "target": [0, 2, 0] },
   "lights": [
     { "type": "ambient", "color": [0.125, 0.125, 0.125] },
     {
       "type": "point",
-      "transform": [{ "translate": [2, 5, 6] }],
+      "transform": [{ "translate": [3, 8, 15] }],
       "color": [1, 1, 0.9]
     }
   ],
@@ -23,7 +23,16 @@
     {
       "type": "mesh",
       "file": "models/deer.obj",
-      "transform": [{ "scale": [0.005, 0.005, 0.005] }],
+      "transform": [
+        { "scale": [0.005, 0.005, 0.005] },
+        { "translate": [0, 0, 5] }
+      ],
+      "material": { "type": "phong", "color": [0.8, 0.8, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/tree.obj",
+      "transform": [{ "scale": [18, 18, 18] }, { "translate": [1, 0, -5] }],
       "material": { "type": "phong", "color": [0.5, 0.25, 0] }
     }
   ]

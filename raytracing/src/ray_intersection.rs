@@ -1,5 +1,5 @@
 use crate::primitives::Primitive;
-use nalgebra::{Affine3, Point3, Vector3};
+use nalgebra::{Affine3, Point3, Unit, Vector2, Vector3};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RayType {
@@ -40,6 +40,9 @@ impl Ray {
 
 #[derive(Debug)]
 pub struct Intersection<'a> {
-    pub distance: f64,
     pub object: &'a dyn Primitive,
+    pub distance: f64,
+    pub hit_point: Point3<f64>,
+    pub normal: Unit<Vector3<f64>>,
+    pub uv: Vector2<f64>,
 }

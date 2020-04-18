@@ -99,6 +99,20 @@ impl Triangle {
 
         Unit::new_normalize(edge1.cross(&edge2))
     }
+
+    fn surface_normal(&self, u: f64, v: f64, w: f64) -> Unit<Vector3<f64>> {
+        Unit::new_normalize(
+            w * self.vertex_data[0].normal.into_inner()
+                + u * self.vertex_data[1].normal.into_inner()
+                + v * self.vertex_data[2].normal.into_inner(),
+        )
+    }
+
+    fn uv(&self, u: f64, v: f64, w: f64) -> Vector2<f64> {
+        w * self.vertex_data[0].texcoords
+            + u * self.vertex_data[1].texcoords
+            + v * self.vertex_data[2].texcoords
+    }
 }
 
 impl Loadable for Triangle {}
@@ -174,19 +188,20 @@ impl Intersectable for Triangle {
             return None;
         }
 
+        let w = 1.0 - u - v;
         let distance = edge2.dot(&q_vec) / det;
+        let hit_point = Point3::from(
+            u * self.vertex_data[0].position.coords
+                + v * self.vertex_data[1].position.coords
+                + w * self.vertex_data[2].position.coords,
+        );
 
         Some(Intersection {
-            distance,
             object: self,
+            distance,
+            hit_point,
+            normal: self.surface_normal(u, v, w),
+            uv: self.uv(u, v, w),
         })
-    }
-
-    fn surface_normal(&self, _hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        self.vertex_data[0].normal
-    }
-
-    fn uv(&self, _hit_point: &Point3<f64>, _normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        self.vertex_data[0].texcoords
     }
 }
