@@ -106,7 +106,7 @@ impl Intersectable for Sphere {
 
         Vector2::new(
             0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
-            0.5 - (2.0 * hit_point.y).asin() * FRAC_1_PI,
+            0.5 + (2.0 * hit_point.y).asin() * FRAC_1_PI,
         )
     }
 }
