@@ -183,6 +183,7 @@ fn main() {
         width as usize,
         height as usize,
         WindowOptions {
+            title: false,
             borderless: true,
             ..WindowOptions::default()
         },
@@ -197,7 +198,9 @@ fn main() {
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let buffer = buffer_mutex.lock().unwrap();
-        window.update_with_buffer(&buffer).unwrap();
+        window
+            .update_with_buffer(&buffer, width as usize, height as usize)
+            .unwrap();
         drop(buffer);
         sleep(std::time::Duration::from_millis(100));
     }
