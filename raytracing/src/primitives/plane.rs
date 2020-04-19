@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable};
 use crate::core::{Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
 use nalgebra::{Point3, Rotation3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
@@ -24,18 +24,6 @@ impl Default for Plane {
             material: Material::default(),
             children: None,
         }
-    }
-}
-
-impl Plane {
-    fn surface_normal(&self) -> Unit<Vector3<f64>> {
-        self.normal
-    }
-
-    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        let p = Rotation3::rotation_between(&normal, &Vector3::y_axis()).unwrap() * hit_point;
-
-        Vector2::new(p.x, p.z)
     }
 }
 
@@ -83,16 +71,29 @@ impl Intersectable for Plane {
 
         let distance = ray.origin.coords.dot(&self.normal) / n_dot_v;
         if distance >= 0.0 {
-            let hit_point = ray.origin + ray.direction * distance;
-            return Some(Intersection::new(
-                self,
-                distance,
-                hit_point,
-                self.surface_normal(),
-                self.uv(&hit_point, &self.surface_normal()),
-            ));
+            return Some(Intersection::new(self, distance));
         }
 
         None
+    }
+
+    fn surface_normal(
+        &self,
+        _object_hit_point: &Point3<f64>,
+        _intermediate: IntermediateData,
+    ) -> Unit<Vector3<f64>> {
+        self.normal
+    }
+
+    fn uv(
+        &self,
+        object_hit_point: &Point3<f64>,
+        object_normal: &Unit<Vector3<f64>>,
+        _intermediate: IntermediateData,
+    ) -> Vector2<f64> {
+        let p = Rotation3::rotation_between(&object_normal, &Vector3::y_axis()).unwrap()
+            * object_hit_point;
+
+        Vector2::new(p.x, p.z)
     }
 }

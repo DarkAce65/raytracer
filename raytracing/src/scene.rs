@@ -1,6 +1,4 @@
-use crate::core::{
-    self, Material, MaterialSide, PhongMaterial, PhysicalMaterial, Texture, Transformed,
-};
+use crate::core::{self, Material, PhongMaterial, PhysicalMaterial, Texture, Transformed};
 use crate::lights::Light;
 use crate::object3d::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
@@ -376,9 +374,10 @@ impl Scene {
         }
 
         ray_count += 1;
-        if let Some(intersection) = self.raycast(&ray) {
+        if let Some(mut intersection) = self.raycast(&ray) {
+            intersection.compute_data(&ray);
             let hit_point = intersection.get_hit_point();
-            let normal = intersection.get_normal(&ray);
+            let normal = intersection.get_normal();
             let uv = intersection.get_uv();
             let material = intersection.object.get_material();
 

@@ -6,7 +6,8 @@ mod triangle;
 
 use crate::core::{Bounds, Material, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{IntermediateData, Intersection, Ray};
+use nalgebra::{Point3, Unit, Vector2, Vector3};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 use std::path::Path;
@@ -32,6 +33,18 @@ pub trait Intersectable {
     fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>>;
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection>;
+
+    fn surface_normal(
+        &self,
+        object_hit_point: &Point3<f64>,
+        intermediate: IntermediateData,
+    ) -> Unit<Vector3<f64>>;
+    fn uv(
+        &self,
+        object_hit_point: &Point3<f64>,
+        object_normal: &Unit<Vector3<f64>>,
+        intermediate: IntermediateData,
+    ) -> Vector2<f64>;
 }
 
 #[typetag::deserialize(tag = "type")]

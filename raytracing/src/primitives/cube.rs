@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 
@@ -22,53 +22,6 @@ impl Default for Cube {
             size: 1.0,
             material: Material::default(),
             children: None,
-        }
-    }
-}
-
-impl Cube {
-    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        let normal = hit_point.coords;
-        let normal_sign = normal.map(|c| c.signum());
-        let normal = normal.map(|c| c.abs());
-        if normal.x > normal.y {
-            if normal.x > normal.z {
-                if normal_sign.x < 0.0 {
-                    -Vector3::x_axis()
-                } else {
-                    Vector3::x_axis()
-                }
-            } else if normal_sign.z < 0.0 {
-                -Vector3::z_axis()
-            } else {
-                Vector3::z_axis()
-            }
-        } else if normal.y > normal.z {
-            if normal_sign.y < 0.0 {
-                -Vector3::y_axis()
-            } else {
-                Vector3::y_axis()
-            }
-        } else if normal_sign.z < 0.0 {
-            -Vector3::z_axis()
-        } else {
-            Vector3::z_axis()
-        }
-    }
-
-    fn uv(&self, hit_point: &Point3<f64>, normal: &Unit<Vector3<f64>>) -> Vector2<f64> {
-        let hit_point = hit_point.coords.map(|c| c / self.size);
-
-        if normal.x > normal.y {
-            if normal.x > normal.z {
-                Vector2::new(hit_point.y + 0.5, hit_point.z + 0.5)
-            } else {
-                Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
-            }
-        } else if normal.y > normal.z {
-            Vector2::new(hit_point.x + 0.5, hit_point.z + 0.5)
-        } else {
-            Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
         }
     }
 }
@@ -152,15 +105,60 @@ impl Intersectable for Cube {
             return None;
         }
 
-        let hit_point = ray.origin + ray.direction * d;
-        let intersection = Intersection::new(
-            self,
-            d,
-            hit_point,
-            self.surface_normal(&hit_point),
-            self.uv(&hit_point, &self.surface_normal(&hit_point)),
-        );
+        Some(Intersection::new(self, d))
+    }
 
-        Some(intersection)
+    fn surface_normal(
+        &self,
+        object_hit_point: &Point3<f64>,
+        _intermediate: IntermediateData,
+    ) -> Unit<Vector3<f64>> {
+        let normal = object_hit_point.coords;
+        let normal_sign = normal.map(|c| c.signum());
+        let normal = normal.map(|c| c.abs());
+        if normal.x > normal.y {
+            if normal.x > normal.z {
+                if normal_sign.x < 0.0 {
+                    -Vector3::x_axis()
+                } else {
+                    Vector3::x_axis()
+                }
+            } else if normal_sign.z < 0.0 {
+                -Vector3::z_axis()
+            } else {
+                Vector3::z_axis()
+            }
+        } else if normal.y > normal.z {
+            if normal_sign.y < 0.0 {
+                -Vector3::y_axis()
+            } else {
+                Vector3::y_axis()
+            }
+        } else if normal_sign.z < 0.0 {
+            -Vector3::z_axis()
+        } else {
+            Vector3::z_axis()
+        }
+    }
+
+    fn uv(
+        &self,
+        object_hit_point: &Point3<f64>,
+        object_normal: &Unit<Vector3<f64>>,
+        _intermediate: IntermediateData,
+    ) -> Vector2<f64> {
+        let hit_point = object_hit_point.coords.map(|c| c / self.size);
+
+        if object_normal.x > object_normal.y {
+            if object_normal.x > object_normal.z {
+                Vector2::new(hit_point.y + 0.5, hit_point.z + 0.5)
+            } else {
+                Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+            }
+        } else if object_normal.y > object_normal.z {
+            Vector2::new(hit_point.x + 0.5, hit_point.z + 0.5)
+        } else {
+            Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+        }
     }
 }

@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
@@ -100,19 +100,6 @@ impl Triangle {
         Unit::new_normalize(edge1.cross(&edge2))
     }
 
-    fn surface_normal(&self, u: f64, v: f64, w: f64) -> Unit<Vector3<f64>> {
-        Unit::new_normalize(
-            w * self.vertex_data[0].normal.into_inner()
-                + u * self.vertex_data[1].normal.into_inner()
-                + v * self.vertex_data[2].normal.into_inner(),
-        )
-    }
-
-    fn uv(&self, u: f64, v: f64, w: f64) -> Vector2<f64> {
-        w * self.vertex_data[0].texcoords
-            + u * self.vertex_data[1].texcoords
-            + v * self.vertex_data[2].texcoords
-    }
 }
 
 impl Loadable for Triangle {}
@@ -188,20 +175,45 @@ impl Intersectable for Triangle {
             return None;
         }
 
-        let w = 1.0 - u - v;
         let distance = edge2.dot(&q_vec) / det;
-        let hit_point = Point3::from(
-            u * self.vertex_data[0].position.coords
-                + v * self.vertex_data[1].position.coords
-                + w * self.vertex_data[2].position.coords,
-        );
 
-        Some(Intersection::new(
+        Some(Intersection::new_with_data(
             self,
             distance,
-            hit_point,
-            self.surface_normal(u, v, w),
-            self.uv(u, v, w),
+            IntermediateData::Barycentric(u, v, 1.0 - u - v),
         ))
+    }
+
+    fn surface_normal(
+        &self,
+        _object_hit_point: &Point3<f64>,
+        intermediate: IntermediateData,
+    ) -> Unit<Vector3<f64>> {
+        let (u, v, w) = match intermediate {
+            IntermediateData::Barycentric(u, v, w) => (u, v, w),
+            _ => unreachable!(),
+        };
+
+        Unit::new_normalize(
+            w * self.vertex_data[0].normal.into_inner()
+                + u * self.vertex_data[1].normal.into_inner()
+                + v * self.vertex_data[2].normal.into_inner(),
+        )
+    }
+
+    fn uv(
+        &self,
+        _object_hit_point: &Point3<f64>,
+        _object_normal: &Unit<Vector3<f64>>,
+        intermediate: IntermediateData,
+    ) -> Vector2<f64> {
+        let (u, v, w) = match intermediate {
+            IntermediateData::Barycentric(u, v, w) => (u, v, w),
+            _ => unreachable!(),
+        };
+
+        w * self.vertex_data[0].texcoords
+            + u * self.vertex_data[1].texcoords
+            + v * self.vertex_data[2].texcoords
     }
 }

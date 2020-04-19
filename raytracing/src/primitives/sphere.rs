@@ -3,7 +3,7 @@ use crate::core::{
     quadratic, BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed,
 };
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::consts::FRAC_1_PI;
@@ -26,21 +26,6 @@ impl Default for Sphere {
             material: Material::default(),
             children: None,
         }
-    }
-}
-
-impl Sphere {
-    fn surface_normal(&self, hit_point: &Point3<f64>) -> Unit<Vector3<f64>> {
-        Unit::new_normalize(hit_point.coords)
-    }
-
-    fn uv(&self, hit_point: &Point3<f64>) -> Vector2<f64> {
-        let hit_point = hit_point.coords.map(|c| c / self.radius / 2.0);
-
-        Vector2::new(
-            0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
-            0.5 + (2.0 * hit_point.y).asin() * FRAC_1_PI,
-        )
     }
 }
 
@@ -103,16 +88,31 @@ impl Intersectable for Sphere {
                 return None;
             }
 
-            let hit_point = ray.origin + ray.direction * t;
-            return Some(Intersection::new(
-                self,
-                t,
-                hit_point,
-                self.surface_normal(&hit_point),
-                self.uv(&hit_point),
-            ));
+            return Some(Intersection::new(self, t));
         }
 
         None
+    }
+
+    fn surface_normal(
+        &self,
+        object_hit_point: &Point3<f64>,
+        _intermediate: IntermediateData,
+    ) -> Unit<Vector3<f64>> {
+        Unit::new_normalize(object_hit_point.coords)
+    }
+
+    fn uv(
+        &self,
+        object_hit_point: &Point3<f64>,
+        _object_normal: &Unit<Vector3<f64>>,
+        _intermediate: IntermediateData,
+    ) -> Vector2<f64> {
+        let hit_point = object_hit_point.coords.map(|c| c / self.radius / 2.0);
+
+        Vector2::new(
+            0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
+            0.5 + (2.0 * hit_point.y).asin() * FRAC_1_PI,
+        )
     }
 }

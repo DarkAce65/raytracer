@@ -39,42 +39,56 @@ impl Ray {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum IntermediateData {
+    Empty,
+    Barycentric(f64, f64, f64),
+}
+
+#[derive(Debug)]
+struct IntersectionData {
+    hit_point: Point3<f64>,
+    normal: Unit<Vector3<f64>>,
+    uv: Vector2<f64>,
+}
+
 #[derive(Debug)]
 pub struct Intersection<'a> {
     pub object: &'a dyn Primitive,
     pub distance: f64,
-    object_hit_point: Point3<f64>,
-    object_normal: Unit<Vector3<f64>>,
-    object_uv: Vector2<f64>,
+    intermediate: IntermediateData,
+    data: Option<IntersectionData>,
 }
 
 impl<'a> Intersection<'a> {
-    pub fn new(
+    pub fn new_with_data(
         object: &'a dyn Primitive,
         distance: f64,
-        object_hit_point: Point3<f64>,
-        object_normal: Unit<Vector3<f64>>,
-        object_uv: Vector2<f64>,
+        intermediate: IntermediateData,
     ) -> Self {
         Self {
             object,
             distance,
-            object_hit_point,
-            object_normal,
-            object_uv,
+            intermediate,
+            data: None,
         }
     }
 
-    pub fn get_hit_point(&self) -> Point3<f64> {
-        self.object.get_transform().matrix() * self.object_hit_point
+    pub fn new(object: &'a dyn Primitive, distance: f64) -> Self {
+        Self::new_with_data(object, distance, IntermediateData::Empty)
     }
 
-    pub fn get_normal(&self, ray: &Ray) -> Unit<Vector3<f64>> {
-        let normal = Unit::new_normalize(
-            self.object.get_transform().inverse_transpose() * self.object_normal.into_inner(),
-        );
+    pub fn compute_data(&mut self, ray: &Ray) {
+        let hit_point = ray.origin + ray.direction * self.distance;
+        let object_hit_point = self.object.get_transform().inverse() * hit_point;
 
-        match self.object.get_material().side() {
+        let object_normal = self
+            .object
+            .surface_normal(&object_hit_point, self.intermediate);
+        let normal = Unit::new_normalize(
+            self.object.get_transform().inverse_transpose() * object_normal.into_inner(),
+        );
+        let normal = match self.object.get_material().side() {
             MaterialSide::Both => {
                 if normal.dot(&ray.direction) > 0.0 {
                     -normal
@@ -84,10 +98,32 @@ impl<'a> Intersection<'a> {
             }
             MaterialSide::Front => normal,
             MaterialSide::Back => -normal,
-        }
+        };
+
+        let uv = self
+            .object
+            .uv(&object_hit_point, &object_normal, self.intermediate);
+
+        self.data = Some(IntersectionData {
+            hit_point,
+            normal,
+            uv,
+        });
+    }
+
+    fn get_data(&self) -> &IntersectionData {
+        self.data.as_ref().expect("intersection data not computed")
+    }
+
+    pub fn get_hit_point(&self) -> Point3<f64> {
+        self.get_data().hit_point
+    }
+
+    pub fn get_normal(&self) -> Unit<Vector3<f64>> {
+        self.get_data().normal
     }
 
     pub fn get_uv(&self) -> Vector2<f64> {
-        self.object_uv
+        self.get_data().uv
     }
 }

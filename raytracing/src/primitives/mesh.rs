@@ -1,7 +1,7 @@
 use super::{Intersectable, Loadable, Triangle};
 use crate::core::{Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
-use crate::ray_intersection::{Intersection, Ray};
+use crate::ray_intersection::{IntermediateData, Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
@@ -20,7 +20,7 @@ pub struct Mesh {
 
 impl Loadable for Mesh {
     fn load_assets(&mut self, asset_base: &Path) -> bool {
-        let (models, _) = load_obj(&asset_base.join(&self.file)).expect("Failed to load object");
+        let (models, _) = load_obj(&asset_base.join(&self.file)).expect("failed to load object");
 
         let mut children = Vec::new();
         for model in models.iter() {
@@ -129,5 +129,22 @@ impl Intersectable for Mesh {
 
     fn intersect(&self, _ray: &Ray) -> Option<Intersection> {
         None
+    }
+
+    fn surface_normal(
+        &self,
+        _object_hit_point: &Point3<f64>,
+        _intermediate: IntermediateData,
+    ) -> Unit<Vector3<f64>> {
+        unreachable!()
+    }
+
+    fn uv(
+        &self,
+        _object_hit_point: &Point3<f64>,
+        _object_normal: &Unit<Vector3<f64>>,
+        _intermediate: IntermediateData,
+    ) -> Vector2<f64> {
+        unreachable!()
     }
 }
