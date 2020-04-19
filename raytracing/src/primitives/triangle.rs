@@ -99,7 +99,6 @@ impl Triangle {
 
         Unit::new_normalize(edge1.cross(&edge2))
     }
-
 }
 
 impl Loadable for Triangle {}
