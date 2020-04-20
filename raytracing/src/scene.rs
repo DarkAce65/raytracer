@@ -12,6 +12,7 @@ use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
 use std::path::Path;
 
+const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
 const REFLECTED_RAYS: u8 = 16;
 
@@ -361,7 +362,6 @@ impl Scene {
 
         let color = (1.0 - material.opacity) * k_s.component_mul(&refraction)
             + material.opacity * (emissive_light + ambient_light + reflection + irradiance);
-        let color = color.map(|c| (c / (c + 1.0)).powf(1.0 / 2.2));
 
         (color.insert_row(3, 1.0), ray_count)
     }
@@ -423,6 +423,7 @@ impl Scene {
             refractive_index: 1.0,
         };
 
-        self.get_color(ray)
+        let (color, ray_count) = self.get_color(ray);
+        (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
     }
 }

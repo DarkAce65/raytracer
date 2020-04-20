@@ -3,7 +3,7 @@
   "height": 800,
   "camera": { "position": [6, 5, 16], "target": [0, 2, 0] },
   "lights": [
-    { "type": "ambient", "color": [0.125, 0.125, 0.125] },
+    { "type": "ambient", "color": [0.01, 0.01, 0.01] },
     {
       "type": "point",
       "transform": [{ "translate": [3, 8, 15] }],
