@@ -30,8 +30,8 @@ impl Default for Plane {
 impl Loadable for Plane {}
 
 impl Transformed for Plane {
-    fn get_transform(&self) -> Transform {
-        self.transform
+    fn get_transform(&self) -> &Transform {
+        &self.transform
     }
 }
 

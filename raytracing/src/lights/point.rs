@@ -2,7 +2,7 @@ use crate::core::{Transform, Transformed};
 use nalgebra::Vector3;
 use serde::Deserialize;
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PointLight {
     transform: Transform,
@@ -19,7 +19,7 @@ impl Default for PointLight {
 }
 
 impl Transformed for PointLight {
-    fn get_transform(&self) -> Transform {
-        self.transform
+    fn get_transform(&self) -> &Transform {
+        &self.transform
     }
 }

@@ -29,8 +29,8 @@ impl Default for Cube {
 impl Loadable for Cube {}
 
 impl Transformed for Cube {
-    fn get_transform(&self) -> Transform {
-        self.transform
+    fn get_transform(&self) -> &Transform {
+        &self.transform
     }
 }
 
@@ -63,6 +63,7 @@ impl Intersectable for Cube {
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
+
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
 

@@ -82,7 +82,7 @@ impl Loadable for Mesh {
                 };
 
                 let face = Triangle::new(
-                    self.transform,
+                    self.transform.clone(),
                     [p0, p1, p2],
                     normals,
                     texcoords,
@@ -101,8 +101,8 @@ impl Loadable for Mesh {
 }
 
 impl Transformed for Mesh {
-    fn get_transform(&self) -> Transform {
-        self.transform
+    fn get_transform(&self) -> &Transform {
+        &self.transform
     }
 }
 
@@ -136,7 +136,7 @@ impl Intersectable for Mesh {
         _object_hit_point: &Point3<f64>,
         _intermediate: IntermediateData,
     ) -> Unit<Vector3<f64>> {
-        unreachable!()
+        unimplemented!()
     }
 
     fn uv(
@@ -145,6 +145,6 @@ impl Intersectable for Mesh {
         _object_normal: &Unit<Vector3<f64>>,
         _intermediate: IntermediateData,
     ) -> Vector2<f64> {
-        unreachable!()
+        unimplemented!()
     }
 }

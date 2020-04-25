@@ -104,8 +104,8 @@ impl Triangle {
 impl Loadable for Triangle {}
 
 impl Transformed for Triangle {
-    fn get_transform(&self) -> Transform {
-        self.transform
+    fn get_transform(&self) -> &Transform {
+        &self.transform
     }
 }
 

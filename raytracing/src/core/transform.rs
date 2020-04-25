@@ -1,20 +1,22 @@
 use nalgebra::{Affine3, Matrix4, Point3, Rotation3, Translation3, Unit, Vector3};
+use once_cell::sync::OnceCell;
 use serde::de::{SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::default::Default;
 use std::fmt;
 
 pub trait Transformed {
-    fn get_transform(&self) -> Transform;
+    fn get_transform(&self) -> &Transform;
     fn get_position(&self) -> Point3<f64> {
         self.get_transform().matrix() * Point3::origin()
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Transform {
     matrix: Affine3<f64>,
-    inv_matrix: Affine3<f64>,
+    inv_matrix: OnceCell<Affine3<f64>>,
+    inv_transpose_matrix: OnceCell<Affine3<f64>>,
 }
 
 impl Default for Transform {
@@ -22,7 +24,8 @@ impl Default for Transform {
         let matrix = Affine3::identity();
         Self {
             matrix,
-            inv_matrix: matrix.inverse(),
+            inv_matrix: OnceCell::new(),
+            inv_transpose_matrix: OnceCell::new(),
         }
     }
 }
@@ -33,33 +36,38 @@ impl Transform {
     }
 
     pub fn inverse(&self) -> Affine3<f64> {
-        self.inv_matrix
+        *self.inv_matrix.get_or_init(|| self.matrix.inverse())
     }
 
     pub fn inverse_transpose(&self) -> Affine3<f64> {
-        Affine3::from_matrix_unchecked(
-            nalgebra::convert::<Affine3<f64>, Matrix4<f64>>(self.inverse()).transpose(),
-        )
+        *self.inv_transpose_matrix.get_or_init(|| {
+            Affine3::from_matrix_unchecked(
+                nalgebra::convert::<Affine3<f64>, Matrix4<f64>>(self.inverse()).transpose(),
+            )
+        })
     }
 
-    fn set_matrix(&mut self, m: Affine3<f64>) -> &mut Self {
+    fn set_matrix(mut self, m: Affine3<f64>) -> Self {
         self.matrix = m;
-        self.inv_matrix = self.matrix.inverse();
+        self.inv_matrix = OnceCell::new();
+        self.inv_transpose_matrix = OnceCell::new();
         self
     }
 
-    pub fn translate(&mut self, translation: Vector3<f64>) -> &mut Self {
-        self.set_matrix(Translation3::from(translation) * self.matrix)
+    pub fn translate(self, translation: Vector3<f64>) -> Self {
+        let translated = Translation3::from(translation) * self.matrix;
+        self.set_matrix(translated)
     }
 
-    pub fn rotate(&mut self, axis: Unit<Vector3<f64>>, angle: f64) -> &mut Self {
-        self.set_matrix(Rotation3::from_axis_angle(&axis, angle.to_radians()) * self.matrix)
+    pub fn rotate(self, axis: Unit<Vector3<f64>>, angle: f64) -> Self {
+        let rotated = Rotation3::from_axis_angle(&axis, angle.to_radians()) * self.matrix;
+        self.set_matrix(rotated)
     }
 
-    pub fn scale(&mut self, scale: Vector3<f64>) -> &mut Self {
-        self.set_matrix(
-            Affine3::from_matrix_unchecked(Matrix4::new_nonuniform_scaling(&scale)) * self.matrix,
-        )
+    pub fn scale(self, scale: Vector3<f64>) -> Self {
+        let scaled =
+            Affine3::from_matrix_unchecked(Matrix4::new_nonuniform_scaling(&scale)) * self.matrix;
+        self.set_matrix(scaled)
     }
 }
 
@@ -93,15 +101,13 @@ impl<'de> Deserialize<'de> for Transform {
                 loop {
                     let next: Option<SubTransform> = seq.next_element()?;
                     if let Some(next) = next {
-                        match next {
+                        transform = match next {
                             SubTransform::Translate(translation) => {
-                                transform = *transform.translate(translation)
+                                transform.translate(translation)
                             }
-                            SubTransform::Rotate(axis, angle) => {
-                                transform = *transform.rotate(axis, angle)
-                            }
-                            SubTransform::Scale(scale) => transform = *transform.scale(scale),
-                        }
+                            SubTransform::Rotate(axis, angle) => transform.rotate(axis, angle),
+                            SubTransform::Scale(scale) => transform.scale(scale),
+                        };
                     } else {
                         break;
                     }
@@ -124,9 +130,9 @@ mod test {
     #[test]
     fn it_constructs_matrices() {
         let default = Transform::default();
-        let translation = *Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
-        let rotation = *Transform::default().rotate(Vector3::y_axis(), 50.0);
-        let scale = *Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
+        let translation = Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
+        let rotation = Transform::default().rotate(Vector3::y_axis(), 50.0);
+        let scale = Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
 
         // Base transform matrix
         assert_eq!(default.matrix(), Affine3::identity());
@@ -208,14 +214,14 @@ mod test {
 
     #[test]
     fn it_constructs_complex_matrices() {
-        let full = *Transform::default()
+        let full = Transform::default()
             .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([3.0, 2.0, 1.0]))
             .translate(Vector3::from([5.0, 2.0, 3.0]));
-        let translation_identity = *Transform::default()
+        let translation_identity = Transform::default()
             .translate(Vector3::from([1.0, 2.0, 3.0]))
             .translate(Vector3::from([-1.0, -2.0, -3.0]));
-        let full_identity = *Transform::default()
+        let full_identity = Transform::default()
             .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([1.0, 2.0, 4.0]))
             .translate(Vector3::from([1.0, 2.0, 3.0]))
@@ -284,9 +290,9 @@ mod test {
 
     #[test]
     fn it_deserializes_single_transform() {
-        let translation = *Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
-        let rotation = *Transform::default().rotate(Vector3::y_axis(), 50.0);
-        let scale = *Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
+        let translation = Transform::default().translate(Vector3::from([1.0, 2.0, 3.0]));
+        let rotation = Transform::default().rotate(Vector3::y_axis(), 50.0);
+        let scale = Transform::default().scale(Vector3::from([1.0, 2.0, 3.0]));
 
         assert_eq!(
             serde_json::from_value::<Transform>(json!([
@@ -313,11 +319,11 @@ mod test {
 
     #[test]
     fn it_deserializes_complex_transforms() {
-        let full = *Transform::default()
+        let full = Transform::default()
             .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([3.0, 2.0, 1.0]))
             .translate(Vector3::from([5.0, 2.0, 3.0]));
-        let full_identity = *Transform::default()
+        let full_identity = Transform::default()
             .rotate(Vector3::y_axis(), 50.0)
             .scale(Vector3::from([1.0, 2.0, 4.0]))
             .translate(Vector3::from([1.0, 2.0, 3.0]))

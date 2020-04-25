@@ -32,8 +32,8 @@ impl Default for Sphere {
 impl Loadable for Sphere {}
 
 impl Transformed for Sphere {
-    fn get_transform(&self) -> Transform {
-        self.transform
+    fn get_transform(&self) -> &Transform {
+        &self.transform
     }
 }
 
@@ -64,6 +64,7 @@ impl Intersectable for Sphere {
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray = &ray.transform(self.get_transform().inverse());
+
         let hypot = ray.origin.coords;
         let ray_proj = hypot.dot(&ray.direction);
         let a = ray.direction.magnitude_squared();

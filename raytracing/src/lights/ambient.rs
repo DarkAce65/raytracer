@@ -18,7 +18,7 @@ impl Default for AmbientLight {
 }
 
 impl Transformed for AmbientLight {
-    fn get_transform(&self) -> Transform {
+    fn get_transform(&self) -> &Transform {
         unimplemented!()
     }
 }
