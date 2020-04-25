@@ -64,7 +64,6 @@ impl Object3D {
         if let Some(children) = self.object.get_children_mut() {
             for child in children.iter_mut() {
                 if child.load_assets(asset_base, textures) {
-                    child.bounding_box = compute_bounding_box(child.object.as_ref());
                     should_recompute_bb = true;
                 }
             }
@@ -88,7 +87,7 @@ impl Object3D {
             .object
             .get_children()
             .into_iter()
-            .flat_map(|children| children.iter().filter_map(|object| object.intersect(&ray)));
+            .flat_map(|children| children.iter().filter_map(|object| object.intersect(ray)));
 
         self.object
             .intersect(ray)
