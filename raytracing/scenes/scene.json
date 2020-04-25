@@ -1,4 +1,5 @@
 {
+  "max_depth": 4,
   "width": 800,
   "height": 800,
   "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
@@ -82,7 +83,7 @@
         "type": "physical",
         "color": [1, 0.25, 0.1],
         "metalness": 0.6,
-        "roughness": 0.4
+        "roughness": 0.1
       }
     },
     {
