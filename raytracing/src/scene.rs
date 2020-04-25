@@ -14,7 +14,6 @@ use std::path::Path;
 
 const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
-const REFLECTED_RAYS: u8 = 16;
 
 #[derive(Debug)]
 pub struct Camera {
@@ -126,6 +125,7 @@ pub struct Scene {
     pub width: u32,
     pub height: u32,
     max_depth: u8,
+    max_reflected_rays: u8,
     camera: Camera,
     lights: Vec<Light>,
     objects: Vec<Object3D>,
@@ -137,6 +137,7 @@ impl Default for Scene {
     fn default() -> Self {
         Self {
             max_depth: 3,
+            max_reflected_rays: 8,
             width: 100,
             height: 100,
             camera: Camera::new(
@@ -289,24 +290,27 @@ impl Scene {
         }
 
         let mut reflection: Vector3<f64> = Vector3::zero();
-        if REFLECTED_RAYS > 0 {
-            let max_angle = (FRAC_PI_2 * material.roughness).cos();
-            let reflection_dir = core::reflect(&ray.direction, &normal);
-            let d = depth as f64 / (self.max_depth - 1).max(1) as f64;
-            let reflected_rays = (REFLECTED_RAYS as f64 * (1.0 - d) + d) as u8;
-            for _ in 0..reflected_rays {
-                let direction = core::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
-                let reflection_ray = Ray {
-                    ray_type: RayType::Secondary(depth + 1),
-                    origin: hit_point + (direction * BIAS),
-                    direction,
-                    refractive_index: 1.0,
-                };
-                let (color, r) = self.get_color(reflection_ray);
-                ray_count += r;
-                reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
+        if self.max_reflected_rays > 0 {
+            let d = 0.5f64.powi(depth as i32);
+            let reflected_rays = (self.max_reflected_rays as f64 * d) as u8;
+            if reflected_rays > 0 {
+                let max_angle = (FRAC_PI_2 * material.roughness).cos();
+                let reflection_dir = core::reflect(&ray.direction, &normal);
+                for _ in 0..reflected_rays {
+                    let direction =
+                        core::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
+                    let reflection_ray = Ray {
+                        ray_type: RayType::Secondary(depth + 1),
+                        origin: hit_point + (direction * BIAS),
+                        direction,
+                        refractive_index: 1.0,
+                    };
+                    let (color, r) = self.get_color(reflection_ray);
+                    ray_count += r;
+                    reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
+                }
+                reflection /= reflected_rays as f64;
             }
-            reflection /= reflected_rays as f64;
         }
 
         let mut ambient_light = Vector3::zero();
