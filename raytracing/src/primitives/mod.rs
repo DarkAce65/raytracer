@@ -1,4 +1,5 @@
 mod cube;
+mod group;
 mod mesh;
 mod plane;
 mod sphere;
@@ -15,6 +16,7 @@ use std::marker::{Send, Sync};
 use std::path::Path;
 
 pub use cube::*;
+pub use group::*;
 pub use mesh::*;
 pub use plane::*;
 pub use sphere::*;
@@ -72,6 +74,9 @@ impl Primitive for Plane {}
 impl Primitive for Sphere {}
 #[typetag::deserialize(name = "triangle")]
 impl Primitive for Triangle {}
+
+#[typetag::deserialize(name = "group")]
+impl Primitive for Group {}
 
 #[typetag::deserialize(name = "mesh")]
 impl Primitive for Mesh {}

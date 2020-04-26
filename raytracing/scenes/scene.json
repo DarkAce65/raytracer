@@ -73,31 +73,37 @@
       }
     },
     {
-      "type": "sphere",
-      "radius": 6,
-      "transform": [
-        { "scale": [1.1, 1.1, 1.1] },
-        { "translate": [-6, 6, -18] }
-      ],
-      "material": {
-        "type": "physical",
-        "color": [1, 0.25, 0.1],
-        "metalness": 0.6,
-        "roughness": 0.1
-      }
-    },
-    {
-      "type": "cube",
-      "size": 6,
-      "transform": [
-        { "rotate": [[0, 1, 0], -45] },
-        { "translate": [6, 6, -22] }
-      ],
-      "material": {
-        "type": "phong",
-        "color": [1, 1, 1],
-        "reflectivity": 1
-      }
+      "type": "group",
+      "transform": [{ "translate": [0, 6, -20] }],
+      "children": [
+        {
+          "type": "sphere",
+          "radius": 6,
+          "transform": [
+            { "scale": [1.1, 1.1, 1.1] },
+            { "translate": [-6, 0, 2] }
+          ],
+          "material": {
+            "type": "physical",
+            "color": [1, 0.25, 0.1],
+            "metalness": 0.6,
+            "roughness": 0.1
+          }
+        },
+        {
+          "type": "cube",
+          "size": 6,
+          "transform": [
+            { "rotate": [[0, 1, 0], -45] },
+            { "translate": [6, 0, -2] }
+          ],
+          "material": {
+            "type": "phong",
+            "color": [1, 1, 1],
+            "reflectivity": 1
+          }
+        }
+      ]
     },
     {
       "type": "sphere",
