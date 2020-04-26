@@ -56,10 +56,7 @@ impl Object3D {
         asset_base: &Path,
         textures: &mut HashMap<String, Texture>,
     ) -> bool {
-        let mut should_recompute_bb = self.object.load_assets(asset_base);
-        self.object
-            .get_material_mut()
-            .load_textures(asset_base, textures);
+        let mut should_recompute_bb = self.object.load_assets(asset_base, textures);
 
         if let Some(children) = self.object.get_children_mut() {
             for child in children.iter_mut() {

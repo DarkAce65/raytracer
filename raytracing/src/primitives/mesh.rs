@@ -1,10 +1,12 @@
-use super::{Intersectable, Loadable, Triangle};
+use super::{HasMaterial, Intersectable, Loadable, Triangle};
+use crate::core::Texture;
 use crate::core::{Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{IntermediateData, Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::path::Path;
 use tobj::load_obj;
 
@@ -18,8 +20,18 @@ pub struct Mesh {
     children: Option<Vec<Object3D>>,
 }
 
+impl HasMaterial for Mesh {
+    fn get_material(&self) -> &Material {
+        &self.material
+    }
+
+    fn get_material_mut(&mut self) -> &mut Material {
+        &mut self.material
+    }
+}
+
 impl Loadable for Mesh {
-    fn load_assets(&mut self, asset_base: &Path) -> bool {
+    fn load_assets(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) -> bool {
         let (models, _) = load_obj(&asset_base.join(&self.file)).expect("failed to load object");
 
         let mut children = Vec::new();
@@ -96,6 +108,8 @@ impl Loadable for Mesh {
 
         self.children = Some(children);
 
+        self.load_textures(asset_base, textures);
+
         true
     }
 }
@@ -109,14 +123,6 @@ impl Transformed for Mesh {
 impl Intersectable for Mesh {
     fn make_bounding_volume(&self) -> Bounds {
         Bounds::Children
-    }
-
-    fn get_material(&self) -> &Material {
-        &self.material
-    }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {

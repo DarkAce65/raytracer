@@ -1,4 +1,4 @@
-use super::{Intersectable, Loadable};
+use super::{HasMaterial, Intersectable, Loadable};
 use crate::core::{Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
@@ -27,6 +27,16 @@ impl Default for Plane {
     }
 }
 
+impl HasMaterial for Plane {
+    fn get_material(&self) -> &Material {
+        &self.material
+    }
+
+    fn get_material_mut(&mut self) -> &mut Material {
+        &mut self.material
+    }
+}
+
 impl Loadable for Plane {}
 
 impl Transformed for Plane {
@@ -38,14 +48,6 @@ impl Transformed for Plane {
 impl Intersectable for Plane {
     fn make_bounding_volume(&self) -> Bounds {
         Bounds::Unbounded
-    }
-
-    fn get_material(&self) -> &Material {
-        &self.material
-    }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {

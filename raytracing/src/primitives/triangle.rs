@@ -1,4 +1,4 @@
-use super::{Intersectable, Loadable};
+use super::{HasMaterial, Intersectable, Loadable};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
@@ -101,6 +101,16 @@ impl Triangle {
     }
 }
 
+impl HasMaterial for Triangle {
+    fn get_material(&self) -> &Material {
+        &self.material
+    }
+
+    fn get_material_mut(&mut self) -> &mut Material {
+        &mut self.material
+    }
+}
+
 impl Loadable for Triangle {}
 
 impl Transformed for Triangle {
@@ -128,14 +138,6 @@ impl Intersectable for Triangle {
             max,
             &self.transform,
         ))
-    }
-
-    fn get_material(&self) -> &Material {
-        &self.material
-    }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {

@@ -1,4 +1,4 @@
-use super::{Intersectable, Loadable};
+use super::{HasMaterial, Intersectable, Loadable};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
@@ -26,6 +26,16 @@ impl Default for Cube {
     }
 }
 
+impl HasMaterial for Cube {
+    fn get_material(&self) -> &Material {
+        &self.material
+    }
+
+    fn get_material_mut(&mut self) -> &mut Material {
+        &mut self.material
+    }
+}
+
 impl Loadable for Cube {}
 
 impl Transformed for Cube {
@@ -43,14 +53,6 @@ impl Intersectable for Cube {
             Point3::from([half; 3]),
             &self.transform,
         ))
-    }
-
-    fn get_material(&self) -> &Material {
-        &self.material
-    }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {

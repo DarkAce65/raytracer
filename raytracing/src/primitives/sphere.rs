@@ -1,4 +1,4 @@
-use super::{Intersectable, Loadable};
+use super::{HasMaterial, Intersectable, Loadable};
 use crate::core::{
     quadratic, BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed,
 };
@@ -29,6 +29,16 @@ impl Default for Sphere {
     }
 }
 
+impl HasMaterial for Sphere {
+    fn get_material(&self) -> &Material {
+        &self.material
+    }
+
+    fn get_material_mut(&mut self) -> &mut Material {
+        &mut self.material
+    }
+}
+
 impl Loadable for Sphere {}
 
 impl Transformed for Sphere {
@@ -44,14 +54,6 @@ impl Intersectable for Sphere {
             Point3::from([self.radius; 3]),
             &self.transform,
         ))
-    }
-
-    fn get_material(&self) -> &Material {
-        &self.material
-    }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
     }
 
     fn get_children(&self) -> Option<&Vec<Object3D>> {
