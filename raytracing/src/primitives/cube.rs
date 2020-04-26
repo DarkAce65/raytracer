@@ -45,13 +45,13 @@ impl Transformed for Cube {
 }
 
 impl Intersectable for Cube {
-    fn make_bounding_volume(&self) -> Bounds {
+    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
         let half = self.size / 2.0;
 
         Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             Point3::from([-half; 3]),
             Point3::from([half; 3]),
-            &self.transform,
+            transform,
         ))
     }
 

@@ -6,36 +6,6 @@ use std::cmp::Ordering::Equal;
 use std::collections::HashMap;
 use std::path::Path;
 
-fn compute_bounding_box(object: &dyn Primitive) -> Option<BoundingVolume> {
-    let bounding_box = object.make_bounding_volume();
-
-    match bounding_box {
-        Bounds::Unbounded => None,
-        Bounds::Children => {
-            if let Some(children) = object.get_children() {
-                if !children.is_empty() {
-                    return children[1..]
-                        .iter()
-                        .fold(children[0].bounding_box, |acc, child| {
-                            BoundingVolume::merge(acc, child.bounding_box)
-                        });
-                }
-            }
-
-            None
-        }
-        Bounds::Bounded(bounding_box) => {
-            if let Some(children) = object.get_children() {
-                children.iter().fold(Some(bounding_box), |acc, child| {
-                    BoundingVolume::merge(acc, child.bounding_box)
-                })
-            } else {
-                Some(bounding_box)
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Object3D {
     object: Box<dyn Primitive>,
@@ -44,41 +14,71 @@ pub struct Object3D {
 
 impl Object3D {
     pub fn new(object: Box<dyn Primitive>) -> Self {
-        let bounding_box = compute_bounding_box(object.as_ref());
         Self {
             object,
-            bounding_box,
+            bounding_box: None,
         }
     }
 
-    pub fn load_assets(
-        &mut self,
-        asset_base: &Path,
-        textures: &mut HashMap<String, Texture>,
-    ) -> bool {
-        let mut should_recompute_bb = self.object.load_assets(asset_base, textures);
+    pub fn load_assets(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) {
+        self.object.load_assets(asset_base, textures);
 
         if let Some(children) = self.object.get_children_mut() {
             for child in children.iter_mut() {
-                if child.load_assets(asset_base, textures) {
-                    should_recompute_bb = true;
-                }
+                child.load_assets(asset_base, textures);
+            }
+        }
+    }
+
+    pub fn compute_bounding_box_with_transform(&mut self, transform: &Transform) {
+        let object_transform = transform * self.object.get_transform();
+        if let Some(children) = self.object.get_children_mut() {
+            for child in children.iter_mut() {
+                child.compute_bounding_box_with_transform(&object_transform);
             }
         }
 
-        if should_recompute_bb {
-            self.bounding_box = compute_bounding_box(self.object.as_ref());
+        let object_bounds = self.object.make_bounding_volume(&object_transform);
+
+        let mut bounding_boxes: Vec<Option<BoundingVolume>> = Vec::new();
+
+        match object_bounds {
+            Bounds::Unbounded => {}
+            Bounds::Children => {
+                if let Some(children) = self.object.get_children() {
+                    bounding_boxes.extend(children.iter().map(|child| child.bounding_box));
+                }
+            }
+            Bounds::Bounded(bounding_box) => {
+                if let Some(children) = self.object.get_children() {
+                    bounding_boxes.extend(children.iter().map(|child| child.bounding_box));
+                }
+
+                bounding_boxes.push(Some(bounding_box))
+            }
         }
 
-        should_recompute_bb
+        self.bounding_box = if bounding_boxes.is_empty() {
+            None
+        } else {
+            bounding_boxes[1..]
+                .iter()
+                .fold(bounding_boxes[0], |acc, bounding_box| {
+                    BoundingVolume::merge(acc, *bounding_box)
+                })
+        };
+    }
+
+    pub fn compute_bounding_box(&mut self) {
+        self.compute_bounding_box_with_transform(&Transform::default())
     }
 
     fn intersect_with_transform(&self, ray: &Ray, transform: &Transform) -> Option<Intersection> {
-        // if let Some(bounding_box) = &self.bounding_box {
-        //     if !bounding_box.intersect(ray) {
-        //         return None;
-        //     }
-        // }
+        if let Some(bounding_box) = &self.bounding_box {
+            if !bounding_box.intersect(ray) {
+                return None;
+            }
+        }
 
         let object_transform = transform * self.object.get_transform();
 

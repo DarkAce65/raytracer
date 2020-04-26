@@ -48,11 +48,11 @@ impl Transformed for Sphere {
 }
 
 impl Intersectable for Sphere {
-    fn make_bounding_volume(&self) -> Bounds {
+    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
         Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
             Point3::from([-self.radius; 3]),
             Point3::from([self.radius; 3]),
-            &self.transform,
+            transform,
         ))
     }
 

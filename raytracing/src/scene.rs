@@ -154,9 +154,10 @@ impl Default for Scene {
 }
 
 impl Scene {
-    pub fn load_assets(&mut self, asset_base: &Path) {
+    pub fn initialize(&mut self, asset_base: &Path) {
         for object in self.objects.iter_mut() {
             object.load_assets(asset_base, &mut self.textures);
+            object.compute_bounding_box();
         }
     }
 

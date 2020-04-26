@@ -43,7 +43,7 @@ impl Transformed for Group {
 }
 
 impl Intersectable for Group {
-    fn make_bounding_volume(&self) -> Bounds {
+    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
         Bounds::Children
     }
 

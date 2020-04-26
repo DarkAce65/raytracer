@@ -46,7 +46,7 @@ impl Transformed for Plane {
 }
 
 impl Intersectable for Plane {
-    fn make_bounding_volume(&self) -> Bounds {
+    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
         Bounds::Unbounded
     }
 

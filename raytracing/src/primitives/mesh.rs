@@ -121,7 +121,7 @@ impl Transformed for Mesh {
 }
 
 impl Intersectable for Mesh {
-    fn make_bounding_volume(&self) -> Bounds {
+    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
         Bounds::Children
     }
 

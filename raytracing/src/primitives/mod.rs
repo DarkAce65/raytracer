@@ -6,7 +6,7 @@ mod sphere;
 mod triangle;
 
 use crate::core::Texture;
-use crate::core::{Bounds, Material, Transformed};
+use crate::core::{Bounds, Material, Transform, Transformed};
 use crate::object3d::Object3D;
 use crate::ray_intersection::{IntermediateData, Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -40,7 +40,7 @@ pub trait Loadable: HasMaterial {
 }
 
 pub trait Intersectable {
-    fn make_bounding_volume(&self) -> Bounds;
+    fn make_bounding_volume(&self, transform: &Transform) -> Bounds;
 
     fn get_children(&self) -> Option<&Vec<Object3D>>;
     fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>>;

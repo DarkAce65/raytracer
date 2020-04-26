@@ -143,7 +143,7 @@ fn main() {
     let render_sequentially = matches.is_present("norandom");
 
     let mut scene: Scene = serde_json::from_reader(scene_file).expect("Failed to parse scene");
-    scene.load_assets(scene_path.parent().unwrap_or_else(|| Path::new("")));
+    scene.initialize(scene_path.parent().unwrap_or_else(|| Path::new("")));
     let (width, height) = (scene.width, scene.height);
 
     let progress = if hide_progress {
