@@ -149,8 +149,6 @@ impl Intersectable for Triangle {
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let ray = &ray.transform(self.get_transform().inverse());
-
         let edge1 = self.vertex_data[1].position - self.vertex_data[0].position;
         let edge2 = self.vertex_data[2].position - self.vertex_data[0].position;
         let p_vec = ray.direction.cross(&edge2);

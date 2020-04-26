@@ -94,7 +94,7 @@ impl Loadable for Mesh {
                 };
 
                 let face = Triangle::new(
-                    self.transform.clone(),
+                    Transform::default(),
                     [p0, p1, p2],
                     normals,
                     texcoords,

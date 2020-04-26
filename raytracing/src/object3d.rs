@@ -1,4 +1,4 @@
-use crate::core::{BoundingVolume, Bounds, Texture};
+use crate::core::{BoundingVolume, Bounds, Texture, Transform};
 use crate::primitives::Primitive;
 use crate::ray_intersection::{Intersection, Ray};
 use serde::{Deserialize, Deserializer};
@@ -73,24 +73,36 @@ impl Object3D {
         should_recompute_bb
     }
 
-    pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        if let Some(bounding_box) = &self.bounding_box {
-            if !bounding_box.intersect(ray) {
-                return None;
-            }
-        }
+    fn intersect_with_transform(&self, ray: &Ray, transform: &Transform) -> Option<Intersection> {
+        // if let Some(bounding_box) = &self.bounding_box {
+        //     if !bounding_box.intersect(ray) {
+        //         return None;
+        //     }
+        // }
 
-        let child_intersections = self
-            .object
-            .get_children()
-            .into_iter()
-            .flat_map(|children| children.iter().filter_map(|object| object.intersect(ray)));
+        let object_transform = transform * self.object.get_transform();
+
+        let child_intersections = self.object.get_children().into_iter().flat_map(|children| {
+            children
+                .iter()
+                .filter_map(|object| object.intersect_with_transform(ray, &object_transform))
+        });
+
+        let ray = &ray.transform(object_transform.inverse());
 
         self.object
             .intersect(ray)
+            .map(|mut intersection| {
+                intersection.root_transform = object_transform.clone();
+                intersection
+            })
             .into_iter()
             .chain(child_intersections)
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+    }
+
+    pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        self.intersect_with_transform(ray, &Transform::default())
     }
 }
 

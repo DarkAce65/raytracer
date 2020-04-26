@@ -1,4 +1,4 @@
-use crate::core::MaterialSide;
+use crate::core::{MaterialSide, Transform};
 use crate::primitives::Primitive;
 use nalgebra::{Affine3, Point3, Unit, Vector2, Vector3};
 
@@ -56,6 +56,7 @@ struct IntersectionData {
 pub struct Intersection<'a> {
     pub object: &'a dyn Primitive,
     pub distance: f64,
+    pub root_transform: Transform,
     intermediate: IntermediateData,
     data: Option<IntersectionData>,
 }
@@ -69,6 +70,7 @@ impl<'a> Intersection<'a> {
         Self {
             object,
             distance,
+            root_transform: Transform::default(),
             intermediate,
             data: None,
         }
@@ -79,15 +81,16 @@ impl<'a> Intersection<'a> {
     }
 
     pub fn compute_data(&mut self, ray: &Ray) {
+        let transform = &self.root_transform;
+
         let hit_point = ray.origin + ray.direction * self.distance;
-        let object_hit_point = self.object.get_transform().inverse() * hit_point;
+        let object_hit_point = transform.inverse() * hit_point;
 
         let object_normal = self
             .object
             .surface_normal(&object_hit_point, self.intermediate);
-        let normal = Unit::new_normalize(
-            self.object.get_transform().inverse_transpose() * object_normal.into_inner(),
-        );
+        let normal =
+            Unit::new_normalize(transform.inverse_transpose() * object_normal.into_inner());
         let normal = match self.object.get_material().side() {
             MaterialSide::Both => {
                 if normal.dot(&ray.direction) > 0.0 {

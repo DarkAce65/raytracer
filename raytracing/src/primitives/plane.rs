@@ -59,8 +59,6 @@ impl Intersectable for Plane {
     }
 
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        let ray = &ray.transform(self.get_transform().inverse());
-
         let n_dot_v = self.normal.dot(&-ray.direction);
 
         if match (self.material.side(), ray.ray_type) {

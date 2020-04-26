@@ -1,3 +1,4 @@
+use auto_ops::*;
 use nalgebra::{Affine3, Matrix4, Point3, Rotation3, Translation3, Unit, Vector3};
 use once_cell::sync::OnceCell;
 use serde::de::{SeqAccess, Visitor};
@@ -21,16 +22,21 @@ pub struct Transform {
 
 impl Default for Transform {
     fn default() -> Self {
-        let matrix = Affine3::identity();
+        Self::new(Affine3::identity())
+    }
+}
+
+impl_op_ex!(*|a: &Transform, b: &Transform| -> Transform { Transform::new(a.matrix * b.matrix) });
+
+impl Transform {
+    pub fn new(matrix: Affine3<f64>) -> Self {
         Self {
             matrix,
             inv_matrix: OnceCell::new(),
             inv_transpose_matrix: OnceCell::new(),
         }
     }
-}
 
-impl Transform {
     pub fn matrix(&self) -> Affine3<f64> {
         self.matrix
     }
