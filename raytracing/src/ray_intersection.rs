@@ -56,7 +56,7 @@ struct IntersectionData {
 pub struct Intersection<'a> {
     pub object: &'a dyn Primitive,
     pub distance: f64,
-    pub root_transform: Option<Transform>,
+    pub root_transform: Option<&'a Transform>,
     intermediate: IntermediateData,
     data: Option<IntersectionData>,
 }
@@ -81,7 +81,9 @@ impl<'a> Intersection<'a> {
     }
 
     pub fn compute_data(&mut self, ray: &Ray) {
-        let transform = self.root_transform.get_or_insert(Transform::default());
+        let transform = self
+            .root_transform
+            .expect("intersection has no root transform");
 
         let hit_point = ray.origin + ray.direction * self.distance;
         let object_hit_point = transform.inverse() * hit_point;

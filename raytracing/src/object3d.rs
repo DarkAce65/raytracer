@@ -96,7 +96,7 @@ impl Object3D {
         self.object
             .intersect(ray)
             .map(|mut intersection| {
-                intersection.root_transform = Some(object_transform.clone());
+                intersection.root_transform = Some(object_transform);
                 intersection
             })
             .into_iter()
