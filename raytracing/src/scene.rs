@@ -1,6 +1,6 @@
 use crate::core::{self, Material, PhongMaterial, PhysicalMaterial, Texture, Transformed};
 use crate::lights::Light;
-use crate::primitives::Primitive;
+use crate::primitives::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
@@ -128,7 +128,7 @@ pub struct Scene {
     max_reflected_rays: u8,
     camera: Camera,
     lights: Vec<Light>,
-    objects: Vec<Box<dyn Primitive>>,
+    objects: Vec<Box<dyn Object3D>>,
 
     #[serde(skip_deserializing)]
     pub textures: HashMap<String, Texture>,

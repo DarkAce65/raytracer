@@ -1,6 +1,6 @@
-use super::{HasMaterial, Intersectable, Loadable, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
@@ -30,7 +30,7 @@ struct TriangleData {
     transform: Transform,
     vertices: [Point3<f64>; 3],
     material: Material,
-    children: Option<Vec<Box<dyn Primitive>>>,
+    children: Option<Vec<Box<dyn Object3D>>>,
 }
 
 impl Default for TriangleData {
@@ -50,7 +50,7 @@ pub struct Triangle {
     transform: Transform,
     vertex_data: [VertexPNT; 3],
     material: Material,
-    children: Option<Vec<Box<dyn Primitive>>>,
+    children: Option<Vec<Box<dyn Object3D>>>,
 }
 
 impl From<TriangleData> for Triangle {
@@ -76,7 +76,7 @@ impl Triangle {
         normals: [Unit<Vector3<f64>>; 3],
         texcoords: [Vector2<f64>; 3],
         material: Material,
-        children: Option<Vec<Box<dyn Primitive>>>,
+        children: Option<Vec<Box<dyn Object3D>>>,
     ) -> Self {
         let vertex_data = [
             VertexPNT::new(positions[0], normals[0], texcoords[0]),
@@ -119,32 +119,6 @@ impl Transformed for Triangle {
 }
 
 impl Intersectable for Triangle {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
-        let mut min = self.vertex_data[0].position;
-        let mut max = min;
-        for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
-            min.x = min.x.min(position.x);
-            min.y = min.y.min(position.y);
-            min.z = min.z.min(position.z);
-
-            max.x = max.x.max(position.x);
-            max.y = max.y.max(position.y);
-            max.z = max.z.max(position.z);
-        }
-
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            min, max, transform,
-        ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>> {
-        self.children.as_mut()
-    }
-
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let edge1 = self.vertex_data[1].position - self.vertex_data[0].position;
         let edge2 = self.vertex_data[2].position - self.vertex_data[0].position;
@@ -178,6 +152,34 @@ impl Intersectable for Triangle {
             distance,
             IntermediateData::Barycentric(u, v, 1.0 - u - v),
         ))
+    }
+}
+
+impl Primitive for Triangle {
+    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
+        let mut min = self.vertex_data[0].position;
+        let mut max = min;
+        for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
+            min.x = min.x.min(position.x);
+            min.y = min.y.min(position.y);
+            min.z = min.z.min(position.z);
+
+            max.x = max.x.max(position.x);
+            max.y = max.y.max(position.y);
+            max.z = max.z.max(position.z);
+        }
+
+        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
+            min, max, transform,
+        ))
+    }
+
+    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
+        self.children.as_ref()
+    }
+
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
+        self.children.as_mut()
     }
 
     fn surface_normal(

@@ -1,6 +1,6 @@
-use super::{HasMaterial, Intersectable, Loadable, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive};
 use crate::core::{Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Rotation3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
@@ -12,7 +12,7 @@ pub struct Plane {
     transform: Transform,
     normal: Unit<Vector3<f64>>,
     material: Material,
-    children: Option<Vec<Box<dyn Primitive>>>,
+    children: Option<Vec<Box<dyn Object3D>>>,
 }
 
 impl Default for Plane {
@@ -45,18 +45,6 @@ impl Transformed for Plane {
 }
 
 impl Intersectable for Plane {
-    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
-        Bounds::Unbounded
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>> {
-        self.children.as_mut()
-    }
-
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let n_dot_v = self.normal.dot(&-ray.direction);
 
@@ -74,6 +62,20 @@ impl Intersectable for Plane {
         }
 
         None
+    }
+}
+
+impl Primitive for Plane {
+    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
+        Bounds::Unbounded
+    }
+
+    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
+        self.children.as_ref()
+    }
+
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
+        self.children.as_mut()
     }
 
     fn surface_normal(

@@ -1,6 +1,10 @@
 use crate::core::{MaterialSide, Transform};
-use crate::primitives::Primitive;
+use crate::primitives::Object3D;
 use nalgebra::{Affine3, Point3, Unit, Vector2, Vector3};
+
+pub trait Intersectable {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection>;
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RayType {
@@ -54,7 +58,7 @@ struct IntersectionData {
 
 #[derive(Debug)]
 pub struct Intersection<'a> {
-    pub object: &'a dyn Primitive,
+    pub object: &'a dyn Object3D,
     pub distance: f64,
     pub root_transform: Option<&'a Transform>,
     intermediate: IntermediateData,
@@ -63,7 +67,7 @@ pub struct Intersection<'a> {
 
 impl<'a> Intersection<'a> {
     pub fn new_with_data(
-        object: &'a dyn Primitive,
+        object: &'a dyn Object3D,
         distance: f64,
         intermediate: IntermediateData,
     ) -> Self {
@@ -76,7 +80,7 @@ impl<'a> Intersection<'a> {
         }
     }
 
-    pub fn new(object: &'a dyn Primitive, distance: f64) -> Self {
+    pub fn new(object: &'a dyn Object3D, distance: f64) -> Self {
         Self::new_with_data(object, distance, IntermediateData::Empty)
     }
 

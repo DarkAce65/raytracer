@@ -7,7 +7,7 @@ mod triangle;
 
 use crate::core::Texture;
 use crate::core::{Bounds, Material, Transform, Transformed};
-use crate::ray_intersection::{IntermediateData, Intersection, Ray};
+use crate::ray_intersection::{IntermediateData, Intersectable};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -38,13 +38,11 @@ pub trait Loadable: HasMaterial {
     }
 }
 
-pub trait Intersectable {
+pub trait Primitive {
     fn make_bounding_volume(&self, transform: &Transform) -> Bounds;
 
-    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>>;
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>>;
-
-    fn intersect(&self, ray: &Ray) -> Option<Intersection>;
+    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>>;
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>>;
 
     fn surface_normal(
         &self,
@@ -60,22 +58,22 @@ pub trait Intersectable {
 }
 
 #[typetag::deserialize(tag = "type")]
-pub trait Primitive:
-    Send + Sync + Debug + Transformed + Intersectable + HasMaterial + Loadable
+pub trait Object3D:
+    Send + Sync + Debug + Transformed + Intersectable + Primitive + HasMaterial + Loadable
 {
 }
 
 #[typetag::deserialize(name = "cube")]
-impl Primitive for Cube {}
+impl Object3D for Cube {}
 #[typetag::deserialize(name = "plane")]
-impl Primitive for Plane {}
+impl Object3D for Plane {}
 #[typetag::deserialize(name = "sphere")]
-impl Primitive for Sphere {}
+impl Object3D for Sphere {}
 #[typetag::deserialize(name = "triangle")]
-impl Primitive for Triangle {}
+impl Object3D for Triangle {}
 
 #[typetag::deserialize(name = "group")]
-impl Primitive for Group {}
+impl Object3D for Group {}
 
 #[typetag::deserialize(name = "mesh")]
-impl Primitive for Mesh {}
+impl Object3D for Mesh {}

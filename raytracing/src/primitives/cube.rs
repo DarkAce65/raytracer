@@ -1,6 +1,6 @@
-use super::{HasMaterial, Intersectable, Loadable, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 
@@ -11,7 +11,7 @@ pub struct Cube {
     transform: Transform,
     size: f64,
     material: Material,
-    children: Option<Vec<Box<dyn Primitive>>>,
+    children: Option<Vec<Box<dyn Object3D>>>,
 }
 
 impl Default for Cube {
@@ -44,24 +44,6 @@ impl Transformed for Cube {
 }
 
 impl Intersectable for Cube {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
-        let half = self.size / 2.0;
-
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            Point3::from([-half; 3]),
-            Point3::from([half; 3]),
-            transform,
-        ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>> {
-        self.children.as_mut()
-    }
-
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
@@ -106,6 +88,26 @@ impl Intersectable for Cube {
         }
 
         Some(Intersection::new(self, d))
+    }
+}
+
+impl Primitive for Cube {
+    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
+        let half = self.size / 2.0;
+
+        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
+            Point3::from([-half; 3]),
+            Point3::from([half; 3]),
+            transform,
+        ))
+    }
+
+    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
+        self.children.as_ref()
+    }
+
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
+        self.children.as_mut()
     }
 
     fn surface_normal(
