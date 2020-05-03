@@ -1,7 +1,5 @@
-use super::{HasMaterial, Intersectable, Loadable};
-use crate::core::Texture;
-use crate::core::{Bounds, Material, Transform, Transformed};
-use crate::object3d::Object3D;
+use super::{HasMaterial, Intersectable, Loadable, Primitive};
+use crate::core::{Bounds, Material, Texture, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -13,7 +11,7 @@ use std::path::Path;
 pub struct Group {
     #[serde(default)]
     transform: Transform,
-    children: Vec<Object3D>,
+    children: Vec<Box<dyn Primitive>>,
 }
 
 impl HasMaterial for Group {
@@ -47,11 +45,11 @@ impl Intersectable for Group {
         Bounds::Children
     }
 
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
+    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
         Some(self.children.as_ref())
     }
 
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>> {
         Some(self.children.as_mut())
     }
 

@@ -1,7 +1,5 @@
-use super::{HasMaterial, Intersectable, Loadable, Triangle};
-use crate::core::Texture;
-use crate::core::{Bounds, Material, Transform, Transformed};
-use crate::object3d::Object3D;
+use super::{HasMaterial, Intersectable, Loadable, Primitive, Triangle};
+use crate::core::{Bounds, Material, Texture, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
@@ -17,7 +15,7 @@ pub struct Mesh {
     transform: Transform,
     file: String,
     material: Material,
-    children: Option<Vec<Object3D>>,
+    children: Option<Vec<Box<dyn Primitive>>>,
 }
 
 impl HasMaterial for Mesh {
@@ -34,7 +32,7 @@ impl Loadable for Mesh {
     fn load_assets(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) -> bool {
         let (models, _) = load_obj(&asset_base.join(&self.file)).expect("failed to load object");
 
-        let mut children = Vec::new();
+        let mut children: Vec<Box<dyn Primitive>> = Vec::new();
         for model in models.iter() {
             let mesh = &model.mesh;
 
@@ -102,7 +100,7 @@ impl Loadable for Mesh {
                     None,
                 );
 
-                children.push(Object3D::new(Box::new(face)));
+                children.push(Box::new(face));
             }
         }
 
@@ -125,11 +123,11 @@ impl Intersectable for Mesh {
         Bounds::Children
     }
 
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
+    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
         self.children.as_ref()
     }
 
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>> {
         self.children.as_mut()
     }
 

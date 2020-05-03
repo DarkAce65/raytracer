@@ -1,6 +1,5 @@
-use super::{HasMaterial, Intersectable, Loadable};
+use super::{HasMaterial, Intersectable, Loadable, Primitive};
 use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::object3d::Object3D;
 use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
@@ -31,7 +30,7 @@ struct TriangleData {
     transform: Transform,
     vertices: [Point3<f64>; 3],
     material: Material,
-    children: Option<Vec<Object3D>>,
+    children: Option<Vec<Box<dyn Primitive>>>,
 }
 
 impl Default for TriangleData {
@@ -51,7 +50,7 @@ pub struct Triangle {
     transform: Transform,
     vertex_data: [VertexPNT; 3],
     material: Material,
-    children: Option<Vec<Object3D>>,
+    children: Option<Vec<Box<dyn Primitive>>>,
 }
 
 impl From<TriangleData> for Triangle {
@@ -77,7 +76,7 @@ impl Triangle {
         normals: [Unit<Vector3<f64>>; 3],
         texcoords: [Vector2<f64>; 3],
         material: Material,
-        children: Option<Vec<Object3D>>,
+        children: Option<Vec<Box<dyn Primitive>>>,
     ) -> Self {
         let vertex_data = [
             VertexPNT::new(positions[0], normals[0], texcoords[0]),
@@ -138,11 +137,11 @@ impl Intersectable for Triangle {
         ))
     }
 
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
+    fn get_children(&self) -> Option<&Vec<Box<dyn Primitive>>> {
         self.children.as_ref()
     }
 
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Primitive>>> {
         self.children.as_mut()
     }
 
