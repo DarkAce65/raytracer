@@ -1,5 +1,5 @@
 use super::{HasMaterial, Loadable, Object3D, Primitive};
-use crate::core::{Bounds, Material, Texture, Transform, Transformed};
+use crate::core::{BoundedObject, Material, Texture, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -47,8 +47,11 @@ impl Intersectable for Group {
 }
 
 impl Primitive for Group {
-    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
-        Bounds::NonIntersectable
+    fn into_bounded_object(
+        self: Box<Self>,
+        _parent_transform: &Transform,
+    ) -> Option<BoundedObject> {
+        None
     }
 
     fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {

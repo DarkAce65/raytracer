@@ -1,5 +1,5 @@
 use super::{HasMaterial, Loadable, Object3D, Primitive};
-use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
+use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
@@ -156,7 +156,9 @@ impl Intersectable for Triangle {
 }
 
 impl Primitive for Triangle {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
+    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
+        let transform = parent_transform * self.get_transform();
+
         let mut min = self.vertex_data[0].position;
         let mut max = min;
         for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
@@ -169,8 +171,10 @@ impl Primitive for Triangle {
             max.z = max.z.max(position.z);
         }
 
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            min, max, transform,
+        Some(BoundedObject::bounded(
+            BoundingVolume::from_bounds_and_transform(min, max, &transform),
+            transform,
+            self,
         ))
     }
 

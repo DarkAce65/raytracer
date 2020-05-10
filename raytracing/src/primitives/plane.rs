@@ -1,5 +1,5 @@
 use super::{HasMaterial, Loadable, Object3D, Primitive};
-use crate::core::{Bounds, Material, MaterialSide, Transform, Transformed};
+use crate::core::{BoundedObject, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Rotation3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -66,8 +66,11 @@ impl Intersectable for Plane {
 }
 
 impl Primitive for Plane {
-    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
-        Bounds::Unbounded
+    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
+        Some(BoundedObject::unbounded(
+            parent_transform * self.get_transform(),
+            self,
+        ))
     }
 
     fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {

@@ -1,7 +1,9 @@
-use crate::core::{self, Material, PhongMaterial, PhysicalMaterial, Texture, Transformed};
+use crate::core::{
+    self, BoundedObject, Material, PhongMaterial, PhysicalMaterial, Texture, Transform, Transformed,
+};
 use crate::lights::Light;
 use crate::primitives::Object3D;
-use crate::ray_intersection::{Intersection, Ray, RayType};
+use crate::ray_intersection::{Intersectable, Intersection, Ray, RayType};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
@@ -121,26 +123,38 @@ impl<'de> Deserialize<'de> for Camera {
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct Scene {
-    pub width: u32,
-    pub height: u32,
+struct RenderOptions {
+    width: u32,
+    height: u32,
     max_depth: u8,
     max_reflected_rays: u8,
-    camera: Camera,
-    lights: Vec<Light>,
-    objects: Vec<Box<dyn Object3D>>,
-
-    #[serde(skip_deserializing)]
-    pub textures: HashMap<String, Texture>,
 }
 
-impl Default for Scene {
+impl Default for RenderOptions {
     fn default() -> Self {
         Self {
             max_depth: 3,
             max_reflected_rays: 8,
             width: 100,
             height: 100,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Scene {
+    #[serde(flatten)]
+    render_options: RenderOptions,
+    camera: Camera,
+    lights: Vec<Light>,
+    objects: Vec<Box<dyn Object3D>>,
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Self {
+            render_options: RenderOptions::default(),
             camera: Camera::new(
                 Camera::default_fov(),
                 Camera::default_position(),
@@ -149,21 +163,81 @@ impl Default for Scene {
             ),
             lights: Vec::new(),
             objects: Vec::new(),
-            textures: HashMap::new(),
         }
     }
 }
 
 impl Scene {
-    pub fn initialize(&mut self, asset_base: &Path) {
+    pub fn initialize(mut self, asset_base: &Path) -> RaytracingScene {
+        let mut textures = HashMap::new();
+
         for object in self.objects.iter_mut() {
-            object.load_assets(asset_base, &mut self.textures);
-            object.compute_bounding_box();
+            object.load_assets(asset_base, &mut textures);
+        }
+
+        RaytracingScene::new(
+            self.render_options,
+            self.camera,
+            self.lights,
+            self.objects,
+            textures,
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct RaytracingScene {
+    render_options: RenderOptions,
+    camera: Camera,
+    lights: Vec<Light>,
+    textures: HashMap<String, Texture>,
+
+    flattened_bvh: Vec<BoundedObject>,
+}
+
+impl RaytracingScene {
+    fn new(
+        render_options: RenderOptions,
+        camera: Camera,
+        lights: Vec<Light>,
+        objects: Vec<Box<dyn Object3D>>,
+        textures: HashMap<String, Texture>,
+    ) -> Self {
+        Self {
+            render_options,
+            camera,
+            lights,
+            textures,
+
+            flattened_bvh: RaytracingScene::compute_bounding_volume_hierarchy(objects),
         }
     }
 
+    fn compute_bounding_volume_hierarchy(objects: Vec<Box<dyn Object3D>>) -> Vec<BoundedObject> {
+        let mut flattened_objects = Vec::new();
+
+        for object in objects {
+            let parent_transform = Transform::default();
+
+            let bounded_object = object.into_bounded_object(&parent_transform);
+            if let Some(bounded_object) = bounded_object {
+                flattened_objects.push(bounded_object);
+            }
+        }
+
+        flattened_objects
+    }
+
+    pub fn get_width(&self) -> u32 {
+        self.render_options.width
+    }
+
+    pub fn get_height(&self) -> u32 {
+        self.render_options.height
+    }
+
     fn raycast(&self, ray: &Ray) -> Option<Intersection> {
-        self.objects
+        self.flattened_bvh
             .iter()
             .filter_map(|object| object.intersect(&ray))
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
@@ -292,9 +366,9 @@ impl Scene {
         }
 
         let mut reflection: Vector3<f64> = Vector3::zero();
-        if self.max_reflected_rays > 0 {
+        if self.render_options.max_reflected_rays > 0 {
             let d = 0.5f64.powi(depth as i32);
-            let reflected_rays = (self.max_reflected_rays as f64 * d) as u8;
+            let reflected_rays = (self.render_options.max_reflected_rays as f64 * d) as u8;
             if reflected_rays > 0 {
                 let max_angle = (FRAC_PI_2 * material.roughness).cos();
                 let reflection_dir = core::reflect(&ray.direction, &normal);
@@ -375,7 +449,7 @@ impl Scene {
     fn get_color(&self, ray: Ray) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
-        if ray.get_depth() >= self.max_depth {
+        if ray.get_depth() >= self.render_options.max_depth {
             return (Vector4::zero(), ray_count);
         }
 
@@ -403,16 +477,17 @@ impl Scene {
     }
 
     pub fn screen_raycast(&self, index: u32) -> (Vector4<f64>, u64) {
-        assert!(index < self.width * self.height);
+        let (u32_width, u32_height) = (self.get_width(), self.get_height());
+        assert!(index < u32_width * u32_height);
 
-        let (width, height) = (self.width as f64, self.height as f64);
+        let (width, height) = (u32_width as f64, u32_height as f64);
         let aspect = width / height;
         let fov = (self.camera.fov.to_radians() / 2.0).tan();
 
-        let (x, y) = ((index % self.width) as f64, (index / self.width) as f64);
+        let (x, y) = ((index % u32_width) as f64, (index / u32_width) as f64);
         let (x, y) = ((x + 0.5) / width, (y + 0.5) / height);
         let (x, y) = (x * 2.0 - 1.0, 1.0 - y * 2.0);
-        let (x, y) = if self.width < self.height {
+        let (x, y) = if u32_width < u32_height {
             (x * aspect, y)
         } else {
             (x, y / aspect)

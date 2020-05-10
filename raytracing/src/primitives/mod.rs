@@ -6,7 +6,7 @@ mod sphere;
 mod triangle;
 
 use crate::core::Texture;
-use crate::core::{Bounds, Material, Transform, Transformed};
+use crate::core::{BoundedObject, Material, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use std::collections::HashMap;
@@ -39,7 +39,7 @@ pub trait Loadable: HasMaterial {
 }
 
 pub trait Primitive {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds;
+    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject>;
 
     fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>>;
     fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>>;

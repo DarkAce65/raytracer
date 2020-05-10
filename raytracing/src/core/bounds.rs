@@ -1,12 +1,8 @@
 use super::Transform;
-use crate::ray_intersection::Ray;
+use crate::primitives::Object3D;
+use crate::ray_intersection::{Intersectable, Intersection, Ray};
 use nalgebra::Point3;
-
-pub enum Bounds {
-    Unbounded,
-    Children,
-    Bounded(BoundingVolume),
-}
+use std::cmp::Ordering::Equal;
 
 #[derive(Copy, Clone, Debug)]
 pub struct BoundingVolume {
@@ -113,5 +109,58 @@ impl BoundingVolume {
         }
 
         true
+    }
+}
+
+#[derive(Debug)]
+pub struct BoundedObject {
+    object: Box<dyn Object3D>,
+    world_transform: Transform,
+
+    bounding_volume: Option<BoundingVolume>,
+}
+
+impl BoundedObject {
+    pub fn unbounded(world_transform: Transform, object: Box<dyn Object3D>) -> Self {
+        Self {
+            object,
+            world_transform,
+
+            bounding_volume: None,
+        }
+    }
+
+    pub fn bounded(
+        bounding_volume: BoundingVolume,
+        world_transform: Transform,
+        object: Box<dyn Object3D>,
+    ) -> Self {
+        Self {
+            object,
+            world_transform,
+
+            bounding_volume: Some(bounding_volume),
+        }
+    }
+}
+
+impl Intersectable for BoundedObject {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        if let Some(bounding_volume) = self.bounding_volume {
+            if !bounding_volume.intersect(ray) {
+                return None;
+            }
+        }
+
+        let ray = &ray.transform(self.world_transform.inverse());
+
+        self.object
+            .intersect(ray)
+            .map(|mut intersection| {
+                intersection.root_transform = Some(&self.world_transform);
+                intersection
+            })
+            .into_iter()
+            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 }

@@ -1,6 +1,6 @@
 use super::{HasMaterial, Loadable, Object3D, Primitive};
 use crate::core::{
-    quadratic, BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed,
+    quadratic, BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed,
 };
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -80,11 +80,16 @@ impl Intersectable for Sphere {
 }
 
 impl Primitive for Sphere {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            Point3::from([-self.radius; 3]),
-            Point3::from([self.radius; 3]),
+    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
+        let transform = parent_transform * self.get_transform();
+        Some(BoundedObject::bounded(
+            BoundingVolume::from_bounds_and_transform(
+                Point3::from([-self.radius; 3]),
+                Point3::from([self.radius; 3]),
+                &transform,
+            ),
             transform,
+            self,
         ))
     }
 

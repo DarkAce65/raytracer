@@ -1,5 +1,5 @@
 use super::{HasMaterial, Loadable, Object3D, Primitive};
-use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
+use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -92,13 +92,18 @@ impl Intersectable for Cube {
 }
 
 impl Primitive for Cube {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
+    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
         let half = self.size / 2.0;
+        let transform = parent_transform * self.get_transform();
 
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            Point3::from([-half; 3]),
-            Point3::from([half; 3]),
+        Some(BoundedObject::bounded(
+            BoundingVolume::from_bounds_and_transform(
+                Point3::from([-half; 3]),
+                Point3::from([half; 3]),
+                &transform,
+            ),
             transform,
+            self,
         ))
     }
 
