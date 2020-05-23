@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive, RaytracingObject};
+use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
 use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -71,13 +71,7 @@ impl HasMaterial for RaytracingCube {
     fn get_material(&self) -> &Material {
         &self.material
     }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
 }
-
-impl Loadable for RaytracingCube {}
 
 impl Transformed for RaytracingCube {
     fn get_transform(&self) -> &Transform {

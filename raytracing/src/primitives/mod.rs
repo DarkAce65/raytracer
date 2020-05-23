@@ -58,7 +58,7 @@ impl Object3D {
         }
     }
 
-    pub fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
         match self {
             Object3D::Cube(semantic) => semantic.children.as_mut(),
             Object3D::Triangle(semantic) => semantic.children.as_mut(),
@@ -83,44 +83,10 @@ impl Object3D {
 
 pub trait HasMaterial {
     fn get_material(&self) -> &Material;
-    fn get_material_mut(&mut self) -> &mut Material;
-}
-
-pub trait Loadable: HasMaterial {
-    fn load_assets(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) -> bool {
-        // self.load_textures(asset_base, textures);
-
-        false
-    }
 }
 
 pub trait Primitive: Transformed {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject>;
-    fn into_bounded_object_tree(
-        self: Box<Self>,
-        parent_transform: &Transform,
-    ) -> Vec<BoundedObject> {
-        let transform = parent_transform * self.get_transform();
-
-        let mut bounded_objects = Vec::new();
-
-        // if let Some(children) = self.get_children() {
-        //     for child in children {
-        //         bounded_objects.append(&mut child.into_bounded_object_tree(&transform));
-        //     }
-        // }
-
-        let bounded_object = self.into_bounded_object();
-        if let Some(bounded_object) = bounded_object {
-            bounded_objects.push(bounded_object);
-        }
-
-        bounded_objects
-    }
-
-    // fn get_children(self: Box<Self>) -> Option<Vec<Box<dyn RaytracingObject>>>;
-    // fn get_children_ref(&self) -> Option<&Vec<Box<dyn RaytracingObject>>>;
-    // fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn RaytracingObject>>>;
 
     fn surface_normal(
         &self,
@@ -136,7 +102,7 @@ pub trait Primitive: Transformed {
 }
 
 pub trait RaytracingObject:
-    Send + Sync + Debug + Transformed + Intersectable + Primitive + HasMaterial + Loadable
+    Send + Sync + Debug + Transformed + Intersectable + Primitive + HasMaterial
 {
 }
 

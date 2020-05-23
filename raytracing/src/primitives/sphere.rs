@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive, RaytracingObject};
+use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
 use crate::core::{
     quadratic, BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed,
 };
@@ -80,13 +80,7 @@ impl HasMaterial for RaytracingSphere {
     fn get_material(&self) -> &Material {
         &self.material
     }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
 }
-
-impl Loadable for RaytracingSphere {}
 
 impl Transformed for RaytracingSphere {
     fn get_transform(&self) -> &Transform {
