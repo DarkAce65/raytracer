@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
 use crate::core::{BoundedObject, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Rotation3, Unit, Vector2, Vector3};
@@ -6,22 +6,59 @@ use serde::Deserialize;
 use std::f64::EPSILON;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Plane {
-    #[serde(default)]
-    transform: Transform,
+#[serde(default, deny_unknown_fields)]
+pub struct SemanticPlane {
     normal: Unit<Vector3<f64>>,
-    material: Material,
-    children: Option<Vec<Box<dyn Object3D>>>,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<SemanticObject>>,
 }
 
-impl Default for Plane {
+impl Default for SemanticPlane {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             normal: Vector3::y_axis(),
+            transform: Transform::default(),
             material: Material::default(),
+
             children: None,
+        }
+    }
+}
+
+impl SemanticPlane {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects.push(Box::new(Plane::new(self.normal, transform, self.material)));
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct Plane {
+    normal: Unit<Vector3<f64>>,
+    transform: Transform,
+    material: Material,
+}
+
+impl Plane {
+    pub fn new(normal: Unit<Vector3<f64>>, transform: Transform, material: Material) -> Self {
+        Self {
+            normal,
+            transform,
+            material,
         }
     }
 }
@@ -66,19 +103,8 @@ impl Intersectable for Plane {
 }
 
 impl Primitive for Plane {
-    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
-        Some(BoundedObject::unbounded(
-            parent_transform * self.get_transform(),
-            self,
-        ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
-        self.children.as_mut()
+    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
+        Some(BoundedObject::unbounded(self))
     }
 
     fn surface_normal(

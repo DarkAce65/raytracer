@@ -142,7 +142,7 @@ impl Default for Material {
 }
 
 impl Material {
-    pub fn load_textures(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) {
+    pub fn load_textures(&self, asset_base: &Path, textures: &mut HashMap<String, Texture>) {
         let texture_path = match self {
             Material::Phong(material) => material.texture_path.as_ref(),
             Material::Physical(material) => material.texture_path.as_ref(),

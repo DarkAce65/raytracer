@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
 use crate::core::{
     quadratic, BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed,
 };
@@ -8,22 +8,65 @@ use serde::Deserialize;
 use std::f64::consts::FRAC_1_PI;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Sphere {
-    #[serde(default)]
-    transform: Transform,
+#[serde(default, deny_unknown_fields)]
+pub struct SemanticSphere {
     radius: f64,
-    material: Material,
-    children: Option<Vec<Box<dyn Object3D>>>,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<SemanticObject>>,
 }
 
-impl Default for Sphere {
+impl Default for SemanticSphere {
     fn default() -> Self {
         Self {
             transform: Transform::default(),
             radius: 1.0,
             material: Material::default(),
+
             children: None,
+        }
+    }
+}
+
+impl SemanticSphere {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects.push(Box::new(Sphere::new(self.radius, transform, self.material)));
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct Sphere {
+    radius: f64,
+    transform: Transform,
+    material: Material,
+}
+
+impl From<SemanticSphere> for Sphere {
+    fn from(semantic: SemanticSphere) -> Self {
+        Self::new(semantic.radius, semantic.transform, semantic.material)
+    }
+}
+
+impl Sphere {
+    pub fn new(radius: f64, transform: Transform, material: Material) -> Self {
+        Self {
+            radius,
+            transform,
+            material,
         }
     }
 }
@@ -80,25 +123,15 @@ impl Intersectable for Sphere {
 }
 
 impl Primitive for Sphere {
-    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
-        let transform = parent_transform * self.get_transform();
+    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         Some(BoundedObject::bounded(
             BoundingVolume::from_bounds_and_transform(
                 Point3::from([-self.radius; 3]),
                 Point3::from([self.radius; 3]),
-                &transform,
+                self.get_transform(),
             ),
-            transform,
             self,
         ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
-        self.children.as_mut()
     }
 
     fn surface_normal(

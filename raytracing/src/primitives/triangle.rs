@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
 use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -6,7 +6,8 @@ use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::f64::EPSILON;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct VertexPNT {
     position: Point3<f64>,
     normal: Unit<Vector3<f64>>,
@@ -24,72 +25,137 @@ impl VertexPNT {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TriangleData {
-    #[serde(default)]
-    transform: Transform,
-    vertices: [Point3<f64>; 3],
-    material: Material,
-    children: Option<Vec<Box<dyn Object3D>>>,
+#[serde(untagged)]
+enum VertexData {
+    PNT([VertexPNT; 3]),
+    Position([Point3<f64>; 3]),
 }
 
-impl Default for TriangleData {
+#[derive(Debug, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct SemanticTriangle {
+    #[serde(alias = "vertices")]
+    vertex_data: VertexData,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<SemanticObject>>,
+}
+
+impl Default for SemanticTriangle {
     fn default() -> Self {
         Self {
+            vertex_data: VertexData::Position([
+                Point3::origin(),
+                Point3::origin(),
+                Point3::origin(),
+            ]),
             transform: Transform::default(),
-            vertices: [Point3::origin(), Point3::origin(), Point3::origin()],
             material: Material::default(),
+
             children: None,
         }
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "TriangleData")]
-pub struct Triangle {
-    transform: Transform,
-    vertex_data: [VertexPNT; 3],
-    material: Material,
-    children: Option<Vec<Box<dyn Object3D>>>,
-}
-
-impl From<TriangleData> for Triangle {
-    fn from(data: TriangleData) -> Self {
-        let normals = [Triangle::compute_normal(data.vertices); 3];
-        let texcoords = [Vector2::zero(); 3];
-
-        Triangle::new(
-            data.transform,
-            data.vertices,
-            normals,
-            texcoords,
-            data.material,
-            data.children,
-        )
-    }
-}
-
-impl Triangle {
+impl SemanticTriangle {
     pub fn new(
-        transform: Transform,
         positions: [Point3<f64>; 3],
         normals: [Unit<Vector3<f64>>; 3],
         texcoords: [Vector2<f64>; 3],
+        transform: Transform,
         material: Material,
-        children: Option<Vec<Box<dyn Object3D>>>,
     ) -> Self {
+        let vertex_data = VertexData::PNT([
+            VertexPNT::new(positions[0], normals[0], texcoords[0]),
+            VertexPNT::new(positions[1], normals[1], texcoords[1]),
+            VertexPNT::new(positions[2], normals[2], texcoords[2]),
+        ]);
+
+        Self {
+            vertex_data,
+            transform,
+            material,
+
+            children: None,
+        }
+    }
+
+    pub fn new_with_vertices(
+        vertices: [Point3<f64>; 3],
+        transform: Transform,
+        material: Material,
+    ) -> Self {
+        let normals = [Triangle::compute_normal(vertices); 3];
+        let texcoords = [Vector2::zero(); 3];
+
+        Self::new(vertices, normals, texcoords, transform, material)
+    }
+
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        match self.vertex_data {
+            VertexData::PNT(vertex_data) => {
+                objects.push(Box::new(Triangle::new(
+                    vertex_data,
+                    transform,
+                    self.material,
+                )));
+            }
+            VertexData::Position(vertices) => {
+                objects.push(Box::new(Triangle::new_with_vertices(
+                    vertices,
+                    transform,
+                    self.material,
+                )));
+            }
+        }
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct Triangle {
+    vertex_data: [VertexPNT; 3],
+    transform: Transform,
+    material: Material,
+}
+
+impl Triangle {
+    fn new(vertex_data: [VertexPNT; 3], transform: Transform, material: Material) -> Self {
+        Self {
+            vertex_data,
+            transform,
+            material,
+        }
+    }
+
+    fn new_with_vertices(
+        positions: [Point3<f64>; 3],
+        transform: Transform,
+        material: Material,
+    ) -> Self {
+        let normals = [Triangle::compute_normal(positions); 3];
+        let texcoords = [Vector2::zero(); 3];
+
         let vertex_data = [
             VertexPNT::new(positions[0], normals[0], texcoords[0]),
             VertexPNT::new(positions[1], normals[1], texcoords[1]),
             VertexPNT::new(positions[2], normals[2], texcoords[2]),
         ];
 
-        Self {
-            transform,
-            vertex_data,
-            material,
-            children,
-        }
+        Self::new(vertex_data, transform, material)
     }
 
     pub fn compute_normal(vertices: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
@@ -156,9 +222,7 @@ impl Intersectable for Triangle {
 }
 
 impl Primitive for Triangle {
-    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
-        let transform = parent_transform * self.get_transform();
-
+    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         let mut min = self.vertex_data[0].position;
         let mut max = min;
         for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
@@ -172,18 +236,9 @@ impl Primitive for Triangle {
         }
 
         Some(BoundedObject::bounded(
-            BoundingVolume::from_bounds_and_transform(min, max, &transform),
-            transform,
+            BoundingVolume::from_bounds_and_transform(min, max, self.get_transform()),
             self,
         ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
-        self.children.as_mut()
     }
 
     fn surface_normal(

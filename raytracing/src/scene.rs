@@ -2,7 +2,7 @@ use crate::core::{
     self, BoundedObject, Material, PhongMaterial, PhysicalMaterial, Texture, Transform, Transformed,
 };
 use crate::lights::Light;
-use crate::primitives::Object3D;
+use crate::primitives::{Object3D, SemanticObject};
 use crate::ray_intersection::{Intersectable, Intersection, Ray, RayType};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
@@ -148,7 +148,7 @@ pub struct Scene {
     render_options: RenderOptions,
     camera: Camera,
     lights: Vec<Light>,
-    objects: Vec<Box<dyn Object3D>>,
+    objects: Vec<SemanticObject>,
 }
 
 impl Default for Scene {
@@ -171,17 +171,11 @@ impl Scene {
     pub fn initialize(mut self, asset_base: &Path) -> RaytracingScene {
         let mut textures = HashMap::new();
 
-        for object in self.objects.iter_mut() {
-            object.load_assets(asset_base, &mut textures);
+        for object in &mut self.objects {
+            SemanticObject::load_assets(object, asset_base, &mut textures);
         }
 
-        RaytracingScene::new(
-            self.render_options,
-            self.camera,
-            self.lights,
-            self.objects,
-            textures,
-        )
+        RaytracingScene::new(self, textures)
     }
 }
 
@@ -196,36 +190,27 @@ pub struct RaytracingScene {
 }
 
 impl RaytracingScene {
-    fn new(
-        render_options: RenderOptions,
-        camera: Camera,
-        lights: Vec<Light>,
-        objects: Vec<Box<dyn Object3D>>,
-        textures: HashMap<String, Texture>,
-    ) -> Self {
+    fn new(scene: Scene, textures: HashMap<String, Texture>) -> Self {
+        let mut objects = Vec::new();
+        for object in scene.objects {
+            objects.append(&mut object.flatten_to_world(&Transform::default()));
+        }
+
         Self {
-            render_options,
-            camera,
-            lights,
+            render_options: scene.render_options,
+            camera: scene.camera,
+            lights: scene.lights,
             textures,
 
-            flattened_bvh: RaytracingScene::compute_bounding_volume_hierarchy(objects),
+            flattened_bvh: Self::compute_bounding_volume_hierarchy(objects),
         }
     }
 
     fn compute_bounding_volume_hierarchy(objects: Vec<Box<dyn Object3D>>) -> Vec<BoundedObject> {
-        let mut flattened_objects = Vec::new();
-
-        for object in objects {
-            let parent_transform = Transform::default();
-
-            let bounded_object = object.into_bounded_object(&parent_transform);
-            if let Some(bounded_object) = bounded_object {
-                flattened_objects.push(bounded_object);
-            }
-        }
-
-        flattened_objects
+        objects
+            .into_iter()
+            .filter_map(|object| object.into_bounded_object())
+            .collect()
     }
 
     pub fn get_width(&self) -> u32 {

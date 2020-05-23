@@ -1,26 +1,63 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive};
+use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
 use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Cube {
-    #[serde(default)]
-    transform: Transform,
+#[serde(default, deny_unknown_fields)]
+pub struct SemanticCube {
     size: f64,
-    material: Material,
-    children: Option<Vec<Box<dyn Object3D>>>,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<SemanticObject>>,
 }
 
-impl Default for Cube {
+impl Default for SemanticCube {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             size: 1.0,
+            transform: Transform::default(),
             material: Material::default(),
+
             children: None,
+        }
+    }
+}
+
+impl SemanticCube {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects.push(Box::new(Cube::new(self.size, transform, self.material)));
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct Cube {
+    size: f64,
+    transform: Transform,
+    material: Material,
+}
+
+impl Cube {
+    pub fn new(size: f64, transform: Transform, material: Material) -> Self {
+        Self {
+            size,
+            transform,
+            material,
         }
     }
 }
@@ -92,27 +129,17 @@ impl Intersectable for Cube {
 }
 
 impl Primitive for Cube {
-    fn into_bounded_object(self: Box<Self>, parent_transform: &Transform) -> Option<BoundedObject> {
+    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         let half = self.size / 2.0;
-        let transform = parent_transform * self.get_transform();
 
         Some(BoundedObject::bounded(
             BoundingVolume::from_bounds_and_transform(
                 Point3::from([-half; 3]),
                 Point3::from([half; 3]),
-                &transform,
+                self.get_transform(),
             ),
-            transform,
             self,
         ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Box<dyn Object3D>>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>> {
-        self.children.as_mut()
     }
 
     fn surface_normal(

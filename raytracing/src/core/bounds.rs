@@ -115,30 +115,20 @@ impl BoundingVolume {
 #[derive(Debug)]
 pub struct BoundedObject {
     object: Box<dyn Object3D>,
-    world_transform: Transform,
-
     bounding_volume: Option<BoundingVolume>,
 }
 
 impl BoundedObject {
-    pub fn unbounded(world_transform: Transform, object: Box<dyn Object3D>) -> Self {
+    pub fn unbounded(object: Box<dyn Object3D>) -> Self {
         Self {
             object,
-            world_transform,
-
             bounding_volume: None,
         }
     }
 
-    pub fn bounded(
-        bounding_volume: BoundingVolume,
-        world_transform: Transform,
-        object: Box<dyn Object3D>,
-    ) -> Self {
+    pub fn bounded(bounding_volume: BoundingVolume, object: Box<dyn Object3D>) -> Self {
         Self {
             object,
-            world_transform,
-
             bounding_volume: Some(bounding_volume),
         }
     }
@@ -152,12 +142,12 @@ impl Intersectable for BoundedObject {
             }
         }
 
-        let ray = &ray.transform(self.world_transform.inverse());
+        let ray = &ray.transform(self.object.get_transform().inverse());
 
         self.object
             .intersect(ray)
             .map(|mut intersection| {
-                intersection.root_transform = Some(&self.world_transform);
+                intersection.root_transform = Some(self.object.get_transform());
                 intersection
             })
             .into_iter()
