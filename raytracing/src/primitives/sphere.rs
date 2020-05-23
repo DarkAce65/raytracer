@@ -56,21 +56,15 @@ impl Sphere {
 #[derive(Debug)]
 pub struct RaytracingSphere {
     radius: f64,
-    transform: Transform,
+    world_transform: Transform,
     material: Material,
 }
 
-impl From<Sphere> for RaytracingSphere {
-    fn from(semantic: Sphere) -> Self {
-        Self::new(semantic.radius, semantic.transform, semantic.material)
-    }
-}
-
 impl RaytracingSphere {
-    pub fn new(radius: f64, transform: Transform, material: Material) -> Self {
+    pub fn new(radius: f64, world_transform: Transform, material: Material) -> Self {
         Self {
             radius,
-            transform,
+            world_transform,
             material,
         }
     }
@@ -84,7 +78,7 @@ impl HasMaterial for RaytracingSphere {
 
 impl Transformed for RaytracingSphere {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 

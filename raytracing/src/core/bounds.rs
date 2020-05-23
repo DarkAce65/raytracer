@@ -146,10 +146,6 @@ impl Intersectable for BoundedObject {
 
         self.object
             .intersect(ray)
-            .map(|mut intersection| {
-                intersection.root_transform = Some(self.object.get_transform());
-                intersection
-            })
             .into_iter()
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }

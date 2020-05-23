@@ -1,4 +1,4 @@
-use crate::core::{MaterialSide, Transform};
+use crate::core::MaterialSide;
 use crate::primitives::RaytracingObject;
 use nalgebra::{Affine3, Point3, Unit, Vector2, Vector3};
 
@@ -60,7 +60,6 @@ struct IntersectionData {
 pub struct Intersection<'a> {
     pub object: &'a dyn RaytracingObject,
     pub distance: f64,
-    pub root_transform: Option<&'a Transform>,
     intermediate: IntermediateData,
     data: Option<IntersectionData>,
 }
@@ -74,7 +73,6 @@ impl<'a> Intersection<'a> {
         Self {
             object,
             distance,
-            root_transform: None,
             intermediate,
             data: None,
         }
@@ -85,10 +83,7 @@ impl<'a> Intersection<'a> {
     }
 
     pub fn compute_data(&mut self, ray: &Ray) {
-        let transform = self
-            .root_transform
-            .expect("intersection has no root transform");
-
+        let transform = self.object.get_transform();
         let hit_point = ray.origin + ray.direction * self.distance;
         let object_hit_point = transform.inverse() * hit_point;
 

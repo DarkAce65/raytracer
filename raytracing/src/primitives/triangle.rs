@@ -139,22 +139,22 @@ impl Triangle {
 #[derive(Debug)]
 pub struct RaytracingTriangle {
     vertex_data: [VertexPNT; 3],
-    transform: Transform,
+    world_transform: Transform,
     material: Material,
 }
 
 impl RaytracingTriangle {
-    fn new(vertex_data: [VertexPNT; 3], transform: Transform, material: Material) -> Self {
+    fn new(vertex_data: [VertexPNT; 3], world_transform: Transform, material: Material) -> Self {
         Self {
             vertex_data,
-            transform,
+            world_transform,
             material,
         }
     }
 
     fn new_with_positions(
         positions: [Point3<f64>; 3],
-        transform: Transform,
+        world_transform: Transform,
         material: Material,
     ) -> Self {
         let normals = [Triangle::compute_normal(positions); 3];
@@ -166,7 +166,7 @@ impl RaytracingTriangle {
             VertexPNT::new(positions[2], normals[2], texcoords[2]),
         ];
 
-        Self::new(vertex_data, transform, material)
+        Self::new(vertex_data, world_transform, material)
     }
 }
 
@@ -178,7 +178,7 @@ impl HasMaterial for RaytracingTriangle {
 
 impl Transformed for RaytracingTriangle {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 

@@ -53,15 +53,15 @@ impl Cube {
 #[derive(Debug)]
 pub struct RaytracingCube {
     size: f64,
-    transform: Transform,
+    world_transform: Transform,
     material: Material,
 }
 
 impl RaytracingCube {
-    pub fn new(size: f64, transform: Transform, material: Material) -> Self {
+    pub fn new(size: f64, world_transform: Transform, material: Material) -> Self {
         Self {
             size,
-            transform,
+            world_transform,
             material,
         }
     }
@@ -75,7 +75,7 @@ impl HasMaterial for RaytracingCube {
 
 impl Transformed for RaytracingCube {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 

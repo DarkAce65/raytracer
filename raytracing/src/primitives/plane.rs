@@ -54,15 +54,15 @@ impl Plane {
 #[derive(Debug)]
 pub struct RaytracingPlane {
     normal: Unit<Vector3<f64>>,
-    transform: Transform,
+    world_transform: Transform,
     material: Material,
 }
 
 impl RaytracingPlane {
-    pub fn new(normal: Unit<Vector3<f64>>, transform: Transform, material: Material) -> Self {
+    pub fn new(normal: Unit<Vector3<f64>>, world_transform: Transform, material: Material) -> Self {
         Self {
             normal,
-            transform,
+            world_transform,
             material,
         }
     }
@@ -76,7 +76,7 @@ impl HasMaterial for RaytracingPlane {
 
 impl Transformed for RaytracingPlane {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 
