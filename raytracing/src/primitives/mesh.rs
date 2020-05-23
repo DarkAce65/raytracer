@@ -106,7 +106,7 @@ impl Mesh {
                     self.material.clone(),
                 );
 
-                children.push(Object3D::Triangle(face));
+                children.push(Object3D::Triangle(Box::new(face)));
             }
         }
 

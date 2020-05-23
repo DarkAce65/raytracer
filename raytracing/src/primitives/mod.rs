@@ -25,12 +25,12 @@ pub use triangle::*;
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "lowercase")]
 pub enum Object3D {
-    Cube(Cube),
-    Plane(Plane),
-    Sphere(Sphere),
-    Triangle(Triangle),
-    Mesh(Mesh),
-    Group(Group),
+    Cube(Box<Cube>),
+    Plane(Box<Plane>),
+    Sphere(Box<Sphere>),
+    Triangle(Box<Triangle>),
+    Mesh(Box<Mesh>),
+    Group(Box<Group>),
 }
 
 impl Object3D {
