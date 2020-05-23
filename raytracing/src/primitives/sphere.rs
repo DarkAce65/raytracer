@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
+use super::{HasMaterial, Loadable, Object3D, Primitive, RaytracingObject};
 use crate::core::{
     quadratic, BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed,
 };
@@ -9,15 +9,15 @@ use std::f64::consts::FRAC_1_PI;
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct SemanticSphere {
+pub struct Sphere {
     radius: f64,
     transform: Transform,
     pub material: Material,
 
-    pub children: Option<Vec<SemanticObject>>,
+    pub children: Option<Vec<Object3D>>,
 }
 
-impl Default for SemanticSphere {
+impl Default for Sphere {
     fn default() -> Self {
         Self {
             transform: Transform::default(),
@@ -29,39 +29,44 @@ impl Default for SemanticSphere {
     }
 }
 
-impl SemanticSphere {
-    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+impl Sphere {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 
-        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
 
         if let Some(children) = self.children {
             for child in children {
-                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
                 objects.extend(child_objects);
             }
         }
 
-        objects.push(Box::new(Sphere::new(self.radius, transform, self.material)));
+        objects.push(Box::new(RaytracingSphere::new(
+            self.radius,
+            transform,
+            self.material,
+        )));
 
         objects
     }
 }
 
 #[derive(Debug)]
-pub struct Sphere {
+pub struct RaytracingSphere {
     radius: f64,
     transform: Transform,
     material: Material,
 }
 
-impl From<SemanticSphere> for Sphere {
-    fn from(semantic: SemanticSphere) -> Self {
+impl From<Sphere> for RaytracingSphere {
+    fn from(semantic: Sphere) -> Self {
         Self::new(semantic.radius, semantic.transform, semantic.material)
     }
 }
 
-impl Sphere {
+impl RaytracingSphere {
     pub fn new(radius: f64, transform: Transform, material: Material) -> Self {
         Self {
             radius,
@@ -71,7 +76,7 @@ impl Sphere {
     }
 }
 
-impl HasMaterial for Sphere {
+impl HasMaterial for RaytracingSphere {
     fn get_material(&self) -> &Material {
         &self.material
     }
@@ -81,15 +86,15 @@ impl HasMaterial for Sphere {
     }
 }
 
-impl Loadable for Sphere {}
+impl Loadable for RaytracingSphere {}
 
-impl Transformed for Sphere {
+impl Transformed for RaytracingSphere {
     fn get_transform(&self) -> &Transform {
         &self.transform
     }
 }
 
-impl Intersectable for Sphere {
+impl Intersectable for RaytracingSphere {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let hypot = ray.origin.coords;
         let ray_proj = hypot.dot(&ray.direction);
@@ -122,7 +127,7 @@ impl Intersectable for Sphere {
     }
 }
 
-impl Primitive for Sphere {
+impl Primitive for RaytracingSphere {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         Some(BoundedObject::bounded(
             BoundingVolume::from_bounds_and_transform(

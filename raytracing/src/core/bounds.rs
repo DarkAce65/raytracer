@@ -1,5 +1,5 @@
 use super::Transform;
-use crate::primitives::Object3D;
+use crate::primitives::RaytracingObject;
 use crate::ray_intersection::{Intersectable, Intersection, Ray};
 use nalgebra::Point3;
 use std::cmp::Ordering::Equal;
@@ -114,19 +114,19 @@ impl BoundingVolume {
 
 #[derive(Debug)]
 pub struct BoundedObject {
-    object: Box<dyn Object3D>,
+    object: Box<dyn RaytracingObject>,
     bounding_volume: Option<BoundingVolume>,
 }
 
 impl BoundedObject {
-    pub fn unbounded(object: Box<dyn Object3D>) -> Self {
+    pub fn unbounded(object: Box<dyn RaytracingObject>) -> Self {
         Self {
             object,
             bounding_volume: None,
         }
     }
 
-    pub fn bounded(bounding_volume: BoundingVolume, object: Box<dyn Object3D>) -> Self {
+    pub fn bounded(bounding_volume: BoundingVolume, object: Box<dyn RaytracingObject>) -> Self {
         Self {
             object,
             bounding_volume: Some(bounding_volume),

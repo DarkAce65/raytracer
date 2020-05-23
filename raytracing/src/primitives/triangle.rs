@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
+use super::{HasMaterial, Loadable, Object3D, Primitive, RaytracingObject};
 use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -33,16 +33,16 @@ enum VertexData {
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct SemanticTriangle {
+pub struct Triangle {
     #[serde(alias = "vertices")]
     vertex_data: VertexData,
     transform: Transform,
     pub material: Material,
 
-    pub children: Option<Vec<SemanticObject>>,
+    pub children: Option<Vec<Object3D>>,
 }
 
-impl Default for SemanticTriangle {
+impl Default for Triangle {
     fn default() -> Self {
         Self {
             vertex_data: VertexData::Position([
@@ -58,7 +58,7 @@ impl Default for SemanticTriangle {
     }
 }
 
-impl SemanticTriangle {
+impl Triangle {
     pub fn new(
         positions: [Point3<f64>; 3],
         normals: [Unit<Vector3<f64>>; 3],
@@ -81,39 +81,50 @@ impl SemanticTriangle {
         }
     }
 
-    pub fn new_with_vertices(
-        vertices: [Point3<f64>; 3],
+    pub fn new_with_positions(
+        positions: [Point3<f64>; 3],
         transform: Transform,
         material: Material,
     ) -> Self {
-        let normals = [Triangle::compute_normal(vertices); 3];
-        let texcoords = [Vector2::zero(); 3];
+        Self {
+            vertex_data: VertexData::Position(positions),
+            transform,
+            material,
 
-        Self::new(vertices, normals, texcoords, transform, material)
+            children: None,
+        }
     }
 
-    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+    pub fn compute_normal(positions: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
+        let edge1 = positions[1] - positions[0];
+        let edge2 = positions[2] - positions[0];
+
+        Unit::new_normalize(edge1.cross(&edge2))
+    }
+
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 
-        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
 
         if let Some(children) = self.children {
             for child in children {
-                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
                 objects.extend(child_objects);
             }
         }
 
         match self.vertex_data {
             VertexData::PNT(vertex_data) => {
-                objects.push(Box::new(Triangle::new(
+                objects.push(Box::new(RaytracingTriangle::new(
                     vertex_data,
                     transform,
                     self.material,
                 )));
             }
             VertexData::Position(vertices) => {
-                objects.push(Box::new(Triangle::new_with_vertices(
+                objects.push(Box::new(RaytracingTriangle::new_with_positions(
                     vertices,
                     transform,
                     self.material,
@@ -126,13 +137,13 @@ impl SemanticTriangle {
 }
 
 #[derive(Debug)]
-pub struct Triangle {
+pub struct RaytracingTriangle {
     vertex_data: [VertexPNT; 3],
     transform: Transform,
     material: Material,
 }
 
-impl Triangle {
+impl RaytracingTriangle {
     fn new(vertex_data: [VertexPNT; 3], transform: Transform, material: Material) -> Self {
         Self {
             vertex_data,
@@ -141,7 +152,7 @@ impl Triangle {
         }
     }
 
-    fn new_with_vertices(
+    fn new_with_positions(
         positions: [Point3<f64>; 3],
         transform: Transform,
         material: Material,
@@ -157,16 +168,9 @@ impl Triangle {
 
         Self::new(vertex_data, transform, material)
     }
-
-    pub fn compute_normal(vertices: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
-        let edge1 = vertices[1] - vertices[0];
-        let edge2 = vertices[2] - vertices[0];
-
-        Unit::new_normalize(edge1.cross(&edge2))
-    }
 }
 
-impl HasMaterial for Triangle {
+impl HasMaterial for RaytracingTriangle {
     fn get_material(&self) -> &Material {
         &self.material
     }
@@ -176,15 +180,15 @@ impl HasMaterial for Triangle {
     }
 }
 
-impl Loadable for Triangle {}
+impl Loadable for RaytracingTriangle {}
 
-impl Transformed for Triangle {
+impl Transformed for RaytracingTriangle {
     fn get_transform(&self) -> &Transform {
         &self.transform
     }
 }
 
-impl Intersectable for Triangle {
+impl Intersectable for RaytracingTriangle {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let edge1 = self.vertex_data[1].position - self.vertex_data[0].position;
         let edge2 = self.vertex_data[2].position - self.vertex_data[0].position;
@@ -221,7 +225,7 @@ impl Intersectable for Triangle {
     }
 }
 
-impl Primitive for Triangle {
+impl Primitive for RaytracingTriangle {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         let mut min = self.vertex_data[0].position;
         let mut max = min;

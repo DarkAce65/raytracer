@@ -1,4 +1,4 @@
-use super::{HasMaterial, Loadable, Object3D, Primitive, SemanticObject};
+use super::{HasMaterial, Loadable, Object3D, Primitive, RaytracingObject};
 use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -6,15 +6,15 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct SemanticCube {
+pub struct Cube {
     size: f64,
     transform: Transform,
     pub material: Material,
 
-    pub children: Option<Vec<SemanticObject>>,
+    pub children: Option<Vec<Object3D>>,
 }
 
-impl Default for SemanticCube {
+impl Default for Cube {
     fn default() -> Self {
         Self {
             size: 1.0,
@@ -26,33 +26,38 @@ impl Default for SemanticCube {
     }
 }
 
-impl SemanticCube {
-    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+impl Cube {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 
-        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
 
         if let Some(children) = self.children {
             for child in children {
-                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
                 objects.extend(child_objects);
             }
         }
 
-        objects.push(Box::new(Cube::new(self.size, transform, self.material)));
+        objects.push(Box::new(RaytracingCube::new(
+            self.size,
+            transform,
+            self.material,
+        )));
 
         objects
     }
 }
 
 #[derive(Debug)]
-pub struct Cube {
+pub struct RaytracingCube {
     size: f64,
     transform: Transform,
     material: Material,
 }
 
-impl Cube {
+impl RaytracingCube {
     pub fn new(size: f64, transform: Transform, material: Material) -> Self {
         Self {
             size,
@@ -62,7 +67,7 @@ impl Cube {
     }
 }
 
-impl HasMaterial for Cube {
+impl HasMaterial for RaytracingCube {
     fn get_material(&self) -> &Material {
         &self.material
     }
@@ -72,15 +77,15 @@ impl HasMaterial for Cube {
     }
 }
 
-impl Loadable for Cube {}
+impl Loadable for RaytracingCube {}
 
-impl Transformed for Cube {
+impl Transformed for RaytracingCube {
     fn get_transform(&self) -> &Transform {
         &self.transform
     }
 }
 
-impl Intersectable for Cube {
+impl Intersectable for RaytracingCube {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
@@ -128,7 +133,7 @@ impl Intersectable for Cube {
     }
 }
 
-impl Primitive for Cube {
+impl Primitive for RaytracingCube {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         let half = self.size / 2.0;
 

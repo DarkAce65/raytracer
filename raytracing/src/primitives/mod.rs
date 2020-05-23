@@ -24,67 +24,59 @@ pub use triangle::*;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "lowercase")]
-pub enum SemanticObject {
-    Cube(SemanticCube),
-    Plane(SemanticPlane),
-    Sphere(SemanticSphere),
-    Triangle(SemanticTriangle),
-    Mesh(SemanticMesh),
-    Group(SemanticGroup),
+pub enum Object3D {
+    Cube(Cube),
+    Plane(Plane),
+    Sphere(Sphere),
+    Triangle(Triangle),
+    Mesh(Mesh),
+    Group(Group),
 }
 
-impl SemanticObject {
+impl Object3D {
     pub fn load_assets(
-        object: &mut SemanticObject,
+        object: &mut Object3D,
         asset_base: &Path,
         textures: &mut HashMap<String, Texture>,
     ) {
         match object {
-            SemanticObject::Cube(semantic) => {
-                semantic.material.load_textures(asset_base, textures);
-            }
-            SemanticObject::Plane(semantic) => {
-                semantic.material.load_textures(asset_base, textures);
-            }
-            SemanticObject::Sphere(semantic) => {
-                semantic.material.load_textures(asset_base, textures);
-            }
-            SemanticObject::Triangle(semantic) => {
-                semantic.material.load_textures(asset_base, textures);
-            }
-            SemanticObject::Mesh(semantic) => {
+            Object3D::Cube(semantic) => semantic.material.load_textures(asset_base, textures),
+            Object3D::Plane(semantic) => semantic.material.load_textures(asset_base, textures),
+            Object3D::Sphere(semantic) => semantic.material.load_textures(asset_base, textures),
+            Object3D::Triangle(semantic) => semantic.material.load_textures(asset_base, textures),
+            Object3D::Mesh(semantic) => {
                 semantic.load_assets(asset_base);
                 semantic.material.load_textures(asset_base, textures);
             }
-            SemanticObject::Group(_) => {}
+            Object3D::Group(_) => {}
         }
 
         if let Some(children) = object.get_children_mut() {
             for child in children {
-                SemanticObject::load_assets(child, asset_base, textures);
+                Object3D::load_assets(child, asset_base, textures);
             }
         }
     }
 
-    pub fn get_children_mut(&mut self) -> Option<&mut Vec<SemanticObject>> {
+    pub fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
         match self {
-            SemanticObject::Cube(semantic) => semantic.children.as_mut(),
-            SemanticObject::Triangle(semantic) => semantic.children.as_mut(),
-            SemanticObject::Plane(semantic) => semantic.children.as_mut(),
-            SemanticObject::Sphere(semantic) => semantic.children.as_mut(),
-            SemanticObject::Mesh(semantic) => semantic.children.as_mut(),
-            SemanticObject::Group(semantic) => Some(&mut semantic.children),
+            Object3D::Cube(semantic) => semantic.children.as_mut(),
+            Object3D::Triangle(semantic) => semantic.children.as_mut(),
+            Object3D::Plane(semantic) => semantic.children.as_mut(),
+            Object3D::Sphere(semantic) => semantic.children.as_mut(),
+            Object3D::Mesh(semantic) => semantic.children.as_mut(),
+            Object3D::Group(semantic) => Some(&mut semantic.children),
         }
     }
 
-    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         match self {
-            SemanticObject::Cube(semantic) => semantic.flatten_to_world(transform),
-            SemanticObject::Triangle(semantic) => semantic.flatten_to_world(transform),
-            SemanticObject::Plane(semantic) => semantic.flatten_to_world(transform),
-            SemanticObject::Sphere(semantic) => semantic.flatten_to_world(transform),
-            SemanticObject::Mesh(semantic) => semantic.flatten_to_world(transform),
-            SemanticObject::Group(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Cube(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Triangle(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Plane(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Sphere(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Mesh(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Group(semantic) => semantic.flatten_to_world(transform),
         }
     }
 }
@@ -126,9 +118,9 @@ pub trait Primitive: Transformed {
         bounded_objects
     }
 
-    // fn get_children(self: Box<Self>) -> Option<Vec<Box<dyn Object3D>>>;
-    // fn get_children_ref(&self) -> Option<&Vec<Box<dyn Object3D>>>;
-    // fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn Object3D>>>;
+    // fn get_children(self: Box<Self>) -> Option<Vec<Box<dyn RaytracingObject>>>;
+    // fn get_children_ref(&self) -> Option<&Vec<Box<dyn RaytracingObject>>>;
+    // fn get_children_mut(&mut self) -> Option<&mut Vec<Box<dyn RaytracingObject>>>;
 
     fn surface_normal(
         &self,
@@ -143,12 +135,12 @@ pub trait Primitive: Transformed {
     ) -> Vector2<f64>;
 }
 
-pub trait Object3D:
+pub trait RaytracingObject:
     Send + Sync + Debug + Transformed + Intersectable + Primitive + HasMaterial + Loadable
 {
 }
 
-impl Object3D for Cube {}
-impl Object3D for Plane {}
-impl Object3D for Sphere {}
-impl Object3D for Triangle {}
+impl RaytracingObject for RaytracingCube {}
+impl RaytracingObject for RaytracingPlane {}
+impl RaytracingObject for RaytracingSphere {}
+impl RaytracingObject for RaytracingTriangle {}

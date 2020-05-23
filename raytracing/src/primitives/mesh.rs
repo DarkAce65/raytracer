@@ -1,4 +1,4 @@
-use super::{Object3D, SemanticObject, SemanticTriangle, Triangle};
+use super::{Object3D, RaytracingObject, Triangle};
 use crate::core::{Material, Transform};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
@@ -8,7 +8,7 @@ use tobj::load_obj;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct SemanticMesh {
+pub struct Mesh {
     file: String,
     #[serde(default)]
     transform: Transform,
@@ -16,18 +16,19 @@ pub struct SemanticMesh {
     pub material: Material,
 
     #[serde(default)]
-    pub children: Option<Vec<SemanticObject>>,
+    pub children: Option<Vec<Object3D>>,
 }
 
-impl SemanticMesh {
-    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn Object3D>> {
+impl Mesh {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 
-        let mut objects: Vec<Box<dyn Object3D>> = Vec::new();
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
 
         if let Some(children) = self.children {
             for child in children {
-                let child_objects: Vec<Box<dyn Object3D>> = child.flatten_to_world(&transform);
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
                 objects.extend(child_objects);
             }
         }
@@ -38,7 +39,7 @@ impl SemanticMesh {
     pub fn load_assets(&mut self, asset_base: &Path) {
         let (models, _) = load_obj(&asset_base.join(&self.file)).expect("failed to load object");
 
-        let mut children: Vec<SemanticObject> = Vec::new();
+        let mut children: Vec<Object3D> = Vec::new();
         for model in models.iter() {
             let mesh = &model.mesh;
 
@@ -97,7 +98,7 @@ impl SemanticMesh {
                     [uv0, uv1, uv2]
                 };
 
-                let face = SemanticTriangle::new(
+                let face = Triangle::new(
                     [p0, p1, p2],
                     normals,
                     texcoords,
@@ -105,7 +106,7 @@ impl SemanticMesh {
                     self.material.clone(),
                 );
 
-                children.push(SemanticObject::Triangle(face));
+                children.push(Object3D::Triangle(face));
             }
         }
 

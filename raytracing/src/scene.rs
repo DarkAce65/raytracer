@@ -2,7 +2,7 @@ use crate::core::{
     self, BoundedObject, Material, PhongMaterial, PhysicalMaterial, Texture, Transform, Transformed,
 };
 use crate::lights::Light;
-use crate::primitives::{Object3D, SemanticObject};
+use crate::primitives::{Object3D, RaytracingObject};
 use crate::ray_intersection::{Intersectable, Intersection, Ray, RayType};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
@@ -148,7 +148,7 @@ pub struct Scene {
     render_options: RenderOptions,
     camera: Camera,
     lights: Vec<Light>,
-    objects: Vec<SemanticObject>,
+    objects: Vec<Object3D>,
 }
 
 impl Default for Scene {
@@ -172,7 +172,7 @@ impl Scene {
         let mut textures = HashMap::new();
 
         for object in &mut self.objects {
-            SemanticObject::load_assets(object, asset_base, &mut textures);
+            Object3D::load_assets(object, asset_base, &mut textures);
         }
 
         RaytracingScene::new(self, textures)
@@ -206,7 +206,9 @@ impl RaytracingScene {
         }
     }
 
-    fn compute_bounding_volume_hierarchy(objects: Vec<Box<dyn Object3D>>) -> Vec<BoundedObject> {
+    fn compute_bounding_volume_hierarchy(
+        objects: Vec<Box<dyn RaytracingObject>>,
+    ) -> Vec<BoundedObject> {
         objects
             .into_iter()
             .filter_map(|object| object.into_bounded_object())
