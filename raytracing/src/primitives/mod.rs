@@ -5,8 +5,7 @@ mod plane;
 mod sphere;
 mod triangle;
 
-use crate::core::Texture;
-use crate::core::{BoundedObject, Material, Transform, Transformed};
+use crate::core::{BoundedObject, Material, Texture, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -39,16 +38,20 @@ impl Object3D {
         asset_base: &Path,
         textures: &mut HashMap<String, Texture>,
     ) {
-        match object {
-            Object3D::Cube(semantic) => semantic.material.load_textures(asset_base, textures),
-            Object3D::Plane(semantic) => semantic.material.load_textures(asset_base, textures),
-            Object3D::Sphere(semantic) => semantic.material.load_textures(asset_base, textures),
-            Object3D::Triangle(semantic) => semantic.material.load_textures(asset_base, textures),
-            Object3D::Mesh(semantic) => {
-                semantic.load_assets(asset_base);
-                semantic.material.load_textures(asset_base, textures);
-            }
-            Object3D::Group(_) => {}
+        if let Object3D::Mesh(mesh) = object {
+            mesh.load_assets(asset_base);
+        }
+
+        let material = match object {
+            Object3D::Cube(cube) => Some(&cube.material),
+            Object3D::Plane(plane) => Some(&plane.material),
+            Object3D::Sphere(sphere) => Some(&sphere.material),
+            Object3D::Triangle(triangle) => Some(&triangle.material),
+            Object3D::Mesh(mesh) => Some(&mesh.material),
+            Object3D::Group(_) => None,
+        };
+        if let Some(material) = material {
+            material.load_textures(asset_base, textures);
         }
 
         if let Some(children) = object.get_children_mut() {
@@ -60,23 +63,23 @@ impl Object3D {
 
     fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
         match self {
-            Object3D::Cube(semantic) => semantic.children.as_mut(),
-            Object3D::Triangle(semantic) => semantic.children.as_mut(),
-            Object3D::Plane(semantic) => semantic.children.as_mut(),
-            Object3D::Sphere(semantic) => semantic.children.as_mut(),
-            Object3D::Mesh(semantic) => semantic.children.as_mut(),
-            Object3D::Group(semantic) => Some(&mut semantic.children),
+            Object3D::Cube(cube) => cube.children.as_mut(),
+            Object3D::Triangle(triangle) => triangle.children.as_mut(),
+            Object3D::Plane(plane) => plane.children.as_mut(),
+            Object3D::Sphere(sphere) => sphere.children.as_mut(),
+            Object3D::Mesh(mesh) => mesh.children.as_mut(),
+            Object3D::Group(group) => Some(&mut group.children),
         }
     }
 
     pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         match self {
-            Object3D::Cube(semantic) => semantic.flatten_to_world(transform),
-            Object3D::Triangle(semantic) => semantic.flatten_to_world(transform),
-            Object3D::Plane(semantic) => semantic.flatten_to_world(transform),
-            Object3D::Sphere(semantic) => semantic.flatten_to_world(transform),
-            Object3D::Mesh(semantic) => semantic.flatten_to_world(transform),
-            Object3D::Group(semantic) => semantic.flatten_to_world(transform),
+            Object3D::Cube(cube) => cube.flatten_to_world(transform),
+            Object3D::Triangle(triangle) => triangle.flatten_to_world(transform),
+            Object3D::Plane(plane) => plane.flatten_to_world(transform),
+            Object3D::Sphere(sphere) => sphere.flatten_to_world(transform),
+            Object3D::Mesh(mesh) => mesh.flatten_to_world(transform),
+            Object3D::Group(group) => group.flatten_to_world(transform),
         }
     }
 }
