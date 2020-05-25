@@ -237,6 +237,13 @@ impl RaytracingScene {
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
+    fn shadow_cast(&self, ray: &Ray, max_distance: f64) -> bool {
+        self.objects
+            .iter()
+            .filter_map(|object| object.intersect(&ray))
+            .any(|intersection| intersection.distance <= max_distance)
+    }
+
     fn get_color_phong(
         &self,
         ray: Ray,
@@ -291,10 +298,7 @@ impl RaytracingScene {
                             };
 
                             ray_count += 1;
-                            let shadow_intersection = self.raycast(&shadow_ray);
-                            if shadow_intersection.is_none()
-                                || shadow_intersection.unwrap().distance > light_distance - BIAS
-                            {
+                            if !self.shadow_cast(&shadow_ray, light_distance - BIAS) {
                                 irradiance += light.color.component_mul(&material_color) * n_dot_l;
 
                                 let half_vec = Unit::new_normalize(light_dir - ray.direction);
@@ -407,10 +411,7 @@ impl RaytracingScene {
                         };
 
                         ray_count += 1;
-                        let shadow_intersection = self.raycast(&shadow_ray);
-                        if shadow_intersection.is_none()
-                            || shadow_intersection.unwrap().distance > light_distance - BIAS
-                        {
+                        if !self.shadow_cast(&shadow_ray, light_distance - BIAS) {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec).max(0.0);
 
