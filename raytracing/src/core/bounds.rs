@@ -143,10 +143,6 @@ impl Intersectable for BoundedObject {
         }
 
         let ray = &ray.transform(self.object.get_transform().inverse());
-
-        self.object
-            .intersect(ray)
-            .into_iter()
-            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+        self.object.intersect(ray)
     }
 }
