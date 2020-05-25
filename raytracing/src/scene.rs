@@ -149,6 +149,9 @@ pub struct Scene {
     camera: Camera,
     lights: Vec<Light>,
     objects: Vec<Object3D>,
+
+    #[serde(skip)]
+    textures: HashMap<String, Texture>,
 }
 
 impl Default for Scene {
@@ -163,19 +166,21 @@ impl Default for Scene {
             ),
             lights: Vec::new(),
             objects: Vec::new(),
+
+            textures: HashMap::new(),
         }
     }
 }
 
 impl Scene {
-    pub fn initialize(mut self, asset_base: &Path) -> RaytracingScene {
-        let mut textures = HashMap::new();
-
+    pub fn load_assets(&mut self, asset_base: &Path) {
         for object in &mut self.objects {
-            Object3D::load_assets(object, asset_base, &mut textures);
+            Object3D::load_assets(object, asset_base, &mut self.textures);
         }
+    }
 
-        RaytracingScene::new(self, textures)
+    pub fn build_raytracing_scene(self) -> RaytracingScene {
+        RaytracingScene::new(self)
     }
 }
 
@@ -186,23 +191,25 @@ pub struct RaytracingScene {
     lights: Vec<Light>,
     textures: HashMap<String, Texture>,
 
-    flattened_bvh: Vec<BoundedObject>,
+    objects: Vec<BoundedObject>,
 }
 
 impl RaytracingScene {
-    fn new(scene: Scene, textures: HashMap<String, Texture>) -> Self {
+    fn new(scene: Scene) -> Self {
+        let root_transform = Transform::default();
         let mut objects = Vec::new();
         for object in scene.objects {
-            objects.append(&mut object.flatten_to_world(&Transform::default()));
+            objects.append(&mut object.flatten_to_world(&root_transform));
         }
+        let objects = Self::compute_bounding_volume_hierarchy(objects);
 
         Self {
             render_options: scene.render_options,
             camera: scene.camera,
             lights: scene.lights,
-            textures,
+            textures: scene.textures,
 
-            flattened_bvh: Self::compute_bounding_volume_hierarchy(objects),
+            objects,
         }
     }
 
@@ -224,7 +231,7 @@ impl RaytracingScene {
     }
 
     fn raycast(&self, ray: &Ray) -> Option<Intersection> {
-        self.flattened_bvh
+        self.objects
             .iter()
             .filter_map(|object| object.intersect(&ray))
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))

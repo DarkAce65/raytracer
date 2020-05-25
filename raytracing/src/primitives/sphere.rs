@@ -117,14 +117,13 @@ impl Intersectable for RaytracingSphere {
 
 impl Primitive for RaytracingSphere {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
-        Some(BoundedObject::bounded(
-            BoundingVolume::from_bounds_and_transform(
-                Point3::from([-self.radius; 3]),
-                Point3::from([self.radius; 3]),
-                self.get_transform(),
-            ),
-            self,
-        ))
+        let bounding_volume = BoundingVolume::from_bounds_and_transform(
+            Point3::from([-self.radius; 3]),
+            Point3::from([self.radius; 3]),
+            self.get_transform(),
+        );
+
+        Some(BoundedObject::Bounded(self, bounding_volume))
     }
 
     fn surface_normal(

@@ -143,11 +143,16 @@ fn main() {
     let hide_progress = matches.is_present("noprogress");
     let render_sequentially = matches.is_present("norandom");
 
-    let scene: Scene = serde_json::from_reader(scene_file).expect("failed to parse scene");
+    let mut scene: Scene = serde_json::from_reader(scene_file).expect("failed to parse scene");
+
     let now = Instant::now();
-    let scene = scene.initialize(scene_path.parent().unwrap_or_else(|| Path::new("")));
+    scene.load_assets(scene_path.parent().unwrap_or_else(|| Path::new("")));
+    println!("Took {:?} to load assets.", now.elapsed());
+
+    let now = Instant::now();
+    let scene = scene.build_raytracing_scene();
     println!(
-        "Took {:?} to load assets and optimize bounding boxes.",
+        "Took {:?} to pre-process scene and construct bounding boxes.",
         now.elapsed()
     );
 

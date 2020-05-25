@@ -103,7 +103,7 @@ impl Intersectable for RaytracingPlane {
 
 impl Primitive for RaytracingPlane {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
-        Some(BoundedObject::unbounded(self))
+        Some(BoundedObject::Unbounded(self))
     }
 
     fn surface_normal(

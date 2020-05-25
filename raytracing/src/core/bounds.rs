@@ -113,36 +113,24 @@ impl BoundingVolume {
 }
 
 #[derive(Debug)]
-pub struct BoundedObject {
-    object: Box<dyn RaytracingObject>,
-    bounding_volume: Option<BoundingVolume>,
-}
-
-impl BoundedObject {
-    pub fn unbounded(object: Box<dyn RaytracingObject>) -> Self {
-        Self {
-            object,
-            bounding_volume: None,
-        }
-    }
-
-    pub fn bounded(bounding_volume: BoundingVolume, object: Box<dyn RaytracingObject>) -> Self {
-        Self {
-            object,
-            bounding_volume: Some(bounding_volume),
-        }
-    }
+pub enum BoundedObject {
+    Unbounded(Box<dyn RaytracingObject>),
+    Bounded(Box<dyn RaytracingObject>, BoundingVolume),
 }
 
 impl Intersectable for BoundedObject {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        if let Some(bounding_volume) = self.bounding_volume {
+        if let Self::Bounded(_, bounding_volume) = self {
             if !bounding_volume.intersect(ray) {
                 return None;
             }
         }
 
-        let ray = &ray.transform(self.object.get_transform().inverse());
-        self.object.intersect(ray)
+        let object = match self {
+            Self::Unbounded(object) | Self::Bounded(object, _) => object,
+        };
+
+        let ray = &ray.transform(object.get_transform().inverse());
+        object.intersect(ray)
     }
 }

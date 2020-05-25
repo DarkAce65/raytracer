@@ -232,11 +232,10 @@ impl Primitive for RaytracingTriangle {
             max.y = max.y.max(position.y);
             max.z = max.z.max(position.z);
         }
+        let bounding_volume =
+            BoundingVolume::from_bounds_and_transform(min, max, self.get_transform());
 
-        Some(BoundedObject::bounded(
-            BoundingVolume::from_bounds_and_transform(min, max, self.get_transform()),
-            self,
-        ))
+        Some(BoundedObject::Bounded(self, bounding_volume))
     }
 
     fn surface_normal(

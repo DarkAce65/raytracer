@@ -130,15 +130,13 @@ impl Intersectable for RaytracingCube {
 impl Primitive for RaytracingCube {
     fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
         let half = self.size / 2.0;
+        let bounding_volume = BoundingVolume::from_bounds_and_transform(
+            Point3::from([-half; 3]),
+            Point3::from([half; 3]),
+            self.get_transform(),
+        );
 
-        Some(BoundedObject::bounded(
-            BoundingVolume::from_bounds_and_transform(
-                Point3::from([-half; 3]),
-                Point3::from([half; 3]),
-                self.get_transform(),
-            ),
-            self,
-        ))
+        Some(BoundedObject::Bounded(self, bounding_volume))
     }
 
     fn surface_normal(
