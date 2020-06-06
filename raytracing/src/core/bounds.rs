@@ -183,11 +183,7 @@ impl KdTreeAccelerator {
                 BoundedObject::Bounded(_, _) => true,
                 BoundedObject::Unbounded(_) => false,
             });
-        let indexes = bounded_objects
-            .iter()
-            .enumerate()
-            .map(|(index, _)| index)
-            .collect();
+        let indexes = (0..bounded_objects.len()).collect();
 
         let max_depth = (8.0 + 1.3 * (bounded_objects.len() as f64).log2()) as u8;
         let tree = KdTree::build(
