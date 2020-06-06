@@ -1,14 +1,14 @@
 use crate::core::{
-    self, BoundedObject, Material, PhongMaterial, PhysicalMaterial, Texture, Transform, Transformed,
+    self, KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture, Transform,
+    Transformed,
 };
 use crate::lights::Light;
-use crate::primitives::{Object3D, RaytracingObject};
-use crate::ray_intersection::{Intersectable, Intersection, Ray, RayType};
+use crate::primitives::Object3D;
+use crate::ray_intersection::{Intersection, Ray, RayType};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use std::cmp::Ordering::Equal;
 use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
@@ -190,8 +190,7 @@ pub struct RaytracingScene {
     camera: Camera,
     lights: Vec<Light>,
     textures: HashMap<String, Texture>,
-
-    objects: Vec<BoundedObject>,
+    object_tree: KdTreeAccelerator,
 }
 
 impl RaytracingScene {
@@ -201,25 +200,15 @@ impl RaytracingScene {
         for object in scene.objects {
             objects.append(&mut object.flatten_to_world(&root_transform));
         }
-        let objects = Self::compute_bounding_volume_hierarchy(objects);
+        let object_tree = KdTreeAccelerator::new(objects);
 
         Self {
             render_options: scene.render_options,
             camera: scene.camera,
             lights: scene.lights,
             textures: scene.textures,
-
-            objects,
+            object_tree,
         }
-    }
-
-    fn compute_bounding_volume_hierarchy(
-        objects: Vec<Box<dyn RaytracingObject>>,
-    ) -> Vec<BoundedObject> {
-        objects
-            .into_iter()
-            .filter_map(|object| object.into_bounded_object())
-            .collect()
     }
 
     pub fn get_width(&self) -> u32 {
@@ -231,17 +220,11 @@ impl RaytracingScene {
     }
 
     fn raycast(&self, ray: &Ray) -> Option<Intersection> {
-        self.objects
-            .iter()
-            .filter_map(|object| object.intersect(&ray))
-            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+        self.object_tree.raycast(ray)
     }
 
     fn shadow_cast(&self, ray: &Ray, max_distance: f64) -> bool {
-        self.objects
-            .iter()
-            .filter_map(|object| object.intersect(&ray))
-            .any(|intersection| intersection.distance <= max_distance)
+        self.object_tree.shadow_cast(ray, max_distance - BIAS)
     }
 
     fn get_color_phong(
@@ -298,7 +281,7 @@ impl RaytracingScene {
                             };
 
                             ray_count += 1;
-                            if !self.shadow_cast(&shadow_ray, light_distance - BIAS) {
+                            if !self.shadow_cast(&shadow_ray, light_distance) {
                                 irradiance += light.color.component_mul(&material_color) * n_dot_l;
 
                                 let half_vec = Unit::new_normalize(light_dir - ray.direction);
@@ -411,7 +394,7 @@ impl RaytracingScene {
                         };
 
                         ray_count += 1;
-                        if !self.shadow_cast(&shadow_ray, light_distance - BIAS) {
+                        if !self.shadow_cast(&shadow_ray, light_distance) {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec).max(0.0);
 
