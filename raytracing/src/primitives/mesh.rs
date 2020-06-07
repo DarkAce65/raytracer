@@ -1,40 +1,45 @@
-use super::{HasMaterial, Intersectable, Loadable, Triangle};
-use crate::core::Texture;
-use crate::core::{Bounds, Material, Transform, Transformed};
-use crate::object3d::Object3D;
-use crate::ray_intersection::{IntermediateData, Intersection, Ray};
+use super::{Object3D, RaytracingObject, Triangle};
+use crate::core::{Material, Transform};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::path::Path;
 use tobj::load_obj;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Mesh {
+    file: String,
     #[serde(default)]
     transform: Transform,
-    file: String,
-    material: Material,
-    children: Option<Vec<Object3D>>,
+    #[serde(default)]
+    pub material: Material,
+
+    #[serde(default)]
+    pub children: Option<Vec<Object3D>>,
 }
 
-impl HasMaterial for Mesh {
-    fn get_material(&self) -> &Material {
-        &self.material
+impl Mesh {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects
     }
 
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
-}
-
-impl Loadable for Mesh {
-    fn load_assets(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) -> bool {
+    pub fn load_assets(&mut self, asset_base: &Path) {
         let (models, _) = load_obj(&asset_base.join(&self.file)).expect("failed to load object");
 
-        let mut children = Vec::new();
+        let mut children: Vec<Object3D> = Vec::new();
         for model in models.iter() {
             let mesh = &model.mesh;
 
@@ -94,63 +99,17 @@ impl Loadable for Mesh {
                 };
 
                 let face = Triangle::new(
-                    Transform::default(),
                     [p0, p1, p2],
                     normals,
                     texcoords,
+                    Transform::default(),
                     self.material.clone(),
-                    None,
                 );
 
-                children.push(Object3D::new(Box::new(face)));
+                children.push(Object3D::Triangle(Box::new(face)));
             }
         }
 
         self.children = Some(children);
-
-        self.load_textures(asset_base, textures);
-
-        true
-    }
-}
-
-impl Transformed for Mesh {
-    fn get_transform(&self) -> &Transform {
-        &self.transform
-    }
-}
-
-impl Intersectable for Mesh {
-    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
-        Bounds::Children
-    }
-
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
-        self.children.as_mut()
-    }
-
-    fn intersect(&self, _ray: &Ray) -> Option<Intersection> {
-        None
-    }
-
-    fn surface_normal(
-        &self,
-        _object_hit_point: &Point3<f64>,
-        _intermediate: IntermediateData,
-    ) -> Unit<Vector3<f64>> {
-        unimplemented!()
-    }
-
-    fn uv(
-        &self,
-        _object_hit_point: &Point3<f64>,
-        _object_normal: &Unit<Vector3<f64>>,
-        _intermediate: IntermediateData,
-    ) -> Vector2<f64> {
-        unimplemented!()
     }
 }

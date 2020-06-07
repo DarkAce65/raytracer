@@ -2,12 +2,11 @@
 
 mod core;
 mod lights;
-mod object3d;
 mod primitives;
 mod ray_intersection;
 mod scene;
 
-use crate::scene::Scene;
+use crate::scene::{RaytracingScene, Scene};
 use clap::{App, Arg};
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -31,13 +30,13 @@ fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
 }
 
 fn raytrace_fb(
-    scene: Scene,
+    scene: RaytracingScene,
     buffer_mutex: &Arc<Mutex<Vec<u32>>>,
     progress: Option<ProgressBar>,
     render_sequentially: bool,
 ) {
     let buffer_mutex = Arc::clone(&buffer_mutex);
-    let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
+    let mut indexes: Vec<u32> = (0..scene.get_width() * scene.get_height()).collect();
     if !render_sequentially {
         indexes.shuffle(&mut thread_rng());
     }
@@ -50,7 +49,6 @@ fn raytrace_fb(
             Box::new(indexes.iter())
         };
 
-        println!("Raytracing...");
         for index in iter {
             let (color, r) = scene.screen_raycast(*index);
             rays += r;
@@ -70,8 +68,12 @@ fn raytrace_fb(
     });
 }
 
-fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<ProgressBar>) -> Duration {
-    let mut indexes: Vec<u32> = (0..scene.width * scene.height).collect();
+fn raytrace(
+    scene: RaytracingScene,
+    image_buffer: &mut Vec<u8>,
+    progress: Option<ProgressBar>,
+) -> Duration {
+    let mut indexes: Vec<u32> = (0..scene.get_width() * scene.get_height()).collect();
     indexes.shuffle(&mut thread_rng());
 
     let mut rays = 0;
@@ -81,7 +83,6 @@ fn raytrace(scene: &Scene, image_buffer: &mut Vec<u8>, progress: Option<Progress
         Box::new(indexes.iter())
     };
 
-    println!("Raytracing...");
     let start = Instant::now();
     for index in iter {
         let (color, r) = scene.screen_raycast(*index);
@@ -137,14 +138,25 @@ fn main() {
         .get_matches();
 
     let scene_path = Path::new(matches.value_of("scene").unwrap());
-    let scene_file = File::open(scene_path).expect("File not found");
+    let scene_file = File::open(scene_path).expect("file not found");
     let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
     let render_sequentially = matches.is_present("norandom");
 
-    let mut scene: Scene = serde_json::from_reader(scene_file).expect("Failed to parse scene");
-    scene.initialize(scene_path.parent().unwrap_or_else(|| Path::new("")));
-    let (width, height) = (scene.width, scene.height);
+    let mut scene: Scene = serde_json::from_reader(scene_file).expect("failed to parse scene");
+
+    let now = Instant::now();
+    scene.load_assets(scene_path.parent().unwrap_or_else(|| Path::new("")));
+    println!("Took {:?} to load assets.", now.elapsed());
+
+    let now = Instant::now();
+    let scene = scene.build_raytracing_scene();
+    println!(
+        "Took {:?} to pre-process scene and construct bounding boxes.",
+        now.elapsed()
+    );
+
+    let (width, height) = (scene.get_width(), scene.get_height());
 
     let progress = if hide_progress {
         None
@@ -168,16 +180,18 @@ fn main() {
     if let Some(filename) = output_filename {
         let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
 
-        let duration = raytrace(&scene, &mut image_buffer, progress);
+        println!("Raytracing...");
+        let duration = raytrace(scene, &mut image_buffer, progress);
 
         let image =
-            RgbaImage::from_raw(width, height, image_buffer).expect("Failed to convert buffer");
-        image.save(filename).expect("Unable to write image");
+            RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
+        image.save(filename).expect("unable to write image");
         println!("Output written to {} in {:?}", filename, duration);
 
         return;
     }
 
+    println!("Rendering to window - press escape to exit.");
     let mut window: Window = Window::new(
         "raytracer",
         width as usize,
@@ -190,10 +204,9 @@ fn main() {
     )
     .unwrap();
 
-    println!("Rendering to window. Press escape to exit");
-
     let image_buffer: Vec<u32> = vec![0; (width * height) as usize];
     let buffer_mutex = Arc::new(Mutex::new(image_buffer));
+    println!("Raytracing...");
     raytrace_fb(scene, &buffer_mutex, progress, render_sequentially);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {

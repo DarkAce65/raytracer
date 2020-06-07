@@ -5,11 +5,10 @@ mod plane;
 mod sphere;
 mod triangle;
 
-use crate::core::Texture;
-use crate::core::{Bounds, Material, Transform, Transformed};
-use crate::object3d::Object3D;
-use crate::ray_intersection::{IntermediateData, Intersection, Ray};
+use crate::core::{Material, ObjectWithBounds, Texture, Transform, Transformed};
+use crate::ray_intersection::{IntermediateData, Intersectable};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
@@ -22,30 +21,75 @@ pub use plane::*;
 pub use sphere::*;
 pub use triangle::*;
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields, tag = "type", rename_all = "lowercase")]
+pub enum Object3D {
+    Cube(Box<Cube>),
+    Plane(Box<Plane>),
+    Sphere(Box<Sphere>),
+    Triangle(Box<Triangle>),
+    Mesh(Box<Mesh>),
+    Group(Box<Group>),
+}
+
+impl Object3D {
+    pub fn load_assets(
+        object: &mut Object3D,
+        asset_base: &Path,
+        textures: &mut HashMap<String, Texture>,
+    ) {
+        if let Object3D::Mesh(mesh) = object {
+            mesh.load_assets(asset_base);
+        }
+
+        let material = match object {
+            Object3D::Cube(cube) => Some(&cube.material),
+            Object3D::Plane(plane) => Some(&plane.material),
+            Object3D::Sphere(sphere) => Some(&sphere.material),
+            Object3D::Triangle(triangle) => Some(&triangle.material),
+            Object3D::Mesh(mesh) => Some(&mesh.material),
+            Object3D::Group(_) => None,
+        };
+        if let Some(material) = material {
+            material.load_textures(asset_base, textures);
+        }
+
+        if let Some(children) = object.get_children_mut() {
+            for child in children {
+                Object3D::load_assets(child, asset_base, textures);
+            }
+        }
+    }
+
+    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
+        match self {
+            Object3D::Cube(cube) => cube.children.as_mut(),
+            Object3D::Triangle(triangle) => triangle.children.as_mut(),
+            Object3D::Plane(plane) => plane.children.as_mut(),
+            Object3D::Sphere(sphere) => sphere.children.as_mut(),
+            Object3D::Mesh(mesh) => mesh.children.as_mut(),
+            Object3D::Group(group) => Some(&mut group.children),
+        }
+    }
+
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
+        match self {
+            Object3D::Cube(cube) => cube.flatten_to_world(transform),
+            Object3D::Triangle(triangle) => triangle.flatten_to_world(transform),
+            Object3D::Plane(plane) => plane.flatten_to_world(transform),
+            Object3D::Sphere(sphere) => sphere.flatten_to_world(transform),
+            Object3D::Mesh(mesh) => mesh.flatten_to_world(transform),
+            Object3D::Group(group) => group.flatten_to_world(transform),
+        }
+    }
+}
+
 pub trait HasMaterial {
     fn get_material(&self) -> &Material;
-    fn get_material_mut(&mut self) -> &mut Material;
-
-    fn load_textures(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) {
-        self.get_material_mut().load_textures(asset_base, textures);
-    }
 }
 
-pub trait Loadable: HasMaterial {
-    fn load_assets(&mut self, asset_base: &Path, textures: &mut HashMap<String, Texture>) -> bool {
-        self.load_textures(asset_base, textures);
-
-        false
-    }
-}
-
-pub trait Intersectable {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds;
-
-    fn get_children(&self) -> Option<&Vec<Object3D>>;
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>>;
-
-    fn intersect(&self, ray: &Ray) -> Option<Intersection>;
+pub trait Primitive: Transformed {
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds;
 
     fn surface_normal(
         &self,
@@ -60,23 +104,12 @@ pub trait Intersectable {
     ) -> Vector2<f64>;
 }
 
-#[typetag::deserialize(tag = "type")]
-pub trait Primitive:
-    Send + Sync + Debug + Transformed + Intersectable + HasMaterial + Loadable
+pub trait RaytracingObject:
+    Send + Sync + Debug + Transformed + Intersectable + Primitive + HasMaterial
 {
 }
 
-#[typetag::deserialize(name = "cube")]
-impl Primitive for Cube {}
-#[typetag::deserialize(name = "plane")]
-impl Primitive for Plane {}
-#[typetag::deserialize(name = "sphere")]
-impl Primitive for Sphere {}
-#[typetag::deserialize(name = "triangle")]
-impl Primitive for Triangle {}
-
-#[typetag::deserialize(name = "group")]
-impl Primitive for Group {}
-
-#[typetag::deserialize(name = "mesh")]
-impl Primitive for Mesh {}
+impl RaytracingObject for RaytracingCube {}
+impl RaytracingObject for RaytracingPlane {}
+impl RaytracingObject for RaytracingSphere {}
+impl RaytracingObject for RaytracingTriangle {}

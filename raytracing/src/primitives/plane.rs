@@ -1,63 +1,86 @@
-use super::{HasMaterial, Intersectable, Loadable};
-use crate::core::{Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::object3d::Object3D;
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
+use crate::core::{Material, MaterialSide, ObjectWithBounds, Transform, Transformed};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Rotation3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::EPSILON;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 pub struct Plane {
-    #[serde(default)]
-    transform: Transform,
     normal: Unit<Vector3<f64>>,
-    material: Material,
-    children: Option<Vec<Object3D>>,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<Object3D>>,
 }
 
 impl Default for Plane {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             normal: Vector3::y_axis(),
+            transform: Transform::default(),
             material: Material::default(),
+
             children: None,
         }
     }
 }
 
-impl HasMaterial for Plane {
+impl Plane {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects.push(Box::new(RaytracingPlane::new(
+            self.normal,
+            transform,
+            self.material,
+        )));
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct RaytracingPlane {
+    normal: Unit<Vector3<f64>>,
+    world_transform: Transform,
+    material: Material,
+}
+
+impl RaytracingPlane {
+    pub fn new(normal: Unit<Vector3<f64>>, world_transform: Transform, material: Material) -> Self {
+        Self {
+            normal,
+            world_transform,
+            material,
+        }
+    }
+}
+
+impl HasMaterial for RaytracingPlane {
     fn get_material(&self) -> &Material {
         &self.material
     }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
 }
 
-impl Loadable for Plane {}
-
-impl Transformed for Plane {
+impl Transformed for RaytracingPlane {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 
-impl Intersectable for Plane {
-    fn make_bounding_volume(&self, _transform: &Transform) -> Bounds {
-        Bounds::Unbounded
-    }
-
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
-        self.children.as_mut()
-    }
-
+impl Intersectable for RaytracingPlane {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let n_dot_v = self.normal.dot(&-ray.direction);
 
@@ -75,6 +98,12 @@ impl Intersectable for Plane {
         }
 
         None
+    }
+}
+
+impl Primitive for RaytracingPlane {
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds {
+        ObjectWithBounds::unbounded(self)
     }
 
     fn surface_normal(

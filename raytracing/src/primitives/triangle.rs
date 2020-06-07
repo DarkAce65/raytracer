@@ -1,13 +1,15 @@
-use super::{HasMaterial, Intersectable, Loadable};
-use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::object3d::Object3D;
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
+use crate::core::{
+    BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
+};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::f64::EPSILON;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct VertexPNT {
     position: Point3<f64>,
     normal: Unit<Vector3<f64>>,
@@ -25,127 +27,164 @@ impl VertexPNT {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TriangleData {
-    #[serde(default)]
-    transform: Transform,
-    vertices: [Point3<f64>; 3],
-    material: Material,
-    children: Option<Vec<Object3D>>,
+#[serde(untagged)]
+enum VertexData {
+    PNT([VertexPNT; 3]),
+    Position([Point3<f64>; 3]),
 }
 
-impl Default for TriangleData {
+#[derive(Debug, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Triangle {
+    #[serde(alias = "vertices")]
+    vertex_data: VertexData,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<Object3D>>,
+}
+
+impl Default for Triangle {
     fn default() -> Self {
         Self {
+            vertex_data: VertexData::Position([
+                Point3::origin(),
+                Point3::origin(),
+                Point3::origin(),
+            ]),
             transform: Transform::default(),
-            vertices: [Point3::origin(), Point3::origin(), Point3::origin()],
             material: Material::default(),
+
             children: None,
         }
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "TriangleData")]
-pub struct Triangle {
-    transform: Transform,
-    vertex_data: [VertexPNT; 3],
-    material: Material,
-    children: Option<Vec<Object3D>>,
-}
-
-impl From<TriangleData> for Triangle {
-    fn from(data: TriangleData) -> Self {
-        let normals = [Triangle::compute_normal(data.vertices); 3];
-        let texcoords = [Vector2::zero(); 3];
-
-        Triangle::new(
-            data.transform,
-            data.vertices,
-            normals,
-            texcoords,
-            data.material,
-            data.children,
-        )
-    }
-}
-
 impl Triangle {
     pub fn new(
-        transform: Transform,
         positions: [Point3<f64>; 3],
         normals: [Unit<Vector3<f64>>; 3],
         texcoords: [Vector2<f64>; 3],
+        transform: Transform,
         material: Material,
-        children: Option<Vec<Object3D>>,
     ) -> Self {
+        let vertex_data = VertexData::PNT([
+            VertexPNT::new(positions[0], normals[0], texcoords[0]),
+            VertexPNT::new(positions[1], normals[1], texcoords[1]),
+            VertexPNT::new(positions[2], normals[2], texcoords[2]),
+        ]);
+
+        Self {
+            vertex_data,
+            transform,
+            material,
+
+            children: None,
+        }
+    }
+
+    pub fn new_with_positions(
+        positions: [Point3<f64>; 3],
+        transform: Transform,
+        material: Material,
+    ) -> Self {
+        Self {
+            vertex_data: VertexData::Position(positions),
+            transform,
+            material,
+
+            children: None,
+        }
+    }
+
+    pub fn compute_normal(positions: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
+        let edge1 = positions[1] - positions[0];
+        let edge2 = positions[2] - positions[0];
+
+        Unit::new_normalize(edge1.cross(&edge2))
+    }
+
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        match self.vertex_data {
+            VertexData::PNT(vertex_data) => {
+                objects.push(Box::new(RaytracingTriangle::new(
+                    vertex_data,
+                    transform,
+                    self.material,
+                )));
+            }
+            VertexData::Position(vertices) => {
+                objects.push(Box::new(RaytracingTriangle::new_with_positions(
+                    vertices,
+                    transform,
+                    self.material,
+                )));
+            }
+        }
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct RaytracingTriangle {
+    vertex_data: [VertexPNT; 3],
+    world_transform: Transform,
+    material: Material,
+}
+
+impl RaytracingTriangle {
+    fn new(vertex_data: [VertexPNT; 3], world_transform: Transform, material: Material) -> Self {
+        Self {
+            vertex_data,
+            world_transform,
+            material,
+        }
+    }
+
+    fn new_with_positions(
+        positions: [Point3<f64>; 3],
+        world_transform: Transform,
+        material: Material,
+    ) -> Self {
+        let normals = [Triangle::compute_normal(positions); 3];
+        let texcoords = [Vector2::zero(); 3];
+
         let vertex_data = [
             VertexPNT::new(positions[0], normals[0], texcoords[0]),
             VertexPNT::new(positions[1], normals[1], texcoords[1]),
             VertexPNT::new(positions[2], normals[2], texcoords[2]),
         ];
 
-        Self {
-            transform,
-            vertex_data,
-            material,
-            children,
-        }
-    }
-
-    pub fn compute_normal(vertices: [Point3<f64>; 3]) -> Unit<Vector3<f64>> {
-        let edge1 = vertices[1] - vertices[0];
-        let edge2 = vertices[2] - vertices[0];
-
-        Unit::new_normalize(edge1.cross(&edge2))
+        Self::new(vertex_data, world_transform, material)
     }
 }
 
-impl HasMaterial for Triangle {
+impl HasMaterial for RaytracingTriangle {
     fn get_material(&self) -> &Material {
         &self.material
     }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
 }
 
-impl Loadable for Triangle {}
-
-impl Transformed for Triangle {
+impl Transformed for RaytracingTriangle {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 
-impl Intersectable for Triangle {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
-        let mut min = self.vertex_data[0].position;
-        let mut max = min;
-        for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
-            min.x = min.x.min(position.x);
-            min.y = min.y.min(position.y);
-            min.z = min.z.min(position.z);
-
-            max.x = max.x.max(position.x);
-            max.y = max.y.max(position.y);
-            max.z = max.z.max(position.z);
-        }
-
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            min, max, transform,
-        ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
-        self.children.as_mut()
-    }
-
+impl Intersectable for RaytracingTriangle {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let edge1 = self.vertex_data[1].position - self.vertex_data[0].position;
         let edge2 = self.vertex_data[2].position - self.vertex_data[0].position;
@@ -179,6 +218,26 @@ impl Intersectable for Triangle {
             distance,
             IntermediateData::Barycentric(u, v, 1.0 - u - v),
         ))
+    }
+}
+
+impl Primitive for RaytracingTriangle {
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds {
+        let mut min = self.vertex_data[0].position;
+        let mut max = min;
+        for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
+            min.x = min.x.min(position.x);
+            min.y = min.y.min(position.y);
+            min.z = min.z.min(position.z);
+
+            max.x = max.x.max(position.x);
+            max.y = max.y.max(position.y);
+            max.z = max.z.max(position.z);
+        }
+        let bounding_volume =
+            BoundingVolume::from_bounds_and_transform(min, max, self.get_transform());
+
+        ObjectWithBounds::bounded(self, bounding_volume)
     }
 
     fn surface_normal(

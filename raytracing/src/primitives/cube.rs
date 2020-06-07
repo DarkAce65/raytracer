@@ -1,68 +1,87 @@
-use super::{HasMaterial, Intersectable, Loadable};
-use crate::core::{BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed};
-use crate::object3d::Object3D;
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
+use crate::core::{
+    BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
+};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 pub struct Cube {
-    #[serde(default)]
-    transform: Transform,
     size: f64,
-    material: Material,
-    children: Option<Vec<Object3D>>,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<Object3D>>,
 }
 
 impl Default for Cube {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             size: 1.0,
+            transform: Transform::default(),
             material: Material::default(),
+
             children: None,
         }
     }
 }
 
-impl HasMaterial for Cube {
+impl Cube {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects.push(Box::new(RaytracingCube::new(
+            self.size,
+            transform,
+            self.material,
+        )));
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct RaytracingCube {
+    size: f64,
+    world_transform: Transform,
+    material: Material,
+}
+
+impl RaytracingCube {
+    pub fn new(size: f64, world_transform: Transform, material: Material) -> Self {
+        Self {
+            size,
+            world_transform,
+            material,
+        }
+    }
+}
+
+impl HasMaterial for RaytracingCube {
     fn get_material(&self) -> &Material {
         &self.material
     }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
 }
 
-impl Loadable for Cube {}
-
-impl Transformed for Cube {
+impl Transformed for RaytracingCube {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 
-impl Intersectable for Cube {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
-        let half = self.size / 2.0;
-
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            Point3::from([-half; 3]),
-            Point3::from([half; 3]),
-            transform,
-        ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
-        self.children.as_mut()
-    }
-
+impl Intersectable for RaytracingCube {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
@@ -107,6 +126,19 @@ impl Intersectable for Cube {
         }
 
         Some(Intersection::new(self, d))
+    }
+}
+
+impl Primitive for RaytracingCube {
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds {
+        let half = self.size / 2.0;
+        let bounding_volume = BoundingVolume::from_bounds_and_transform(
+            Point3::from([-half; 3]),
+            Point3::from([half; 3]),
+            self.get_transform(),
+        );
+
+        ObjectWithBounds::bounded(self, bounding_volume)
     }
 
     fn surface_normal(

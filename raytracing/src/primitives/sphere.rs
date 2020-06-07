@@ -1,21 +1,20 @@
-use super::{HasMaterial, Intersectable, Loadable};
+use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
 use crate::core::{
-    quadratic, BoundingVolume, Bounds, Material, MaterialSide, Transform, Transformed,
+    quadratic, BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
 };
-use crate::object3d::Object3D;
-use crate::ray_intersection::{IntermediateData, Intersection, Ray, RayType};
+use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::consts::FRAC_1_PI;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 pub struct Sphere {
-    #[serde(default)]
-    transform: Transform,
     radius: f64,
-    material: Material,
-    children: Option<Vec<Object3D>>,
+    transform: Transform,
+    pub material: Material,
+
+    pub children: Option<Vec<Object3D>>,
 }
 
 impl Default for Sphere {
@@ -24,46 +23,66 @@ impl Default for Sphere {
             transform: Transform::default(),
             radius: 1.0,
             material: Material::default(),
+
             children: None,
         }
     }
 }
 
-impl HasMaterial for Sphere {
+impl Sphere {
+    pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
+        let transform = transform * self.transform;
+
+        let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();
+
+        if let Some(children) = self.children {
+            for child in children {
+                let child_objects: Vec<Box<dyn RaytracingObject>> =
+                    child.flatten_to_world(&transform);
+                objects.extend(child_objects);
+            }
+        }
+
+        objects.push(Box::new(RaytracingSphere::new(
+            self.radius,
+            transform,
+            self.material,
+        )));
+
+        objects
+    }
+}
+
+#[derive(Debug)]
+pub struct RaytracingSphere {
+    radius: f64,
+    world_transform: Transform,
+    material: Material,
+}
+
+impl RaytracingSphere {
+    pub fn new(radius: f64, world_transform: Transform, material: Material) -> Self {
+        Self {
+            radius,
+            world_transform,
+            material,
+        }
+    }
+}
+
+impl HasMaterial for RaytracingSphere {
     fn get_material(&self) -> &Material {
         &self.material
     }
-
-    fn get_material_mut(&mut self) -> &mut Material {
-        &mut self.material
-    }
 }
 
-impl Loadable for Sphere {}
-
-impl Transformed for Sphere {
+impl Transformed for RaytracingSphere {
     fn get_transform(&self) -> &Transform {
-        &self.transform
+        &self.world_transform
     }
 }
 
-impl Intersectable for Sphere {
-    fn make_bounding_volume(&self, transform: &Transform) -> Bounds {
-        Bounds::Bounded(BoundingVolume::from_bounds_and_transform(
-            Point3::from([-self.radius; 3]),
-            Point3::from([self.radius; 3]),
-            transform,
-        ))
-    }
-
-    fn get_children(&self) -> Option<&Vec<Object3D>> {
-        self.children.as_ref()
-    }
-
-    fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
-        self.children.as_mut()
-    }
-
+impl Intersectable for RaytracingSphere {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         let hypot = ray.origin.coords;
         let ray_proj = hypot.dot(&ray.direction);
@@ -93,6 +112,18 @@ impl Intersectable for Sphere {
         }
 
         None
+    }
+}
+
+impl Primitive for RaytracingSphere {
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds {
+        let bounding_volume = BoundingVolume::from_bounds_and_transform(
+            Point3::from([-self.radius; 3]),
+            Point3::from([self.radius; 3]),
+            self.get_transform(),
+        );
+
+        ObjectWithBounds::bounded(self, bounding_volume)
     }
 
     fn surface_normal(
