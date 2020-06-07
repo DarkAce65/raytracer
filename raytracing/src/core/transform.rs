@@ -13,7 +13,7 @@ pub trait Transformed {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Transform {
     matrix: Affine3<f64>,
     inv_matrix: OnceCell<Affine3<f64>>,
@@ -23,6 +23,12 @@ pub struct Transform {
 impl Default for Transform {
     fn default() -> Self {
         Self::new(Affine3::identity())
+    }
+}
+
+impl fmt::Debug for Transform {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Transform {{ matrix: {:?} }}", self.matrix)
     }
 }
 

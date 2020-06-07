@@ -1,5 +1,5 @@
 use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
-use crate::core::{BoundedObject, Material, MaterialSide, Transform, Transformed};
+use crate::core::{Material, MaterialSide, ObjectWithBounds, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Rotation3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -102,8 +102,8 @@ impl Intersectable for RaytracingPlane {
 }
 
 impl Primitive for RaytracingPlane {
-    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
-        Some(BoundedObject::Unbounded(self))
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds {
+        ObjectWithBounds::unbounded(self)
     }
 
     fn surface_normal(

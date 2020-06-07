@@ -1,5 +1,7 @@
 use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
-use crate::core::{BoundedObject, BoundingVolume, Material, MaterialSide, Transform, Transformed};
+use crate::core::{
+    BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
+};
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
@@ -220,7 +222,7 @@ impl Intersectable for RaytracingTriangle {
 }
 
 impl Primitive for RaytracingTriangle {
-    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject> {
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds {
         let mut min = self.vertex_data[0].position;
         let mut max = min;
         for VertexPNT { position, .. } in self.vertex_data[1..].iter() {
@@ -235,7 +237,7 @@ impl Primitive for RaytracingTriangle {
         let bounding_volume =
             BoundingVolume::from_bounds_and_transform(min, max, self.get_transform());
 
-        Some(BoundedObject::Bounded(self, bounding_volume))
+        ObjectWithBounds::bounded(self, bounding_volume)
     }
 
     fn surface_normal(

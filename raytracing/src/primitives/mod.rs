@@ -5,7 +5,7 @@ mod plane;
 mod sphere;
 mod triangle;
 
-use crate::core::{BoundedObject, Material, Texture, Transform, Transformed};
+use crate::core::{Material, ObjectWithBounds, Texture, Transform, Transformed};
 use crate::ray_intersection::{IntermediateData, Intersectable};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
@@ -89,7 +89,7 @@ pub trait HasMaterial {
 }
 
 pub trait Primitive: Transformed {
-    fn into_bounded_object(self: Box<Self>) -> Option<BoundedObject>;
+    fn into_bounded_object(self: Box<Self>) -> ObjectWithBounds;
 
     fn surface_normal(
         &self,

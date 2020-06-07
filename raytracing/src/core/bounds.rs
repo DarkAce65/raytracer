@@ -2,34 +2,18 @@ use super::Transform;
 use crate::primitives::RaytracingObject;
 use crate::ray_intersection::{Intersectable, Intersection, Ray};
 use nalgebra::Point3;
-use std::cmp::Ordering::Equal;
+use std::cmp::Ordering::{self, Equal};
 use std::fmt;
 
-fn build_bounding_volume(objects: &[BoundedObject]) -> BoundingVolume {
-    let objects: Vec<&BoundedObject> = objects
-        .iter()
-        .filter(|object| match object {
-            BoundedObject::Bounded(_, _) => true,
-            BoundedObject::Unbounded(_) => false,
-        })
-        .collect();
-
-    if objects.is_empty() {
+fn build_bounding_volume(bounding_volumes: &[BoundingVolume]) -> BoundingVolume {
+    if bounding_volumes.is_empty() {
         panic!("trying to build a bounding volume out of nothing")
     }
 
-    let bounding_volume = match objects[0] {
-        BoundedObject::Bounded(_, bounding_volume) => bounding_volume,
-        BoundedObject::Unbounded(_) => unreachable!(),
-    };
-
-    objects[1..]
+    bounding_volumes[1..]
         .iter()
-        .fold(*bounding_volume, |acc, object| match object {
-            BoundedObject::Bounded(_, bounding_volume) => {
-                BoundingVolume::merge(&acc, bounding_volume)
-            }
-            _ => unreachable!(),
+        .fold(bounding_volumes[0], |acc, bounding_volume| {
+            BoundingVolume::merge(&acc, bounding_volume)
         })
 }
 
@@ -99,6 +83,32 @@ impl BoundingVolume {
         BoundingVolume::from_bounds(min, max)
     }
 
+    pub fn maximum_extent(&self) -> Axis {
+        let dx = self.bounds_max.x - self.bounds_min.x;
+        let dy = self.bounds_max.y - self.bounds_min.y;
+        let dz = self.bounds_max.z - self.bounds_min.z;
+
+        if dx >= dy {
+            if dx >= dz {
+                Axis::X
+            } else {
+                Axis::Z
+            }
+        } else if dy >= dz {
+            Axis::Y
+        } else {
+            Axis::Z
+        }
+    }
+
+    pub fn surface_area(&self) -> f64 {
+        let dx = self.bounds_max.x - self.bounds_min.x;
+        let dy = self.bounds_max.y - self.bounds_min.y;
+        let dz = self.bounds_max.z - self.bounds_min.z;
+
+        2.0 * (dx * dy + dy * dz + dx * dz)
+    }
+
     pub fn intersect(&self, ray: &Ray) -> bool {
         let translated_center = self.center - ray.origin;
         let half = (self.bounds_max - self.bounds_min) / 2.0;
@@ -135,80 +145,206 @@ impl BoundingVolume {
 }
 
 #[derive(Debug)]
-pub enum BoundedObject {
-    Unbounded(Box<dyn RaytracingObject>),
-    Bounded(Box<dyn RaytracingObject>, BoundingVolume),
-}
+pub struct UnboundedObject(Box<dyn RaytracingObject>);
 
-impl Intersectable for BoundedObject {
+impl Intersectable for UnboundedObject {
     fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        if let Self::Bounded(_, bounding_volume) = self {
-            if !bounding_volume.intersect(ray) {
-                return None;
-            }
-        }
-
-        let object = match self {
-            Self::Unbounded(object) | Self::Bounded(object, _) => object,
-        };
-
+        let object = &self.0;
         let ray = &ray.transform(object.get_transform().inverse());
         object.intersect(ray)
     }
 }
 
 #[derive(Debug)]
+pub struct BoundedObject {
+    object: Box<dyn RaytracingObject>,
+    bounding_volume: BoundingVolume,
+}
+
+impl Intersectable for BoundedObject {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        if !self.bounding_volume.intersect(ray) {
+            return None;
+        }
+
+        let ray = &ray.transform(self.object.get_transform().inverse());
+        self.object.intersect(ray)
+    }
+}
+
+#[derive(Debug)]
+pub enum ObjectWithBounds {
+    Unbounded(UnboundedObject),
+    Bounded(BoundedObject),
+}
+
+impl ObjectWithBounds {
+    pub fn unbounded(object: Box<dyn RaytracingObject>) -> Self {
+        Self::Unbounded(UnboundedObject(object))
+    }
+
+    pub fn bounded(object: Box<dyn RaytracingObject>, bounding_volume: BoundingVolume) -> Self {
+        Self::Bounded(BoundedObject {
+            object,
+            bounding_volume,
+        })
+    }
+}
+
+impl Intersectable for ObjectWithBounds {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+        match self {
+            Self::Unbounded(object) => object.intersect(ray),
+            Self::Bounded(object) => object.intersect(ray),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum Axis {
     X,
     Y,
     Z,
 }
 
+impl Axis {
+    fn iter(initial_axis: Axis) -> impl Iterator<Item = usize> {
+        let start: usize = initial_axis.into();
+
+        (start..(start + 3)).map(|a| a % 3)
+    }
+}
+
+impl From<Axis> for usize {
+    fn from(axis: Axis) -> Self {
+        match axis {
+            Axis::X => 0,
+            Axis::Y => 1,
+            Axis::Z => 2,
+        }
+    }
+}
+
+impl From<usize> for Axis {
+    fn from(axis: usize) -> Self {
+        match axis {
+            0 => Axis::X,
+            1 => Axis::Y,
+            2 => Axis::Z,
+            _ => panic!("{:?} is not a valid 3D axis", axis),
+        }
+    }
+}
+
+enum SplitCandidate {
+    Start(f64, usize),
+    End(f64, usize),
+}
+
+impl fmt::Debug for SplitCandidate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Start(split, _) => write!(f, "Start({:.2})", split),
+            Self::End(split, _) => write!(f, "End({:.2})", split),
+        }
+    }
+}
+
+impl SplitCandidate {
+    fn cmp(a: &SplitCandidate, b: &SplitCandidate) -> Ordering {
+        let split = a.get_split().partial_cmp(&b.get_split()).unwrap_or(Equal);
+
+        if split == Equal {
+            match (a, b) {
+                (SplitCandidate::Start(_, _), SplitCandidate::End(_, _)) => Ordering::Less,
+                (SplitCandidate::End(_, _), SplitCandidate::Start(_, _)) => Ordering::Greater,
+                _ => Equal,
+            }
+        } else {
+            split
+        }
+    }
+
+    fn get_split(&self) -> f64 {
+        match self {
+            SplitCandidate::Start(split, _) | SplitCandidate::End(split, _) => *split,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct KdTreeAccelerator {
+    unbounded_objects: Vec<UnboundedObject>,
     bounded_objects: Vec<BoundedObject>,
-    unbounded_objects: Vec<BoundedObject>,
     tree: KdTree,
 }
 
 impl KdTreeAccelerator {
     pub fn new(objects: Vec<Box<dyn RaytracingObject>>) -> Self {
-        let objects: Vec<BoundedObject> = objects
+        let (unbounded_objects, bounded_objects): (Vec<ObjectWithBounds>, Vec<ObjectWithBounds>) =
+            objects
+                .into_iter()
+                .map(|object| object.into_bounded_object())
+                .partition(|object| match object {
+                    ObjectWithBounds::Unbounded(_) => true,
+                    ObjectWithBounds::Bounded(_) => false,
+                });
+
+        let unbounded_objects: Vec<UnboundedObject> = unbounded_objects
             .into_iter()
-            .filter_map(|object| object.into_bounded_object())
+            .map(|object| match object {
+                ObjectWithBounds::Unbounded(object) => object,
+                ObjectWithBounds::Bounded(_) => unreachable!(),
+            })
+            .collect();
+        let bounded_objects: Vec<BoundedObject> = bounded_objects
+            .into_iter()
+            .map(|object| match object {
+                ObjectWithBounds::Unbounded(_) => unreachable!(),
+                ObjectWithBounds::Bounded(object) => object,
+            })
             .collect();
 
-        let (bounded_objects, unbounded_objects): (Vec<BoundedObject>, Vec<BoundedObject>) =
-            objects.into_iter().partition(|object| match object {
-                BoundedObject::Bounded(_, _) => true,
-                BoundedObject::Unbounded(_) => false,
-            });
         let indexes = (0..bounded_objects.len()).collect();
-
         let max_depth = (8.0 + 1.3 * (bounded_objects.len() as f64).log2()) as u8;
+        let max_bad_refines = 3;
+
+        let bounding_volumes: Vec<BoundingVolume> = bounded_objects
+            .iter()
+            .map(|object| object.bounding_volume)
+            .collect();
+
         let tree = KdTree::build(
-            build_bounding_volume(&bounded_objects),
             &bounded_objects,
-            indexes,
-            max_depth,
             KdTreeConstructionOptions::default(),
+            max_depth,
+            max_bad_refines,
+            build_bounding_volume(&bounding_volumes),
+            indexes,
         )
         .unwrap_or_else(|| KdTree::Leaf(Vec::new()));
-        println!("{:?}", tree);
 
         Self {
-            bounded_objects,
             unbounded_objects,
+            bounded_objects,
             tree,
         }
     }
 
     pub fn raycast(&self, ray: &Ray) -> Option<Intersection> {
-        self.raycast_int(&self.tree, ray)
+        self.unbounded_objects
+            .iter()
+            .filter_map(|object| object.intersect(ray))
+            .chain(self.raycast_int(&self.tree, ray))
+            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
     pub fn shadow_cast(&self, ray: &Ray, max_distance: f64) -> bool {
-        self.shadow_cast_int(&self.tree, ray, max_distance)
+        self.unbounded_objects
+            .iter()
+            .filter_map(|object| object.intersect(ray))
+            .any(|intersection| intersection.distance <= max_distance)
+            || self.shadow_cast_int(&self.tree, ray, max_distance)
     }
 
     fn raycast_int(&self, tree: &KdTree, ray: &Ray) -> Option<Intersection> {
@@ -261,8 +397,8 @@ impl KdTreeAccelerator {
 #[derive(Copy, Clone)]
 struct KdTreeConstructionOptions {
     max_objects: usize,
-    intersection_cost: u8,
-    traversal_cost: u8,
+    intersection_cost: f64,
+    traversal_cost: f64,
     empty_bonus: f64,
 }
 
@@ -270,9 +406,9 @@ impl Default for KdTreeConstructionOptions {
     fn default() -> Self {
         Self {
             max_objects: 2,
-            intersection_cost: 80,
-            traversal_cost: 1,
-            empty_bonus: 0.0,
+            intersection_cost: 80.0,
+            traversal_cost: 1.0,
+            empty_bonus: 0.5,
         }
     }
 }
@@ -310,11 +446,12 @@ impl fmt::Debug for KdTree {
 
 impl KdTree {
     fn build(
-        bounds: BoundingVolume,
         objects: &[BoundedObject],
-        indexes: Vec<usize>,
-        max_depth: u8,
         options: KdTreeConstructionOptions,
+        max_depth: u8,
+        max_bad_refines: u8,
+        bounding_volume: BoundingVolume,
+        indexes: Vec<usize>,
     ) -> Option<Self> {
         if indexes.is_empty() {
             return None;
@@ -322,31 +459,146 @@ impl KdTree {
             return Some(Self::Leaf(indexes));
         }
 
+        let split_axis = bounding_volume.maximum_extent();
+        let total_surface_area = bounding_volume.surface_area();
+        let bounds_diagonal = bounding_volume.bounds_max - bounding_volume.bounds_min;
+        let old_cost = options.intersection_cost * indexes.len() as f64;
+
+        let mut max_bad_refines = max_bad_refines;
+        let mut split_attempts = 0;
+
+        let mut split_candidates = Vec::new();
+        let mut best_axis_and_split = None;
+        let mut best_cost = f64::INFINITY;
+
+        for axis in Axis::iter(split_axis) {
+            split_candidates.clear();
+            for &index in &indexes {
+                let object_bounds = objects[index].bounding_volume;
+                split_candidates.push(SplitCandidate::Start(object_bounds.bounds_min[axis], index));
+                split_candidates.push(SplitCandidate::End(object_bounds.bounds_max[axis], index));
+            }
+            split_candidates.sort_by(|a, b| SplitCandidate::cmp(a, b));
+
+            let mut below = 0;
+            let mut above = indexes.len();
+            for (index, split_candidate) in split_candidates.iter().enumerate() {
+                if let SplitCandidate::End(_, _) = split_candidate {
+                    above -= 1;
+                }
+
+                let split = split_candidate.get_split();
+
+                if bounding_volume.bounds_min[axis] < split
+                    && split < bounding_volume.bounds_max[axis]
+                {
+                    let other_axis0 = (axis + 1) % 3;
+                    let other_axis1 = (axis + 2) % 3;
+                    let d = bounds_diagonal[other_axis0] * bounds_diagonal[other_axis1];
+                    let surface_area_below = 2.0
+                        * (d + (split - bounding_volume.bounds_min[axis])
+                            * (bounds_diagonal[other_axis0] + bounds_diagonal[other_axis1]));
+                    let surface_area_above = 2.0
+                        * (d + (bounding_volume.bounds_max[axis] - split)
+                            * (bounds_diagonal[other_axis0] + bounds_diagonal[other_axis1]));
+
+                    let area_below = surface_area_below / total_surface_area;
+                    let area_above = surface_area_above / total_surface_area;
+                    let empty_bonus = if above == 0 || below == 0 {
+                        options.empty_bonus
+                    } else {
+                        0.0
+                    };
+                    let cost = options.traversal_cost
+                        + options.intersection_cost
+                            * (1.0 - empty_bonus)
+                            * (area_below * below as f64 + area_above * above as f64);
+
+                    if cost < best_cost {
+                        best_cost = cost;
+                        best_axis_and_split = Some((axis, index));
+                    }
+                }
+
+                if let SplitCandidate::Start(_, _) = split_candidate {
+                    below += 1;
+                }
+            }
+
+            if best_axis_and_split.is_none() && split_attempts < 2 {
+                split_attempts += 1;
+                continue;
+            }
+
+            if best_cost > old_cost {
+                max_bad_refines -= 1;
+            }
+
+            if best_axis_and_split.is_none()
+                || max_bad_refines == 0
+                || (best_cost > 4.0 * old_cost && indexes.len() < 16)
+            {
+                return Some(Self::Leaf(indexes));
+            }
+
+            break;
+        }
+
+        let (split_axis, split_index) = best_axis_and_split.unwrap();
+        let split_location = split_candidates[split_index].get_split();
+
         let mut left = Vec::new();
         let mut right = Vec::new();
-        for index in &indexes {
-            if rand::random() {
-                left.push(*index);
-            } else {
-                right.push(*index);
+        for (index, split_candidate) in split_candidates.iter().enumerate() {
+            match index.cmp(&split_index) {
+                Ordering::Less => {
+                    if let SplitCandidate::Start(_, object_index) = split_candidate {
+                        left.push(*object_index);
+                    }
+                }
+                Ordering::Greater => {
+                    if let SplitCandidate::End(_, object_index) = split_candidate {
+                        right.push(*object_index);
+                    }
+                }
+                Ordering::Equal => {}
             }
         }
 
-        let left = Self::build(bounds, objects, left, max_depth - 1, options);
-        let right = Self::build(bounds, objects, right, max_depth - 1, options);
+        let mut left_bound = bounding_volume.bounds_max;
+        left_bound[split_axis] = split_location;
+        let left_bounding_volume =
+            BoundingVolume::from_bounds(bounding_volume.bounds_min, left_bound);
+        let left = Self::build(
+            objects,
+            options,
+            max_depth - 1,
+            max_bad_refines,
+            left_bounding_volume,
+            left,
+        );
+
+        let mut right_bound = bounding_volume.bounds_min;
+        right_bound[split_axis] = split_location;
+        let right_bounding_volume =
+            BoundingVolume::from_bounds(right_bound, bounding_volume.bounds_max);
+        let right = Self::build(
+            objects,
+            options,
+            max_depth - 1,
+            max_bad_refines,
+            right_bounding_volume,
+            right,
+        );
 
         match (left, right) {
-            (Some(left), Some(right)) => {
-                let bounding_volume = build_bounding_volume(objects);
-
-                Some(Self::Node {
-                    split_axis: Axis::X,
-                    split_location: 0.0,
-                    bounding_volume,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                })
-            }
+            (Some(left), Some(right)) => Some(Self::Node {
+                split_axis: split_axis.into(),
+                split_location,
+                bounding_volume,
+                left: Box::new(left),
+                right: Box::new(right),
+            }),
             (None, Some(leaf)) | (Some(leaf), None) => Some(leaf),
             (None, None) => None,
         }
