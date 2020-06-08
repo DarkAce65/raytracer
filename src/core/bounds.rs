@@ -335,7 +335,7 @@ impl KdTreeAccelerator {
         self.unbounded_objects
             .iter()
             .filter_map(|object| object.intersect(ray))
-            .chain(self.raycast_int(&self.tree, ray))
+            .chain(self.raycast_tree(&self.tree, ray))
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
@@ -344,10 +344,10 @@ impl KdTreeAccelerator {
             .iter()
             .filter_map(|object| object.intersect(ray))
             .any(|intersection| intersection.distance <= max_distance)
-            || self.shadow_cast_int(&self.tree, ray, max_distance)
+            || self.shadow_cast_tree(&self.tree, ray, max_distance)
     }
 
-    fn raycast_int(&self, tree: &KdTree, ray: &Ray) -> Option<Intersection> {
+    fn raycast_tree(&self, tree: &KdTree, ray: &Ray) -> Option<Intersection> {
         match tree {
             KdTree::Node {
                 bounding_volume,
@@ -358,9 +358,9 @@ impl KdTreeAccelerator {
                 if !bounding_volume.intersect(ray) {
                     None
                 } else {
-                    self.raycast_int(left, ray)
+                    self.raycast_tree(left, ray)
                         .into_iter()
-                        .chain(self.raycast_int(right, ray).into_iter())
+                        .chain(self.raycast_tree(right, ray).into_iter())
                         .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
                 }
             }
@@ -371,7 +371,7 @@ impl KdTreeAccelerator {
         }
     }
 
-    fn shadow_cast_int(&self, tree: &KdTree, ray: &Ray, max_distance: f64) -> bool {
+    fn shadow_cast_tree(&self, tree: &KdTree, ray: &Ray, max_distance: f64) -> bool {
         match tree {
             KdTree::Node {
                 bounding_volume,
@@ -382,8 +382,8 @@ impl KdTreeAccelerator {
                 if !bounding_volume.intersect(ray) {
                     false
                 } else {
-                    self.shadow_cast_int(left, ray, max_distance)
-                        || self.shadow_cast_int(right, ray, max_distance)
+                    self.shadow_cast_tree(left, ray, max_distance)
+                        || self.shadow_cast_tree(right, ray, max_distance)
                 }
             }
             KdTree::Leaf(object_indexes) => object_indexes
