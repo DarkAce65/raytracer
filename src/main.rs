@@ -43,13 +43,14 @@ fn raytrace_fb(
 
     spawn(move || {
         let mut rays = 0;
+        let width = scene.get_width();
+
         let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
             Box::new(progress.wrap_iter(indexes.into_iter()))
         } else {
             Box::new(indexes.into_iter())
         };
 
-        let width = scene.get_width();
         for index in iter {
             let (color, r) = scene.screen_raycast(index % width, index / width);
             rays += r;
@@ -190,35 +191,35 @@ fn main() {
             RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
         image.save(filename).expect("unable to write image");
         println!("Output written to {} in {:?}", filename, duration);
+    } else {
+        println!("Rendering to window - press escape to exit.");
+        let mut window: Window = Window::new(
+            "raytracer",
+            width as usize,
+            height as usize,
+            WindowOptions {
+                title: false,
+                borderless: true,
+                ..WindowOptions::default()
+            },
+        )
+        .unwrap();
 
-        return;
-    }
+        let image_buffer: Vec<u32> = vec![0; (width * height) as usize];
+        let buffer_mutex = Arc::new(Mutex::new(image_buffer));
 
-    println!("Rendering to window - press escape to exit.");
-    let mut window: Window = Window::new(
-        "raytracer",
-        width as usize,
-        height as usize,
-        WindowOptions {
-            title: false,
-            borderless: true,
-            ..WindowOptions::default()
-        },
-    )
-    .unwrap();
+        println!("Raytracing...");
+        raytrace_fb(scene, &buffer_mutex, progress, render_sequentially);
 
-    let image_buffer: Vec<u32> = vec![0; (width * height) as usize];
-    let buffer_mutex = Arc::new(Mutex::new(image_buffer));
-    println!("Raytracing...");
-    raytrace_fb(scene, &buffer_mutex, progress, render_sequentially);
-
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-        let buffer = buffer_mutex.lock().unwrap();
-        window
-            .update_with_buffer(&buffer, width as usize, height as usize)
-            .unwrap();
-        drop(buffer);
-        sleep(std::time::Duration::from_millis(100));
+        while window.is_open() && !window.is_key_down(Key::Escape) {
+            {
+                let buffer = buffer_mutex.lock().unwrap();
+                window
+                    .update_with_buffer(&buffer, width as usize, height as usize)
+                    .unwrap();
+            }
+            sleep(std::time::Duration::from_millis(100));
+        }
     }
 }
 
