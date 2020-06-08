@@ -5,7 +5,7 @@ use crate::core::{
 use crate::lights::Light;
 use crate::primitives::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
-use nalgebra::{clamp, Matrix4, Point3, Unit, Vector2, Vector3, Vector4};
+use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -230,16 +230,17 @@ impl RaytracingScene {
     fn get_color_phong(
         &self,
         ray: Ray,
-        hit_point: Point3<f64>,
-        normal: Unit<Vector3<f64>>,
-        uv: Vector2<f64>,
+        intersection: Intersection,
         material: &PhongMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
         let depth = ray.get_depth();
+        let hit_point = intersection.get_hit_point();
 
+        let normal = intersection.get_normal();
+
+        let uv = intersection.get_uv();
         let material_color = material.get_color(uv, &self.textures);
-
         let emissive_light = material.emissive;
 
         let reflection = if material.reflectivity > 0.0 {
@@ -308,18 +309,19 @@ impl RaytracingScene {
     fn get_color_physical(
         &self,
         ray: Ray,
-        hit_point: Point3<f64>,
-        normal: Unit<Vector3<f64>>,
-        uv: Vector2<f64>,
+        intersection: Intersection,
         material: &PhysicalMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
         let depth = ray.get_depth();
+        let hit_point = intersection.get_hit_point();
 
-        let material_color = material.get_color(uv, &self.textures);
-
+        let normal = intersection.get_normal();
         let view_dir = Unit::new_normalize(-ray.direction);
         let n_dot_v = normal.dot(&view_dir).max(0.0);
+
+        let uv = intersection.get_uv();
+        let material_color = material.get_color(uv, &self.textures);
 
         let roughness = material.roughness.max(0.04);
         let base_reflectivity = Vector3::repeat(0.04).lerp(&material_color, material.metalness);
@@ -434,17 +436,12 @@ impl RaytracingScene {
         ray_count += 1;
         if let Some(mut intersection) = self.raycast(&ray) {
             intersection.compute_data(&ray);
-            let hit_point = intersection.get_hit_point();
-            let normal = intersection.get_normal();
-            let uv = intersection.get_uv();
             let material = intersection.object.get_material();
 
             let (color, r) = match material {
-                Material::Phong(material) => {
-                    self.get_color_phong(ray, hit_point, normal, uv, material)
-                }
+                Material::Phong(material) => self.get_color_phong(ray, intersection, material),
                 Material::Physical(material) => {
-                    self.get_color_physical(ray, hit_point, normal, uv, material)
+                    self.get_color_physical(ray, intersection, material)
                 }
             };
 
