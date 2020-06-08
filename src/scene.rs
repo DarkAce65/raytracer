@@ -454,15 +454,14 @@ impl RaytracingScene {
         }
     }
 
-    pub fn screen_raycast(&self, x: f64, y: f64) -> (Vector4<f64>, u64) {
-        let (width, height) = (self.get_width() as f64, self.get_height() as f64);
-        assert!(0.0 <= x && x < width);
-        assert!(0.0 <= y && y < height);
+    fn build_camera_ray(&self, x: u32, y: u32) -> Ray {
+        assert!(x < self.get_width() && y < self.get_height());
 
+        let (width, height) = (self.get_width() as f64, self.get_height() as f64);
         let aspect = width / height;
         let fov = (self.camera.fov.to_radians() / 2.0).tan();
 
-        let (x, y) = ((x + 0.5) / width, (y + 0.5) / height);
+        let (x, y) = ((x as f64 + 0.5) / width, (y as f64 + 0.5) / height);
         let (x, y) = (x * 2.0 - 1.0, 1.0 - y * 2.0);
         let (x, y) = if width < height {
             (x * aspect, y)
@@ -474,13 +473,16 @@ impl RaytracingScene {
         let direction = Vector3::from([x, y, -1.0]).normalize();
         let direction = (self.camera.camera_to_world * direction.to_homogeneous()).xyz();
 
-        let ray = Ray {
+        Ray {
             ray_type: RayType::Primary,
             origin: self.camera.position,
             direction,
             refractive_index: 1.0,
-        };
+        }
+    }
 
+    pub fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
+        let ray = self.build_camera_ray(x, y);
         let (color, ray_count) = self.get_color(ray);
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
     }

@@ -51,8 +51,7 @@ fn raytrace_fb(
 
         let width = scene.get_width();
         for index in iter {
-            let (x, y) = ((index % width) as f64, (index / width) as f64);
-            let (color, r) = scene.screen_raycast(x, y);
+            let (color, r) = scene.screen_raycast(index % width, index / width);
             rays += r;
 
             {
@@ -89,8 +88,7 @@ fn raytrace(
     let width = scene.get_width();
     let start = Instant::now();
     for index in iter {
-        let (x, y) = ((index % width) as f64, (index / width) as f64);
-        let (color, r) = scene.screen_raycast(x, y);
+        let (color, r) = scene.screen_raycast(index % width, index / width);
         rays += r;
 
         let index = (index * 4) as usize;
