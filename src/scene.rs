@@ -454,18 +454,17 @@ impl RaytracingScene {
         }
     }
 
-    pub fn screen_raycast(&self, index: u32) -> (Vector4<f64>, u64) {
-        let (u32_width, u32_height) = (self.get_width(), self.get_height());
-        assert!(index < u32_width * u32_height);
+    pub fn screen_raycast(&self, x: f64, y: f64) -> (Vector4<f64>, u64) {
+        let (width, height) = (self.get_width() as f64, self.get_height() as f64);
+        assert!(0.0 <= x && x < width);
+        assert!(0.0 <= y && y < height);
 
-        let (width, height) = (u32_width as f64, u32_height as f64);
         let aspect = width / height;
         let fov = (self.camera.fov.to_radians() / 2.0).tan();
 
-        let (x, y) = ((index % u32_width) as f64, (index / u32_width) as f64);
         let (x, y) = ((x + 0.5) / width, (y + 0.5) / height);
         let (x, y) = (x * 2.0 - 1.0, 1.0 - y * 2.0);
-        let (x, y) = if u32_width < u32_height {
+        let (x, y) = if width < height {
             (x * aspect, y)
         } else {
             (x, y / aspect)

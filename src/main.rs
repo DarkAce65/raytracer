@@ -43,19 +43,22 @@ fn raytrace_fb(
 
     spawn(move || {
         let mut rays = 0;
-        let iter: Box<dyn Iterator<Item = &u32>> = if let Some(progress) = &progress {
-            Box::new(progress.wrap_iter(indexes.iter()))
+        let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
+            Box::new(progress.wrap_iter(indexes.into_iter()))
         } else {
-            Box::new(indexes.iter())
+            Box::new(indexes.into_iter())
         };
 
+        let width = scene.get_width();
         for index in iter {
-            let (color, r) = scene.screen_raycast(*index);
+            let (x, y) = ((index % width) as f64, (index / width) as f64);
+            let (color, r) = scene.screen_raycast(x, y);
             rays += r;
-            let index = *index as usize;
-            let mut buffer = buffer_mutex.lock().unwrap();
-            buffer[index] = to_argb_u32(color);
-            drop(buffer);
+
+            {
+                let mut buffer = buffer_mutex.lock().unwrap();
+                buffer[index as usize] = to_argb_u32(color);
+            }
 
             if let Some(progress) = &progress {
                 progress.set_message(&rays.to_string());
@@ -77,15 +80,17 @@ fn raytrace(
     indexes.shuffle(&mut thread_rng());
 
     let mut rays = 0;
-    let iter: Box<dyn Iterator<Item = &u32>> = if let Some(progress) = &progress {
-        Box::new(progress.wrap_iter(indexes.iter()))
+    let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
+        Box::new(progress.wrap_iter(indexes.into_iter()))
     } else {
-        Box::new(indexes.iter())
+        Box::new(indexes.into_iter())
     };
 
+    let width = scene.get_width();
     let start = Instant::now();
     for index in iter {
-        let (color, r) = scene.screen_raycast(*index);
+        let (x, y) = ((index % width) as f64, (index / width) as f64);
+        let (color, r) = scene.screen_raycast(x, y);
         rays += r;
 
         let index = (index * 4) as usize;
