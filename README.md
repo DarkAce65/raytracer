@@ -9,7 +9,15 @@ A ray tracer written in Rust which implements Blinn-Phong shading and physically
 - For a live visualization of the ray tracer, run `cargo run -- scenes/scene.json`
 - To output to a file, run `cargo run -- -o image.png scenes/scene.json`
 
-*Additional scenes can be found in the [scenes](./scenes) folder*
+*Additional scene files are in the [scenes](./scenes) folder*
+
+### Renders
+
+All renders are in the [renders](./renders/renders.md) folder.
+
+`scenes/scene.json` (800 x 800 pixels, 6,686,180 rays, 2.271s on i7 8650U):
+
+![scene.json](./renders/scene.png)
 
 ----
 
