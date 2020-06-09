@@ -9,11 +9,12 @@ mod scene;
 use crate::scene::{RaytracingScene, Scene};
 use clap::{App, Arg};
 use image::RgbaImage;
-use indicatif::ProgressIterator;
+use indicatif::ParallelProgressIterator;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector4;
 use rand::{seq::SliceRandom, thread_rng};
+use rayon::prelude::*;
 use std::fs::File;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -57,14 +58,14 @@ fn raytrace_fb(
 
         if let Some(progress) = progress {
             indexes
-                .into_iter()
+                .into_par_iter()
                 .progress_with(progress.clone())
                 .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
                 .for_each(process_pixel);
 
             progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
         } else {
-            indexes.into_iter().for_each(process_pixel);
+            indexes.into_par_iter().for_each(process_pixel);
         }
     });
 }
@@ -97,14 +98,14 @@ fn raytrace(
 
     if let Some(progress) = progress {
         indexes
-            .into_iter()
+            .into_par_iter()
             .progress_with(progress.clone())
             .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
             .for_each(process_pixel);
 
         progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
     } else {
-        indexes.into_iter().for_each(process_pixel);
+        indexes.into_par_iter().for_each(process_pixel);
     }
 
     start.elapsed()
