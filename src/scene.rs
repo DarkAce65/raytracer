@@ -134,7 +134,7 @@ impl Default for RenderOptions {
     fn default() -> Self {
         Self {
             max_depth: 3,
-            max_reflected_rays: 8,
+            max_reflected_rays: 16,
             width: 100,
             height: 100,
         }
