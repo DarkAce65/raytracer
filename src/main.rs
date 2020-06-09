@@ -15,6 +15,7 @@ use nalgebra::Vector4;
 use rand::{seq::SliceRandom, thread_rng};
 use std::fs::File;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::{Duration, Instant};
@@ -42,7 +43,7 @@ fn raytrace_fb(
     }
 
     spawn(move || {
-        let mut rays = 0;
+        let rays = AtomicU64::new(0);
         let width = scene.get_width();
 
         let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
@@ -53,7 +54,7 @@ fn raytrace_fb(
 
         for index in iter {
             let (color, r) = scene.screen_raycast(index % width, index / width);
-            rays += r;
+            rays.fetch_add(r, Ordering::SeqCst);
 
             {
                 let mut buffer = buffer_mutex.lock().unwrap();
@@ -61,7 +62,7 @@ fn raytrace_fb(
             }
 
             if let Some(progress) = &progress {
-                progress.set_message(&rays.to_string());
+                progress.set_message(&rays.load(Ordering::SeqCst).to_string());
             }
         }
 
@@ -79,7 +80,7 @@ fn raytrace(
     let mut indexes: Vec<u32> = (0..scene.get_width() * scene.get_height()).collect();
     indexes.shuffle(&mut thread_rng());
 
-    let mut rays = 0;
+    let rays = AtomicU64::new(0);
     let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
         Box::new(progress.wrap_iter(indexes.into_iter()))
     } else {
@@ -90,7 +91,7 @@ fn raytrace(
     let start = Instant::now();
     for index in iter {
         let (color, r) = scene.screen_raycast(index % width, index / width);
-        rays += r;
+        rays.fetch_add(r, Ordering::SeqCst);
 
         let index = (index * 4) as usize;
         image_buffer[index] = (color.x * 255.0) as u8;
@@ -99,7 +100,7 @@ fn raytrace(
         image_buffer[index + 3] = (color.w * 255.0) as u8;
 
         if let Some(progress) = &progress {
-            progress.set_message(&rays.to_string());
+            progress.set_message(&rays.load(Ordering::SeqCst).to_string());
         }
     }
 
