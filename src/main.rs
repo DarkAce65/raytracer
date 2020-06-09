@@ -9,6 +9,7 @@ mod scene;
 use crate::scene::{RaytracingScene, Scene};
 use clap::{App, Arg};
 use image::RgbaImage;
+use indicatif::ProgressIterator;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::Vector4;
@@ -46,28 +47,24 @@ fn raytrace_fb(
         let rays = AtomicU64::new(0);
         let width = scene.get_width();
 
-        let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
-            Box::new(progress.wrap_iter(indexes.into_iter()))
-        } else {
-            Box::new(indexes.into_iter())
-        };
-
-        for index in iter {
+        let process_pixel = |index| {
             let (color, r) = scene.screen_raycast(index % width, index / width);
             rays.fetch_add(r, Ordering::SeqCst);
 
-            {
-                let mut buffer = buffer_mutex.lock().unwrap();
-                buffer[index as usize] = to_argb_u32(color);
-            }
-
-            if let Some(progress) = &progress {
-                progress.set_message(&rays.load(Ordering::SeqCst).to_string());
-            }
-        }
+            let mut buffer = buffer_mutex.lock().unwrap();
+            buffer[index as usize] = to_argb_u32(color);
+        };
 
         if let Some(progress) = progress {
-            progress.finish();
+            indexes
+                .into_iter()
+                .progress_with(progress.clone())
+                .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
+                .for_each(process_pixel);
+
+            progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
+        } else {
+            indexes.into_iter().for_each(process_pixel);
         }
     });
 }
@@ -80,32 +77,34 @@ fn raytrace(
     let mut indexes: Vec<u32> = (0..scene.get_width() * scene.get_height()).collect();
     indexes.shuffle(&mut thread_rng());
 
+    let buffer_mutex = Arc::new(Mutex::new(image_buffer));
     let rays = AtomicU64::new(0);
-    let iter: Box<dyn Iterator<Item = u32>> = if let Some(progress) = &progress {
-        Box::new(progress.wrap_iter(indexes.into_iter()))
-    } else {
-        Box::new(indexes.into_iter())
-    };
-
     let width = scene.get_width();
-    let start = Instant::now();
-    for index in iter {
+
+    let process_pixel = |index| {
         let (color, r) = scene.screen_raycast(index % width, index / width);
         rays.fetch_add(r, Ordering::SeqCst);
 
         let index = (index * 4) as usize;
-        image_buffer[index] = (color.x * 255.0) as u8;
-        image_buffer[index + 1] = (color.y * 255.0) as u8;
-        image_buffer[index + 2] = (color.z * 255.0) as u8;
-        image_buffer[index + 3] = (color.w * 255.0) as u8;
+        let mut buffer = buffer_mutex.lock().unwrap();
+        buffer[index] = (color.x * 255.0) as u8;
+        buffer[index + 1] = (color.y * 255.0) as u8;
+        buffer[index + 2] = (color.z * 255.0) as u8;
+        buffer[index + 3] = (color.w * 255.0) as u8;
+    };
 
-        if let Some(progress) = &progress {
-            progress.set_message(&rays.load(Ordering::SeqCst).to_string());
-        }
-    }
+    let start = Instant::now();
 
     if let Some(progress) = progress {
-        progress.finish();
+        indexes
+            .into_iter()
+            .progress_with(progress.clone())
+            .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
+            .for_each(process_pixel);
+
+        progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
+    } else {
+        indexes.into_iter().for_each(process_pixel);
     }
 
     start.elapsed()
