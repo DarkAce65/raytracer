@@ -509,7 +509,7 @@ impl RaytracingScene {
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
     }
 
-    pub fn raytrace_to_image(&self, progress: Option<ProgressBar>) -> (RgbaImage, Duration) {
+    pub fn raytrace_to_image(&self, progress: Option<ProgressBar>) -> (RgbaImage, Duration, u64) {
         let width = self.get_width();
         let height = self.get_height();
 
@@ -548,7 +548,7 @@ impl RaytracingScene {
         let image =
             RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
 
-        (image, duration)
+        (image, duration, rays.load(Ordering::SeqCst))
     }
 
     pub fn raytrace_to_buffer(

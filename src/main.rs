@@ -83,7 +83,7 @@ fn main() {
 
     if let Some(filename) = output_filename {
         println!("Raytracing...");
-        let (image, duration) = scene.raytrace_to_image(progress);
+        let (image, duration, _) = scene.raytrace_to_image(progress);
         image.save(filename).expect("unable to write image");
         println!("Output written to {} in {:?}", filename, duration);
     } else {
