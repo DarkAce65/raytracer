@@ -2,7 +2,7 @@
 
 #### `scenes/scene.json`
 
-800 x 800 pixels, 6,686,180 rays, 2.271s on i7 8650U
+800 x 800 pixels, 6,615,349 rays, 2.370s on i7 8650U
 
 ![scene.json](./scene.png)
 
