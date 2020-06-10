@@ -24,10 +24,10 @@ use std::time::{Duration, Instant};
 
 fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     let (r, g, b, a) = (
-        (rgba.x.max(0.0).min(1.0) * 255.0) as u32,
-        (rgba.y.max(0.0).min(1.0) * 255.0) as u32,
-        (rgba.z.max(0.0).min(1.0) * 255.0) as u32,
-        (rgba.w.max(0.0).min(1.0) * 255.0) as u32,
+        (rgba.x * 255.0) as u32,
+        (rgba.y * 255.0) as u32,
+        (rgba.z * 255.0) as u32,
+        (rgba.w * 255.0) as u32,
     );
     a << 24 | r << 16 | g << 8 | b
 }
