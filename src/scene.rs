@@ -5,17 +5,36 @@ use crate::core::{
 use crate::lights::Light;
 use crate::primitives::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
+use image::RgbaImage;
+use indicatif::ParallelProgressIterator;
+use indicatif::ProgressBar;
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
+use rand::{seq::SliceRandom, thread_rng};
+use rayon::prelude::*;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::fmt;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread::spawn;
+use std::time::{Duration, Instant};
 
 const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
+
+fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
+    let (r, g, b, a) = (
+        (rgba.x * 255.0) as u32,
+        (rgba.y * 255.0) as u32,
+        (rgba.z * 255.0) as u32,
+        (rgba.w * 255.0) as u32,
+    );
+    a << 24 | r << 16 | g << 8 | b
+}
 
 #[derive(Debug)]
 pub struct Camera {
@@ -484,9 +503,112 @@ impl RaytracingScene {
         }
     }
 
-    pub fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
+    fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
         let ray = self.build_camera_ray(x, y);
         let (color, ray_count) = self.get_color(ray);
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
+    }
+
+    pub fn raytrace_to_image(&self, progress: Option<ProgressBar>) -> (RgbaImage, Duration) {
+        let width = self.get_width();
+        let height = self.get_height();
+
+        let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
+        let buffer_mutex = Arc::new(Mutex::new(&mut image_buffer));
+        let rays = AtomicU64::new(0);
+
+        let process_pixel = |index| {
+            let (color, r) = self.screen_raycast(index % width, index / width);
+            rays.fetch_add(r, Ordering::SeqCst);
+
+            let index = (index * 4) as usize;
+            let mut buffer = buffer_mutex.lock().unwrap();
+            buffer[index] = (color.x * 255.0) as u8;
+            buffer[index + 1] = (color.y * 255.0) as u8;
+            buffer[index + 2] = (color.z * 255.0) as u8;
+            buffer[index + 3] = (color.w * 255.0) as u8;
+        };
+
+        let mut indexes: Vec<u32> = (0..width * height).collect();
+        indexes.shuffle(&mut thread_rng());
+
+        let start = Instant::now();
+        if let Some(progress) = progress {
+            indexes
+                .into_par_iter()
+                .progress_with(progress.clone())
+                .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
+                .for_each(process_pixel);
+
+            progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
+        } else {
+            indexes.into_par_iter().for_each(process_pixel);
+        }
+        let duration = start.elapsed();
+        let image =
+            RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
+
+        (image, duration)
+    }
+
+    pub fn raytrace_to_buffer(
+        self,
+        buffer_mutex: &Arc<Mutex<Vec<u32>>>,
+        process_sequentially: bool,
+        progress: Option<ProgressBar>,
+    ) {
+        let width = self.get_width();
+        let height = self.get_height();
+
+        assert!(buffer_mutex.lock().unwrap().len() == (width * height) as usize);
+
+        let buffer_mutex = Arc::clone(buffer_mutex);
+        spawn(move || {
+            let rays = AtomicU64::new(0);
+
+            let process_pixel = |index| {
+                let (color, r) = self.screen_raycast(index % width, index / width);
+                rays.fetch_add(r, Ordering::SeqCst);
+
+                let mut buffer = buffer_mutex.lock().unwrap();
+                buffer[index as usize] = to_argb_u32(color);
+            };
+
+            let mut indexes: Vec<u32> = (0..width * height).collect();
+            if !process_sequentially {
+                indexes.shuffle(&mut thread_rng());
+            }
+
+            if let Some(progress) = progress {
+                indexes
+                    .into_par_iter()
+                    .progress_with(progress.clone())
+                    .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
+                    .for_each(process_pixel);
+
+                progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
+            } else {
+                indexes.into_par_iter().for_each(process_pixel);
+            }
+        });
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn it_converts_color_vecs_to_u32() {
+        let color = 0;
+        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 0.0])), color);
+        let color = 255 << 24;
+        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 1.0])), color);
+        let color = 255 << 24 | 255 << 16 | 255 << 8 | 255;
+        assert_eq!(to_argb_u32(Vector4::from([1.0, 1.0, 1.0, 1.0])), color);
+        let color = 255 << 24 | 255;
+        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 1.0, 1.0])), color);
+        let color = 255 << 24 | 255 << 16 | 255;
+        assert_eq!(to_argb_u32(Vector4::from([1.0, 0.0, 1.0, 1.0])), color);
     }
 }

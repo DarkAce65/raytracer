@@ -6,110 +6,15 @@ mod primitives;
 mod ray_intersection;
 mod scene;
 
-use crate::scene::{RaytracingScene, Scene};
+use crate::scene::Scene;
 use clap::{App, Arg};
-use image::RgbaImage;
-use indicatif::ParallelProgressIterator;
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
-use nalgebra::Vector4;
-use rand::{seq::SliceRandom, thread_rng};
-use rayon::prelude::*;
 use std::fs::File;
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread::{sleep, spawn};
-use std::time::{Duration, Instant};
-
-fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
-    let (r, g, b, a) = (
-        (rgba.x * 255.0) as u32,
-        (rgba.y * 255.0) as u32,
-        (rgba.z * 255.0) as u32,
-        (rgba.w * 255.0) as u32,
-    );
-    a << 24 | r << 16 | g << 8 | b
-}
-
-fn raytrace_fb(
-    scene: RaytracingScene,
-    buffer_mutex: &Arc<Mutex<Vec<u32>>>,
-    progress: Option<ProgressBar>,
-    render_sequentially: bool,
-) {
-    let buffer_mutex = Arc::clone(&buffer_mutex);
-    let mut indexes: Vec<u32> = (0..scene.get_width() * scene.get_height()).collect();
-    if !render_sequentially {
-        indexes.shuffle(&mut thread_rng());
-    }
-
-    spawn(move || {
-        let rays = AtomicU64::new(0);
-        let width = scene.get_width();
-
-        let process_pixel = |index| {
-            let (color, r) = scene.screen_raycast(index % width, index / width);
-            rays.fetch_add(r, Ordering::SeqCst);
-
-            let mut buffer = buffer_mutex.lock().unwrap();
-            buffer[index as usize] = to_argb_u32(color);
-        };
-
-        if let Some(progress) = progress {
-            indexes
-                .into_par_iter()
-                .progress_with(progress.clone())
-                .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
-                .for_each(process_pixel);
-
-            progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
-        } else {
-            indexes.into_par_iter().for_each(process_pixel);
-        }
-    });
-}
-
-fn raytrace(scene: RaytracingScene, progress: Option<ProgressBar>) -> (RgbaImage, Duration) {
-    let width = scene.get_width();
-    let height = scene.get_height();
-
-    let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
-    let buffer_mutex = Arc::new(Mutex::new(&mut image_buffer));
-    let rays = AtomicU64::new(0);
-
-    let process_pixel = |index| {
-        let (color, r) = scene.screen_raycast(index % width, index / width);
-        rays.fetch_add(r, Ordering::SeqCst);
-
-        let index = (index * 4) as usize;
-        let mut buffer = buffer_mutex.lock().unwrap();
-        buffer[index] = (color.x * 255.0) as u8;
-        buffer[index + 1] = (color.y * 255.0) as u8;
-        buffer[index + 2] = (color.z * 255.0) as u8;
-        buffer[index + 3] = (color.w * 255.0) as u8;
-    };
-
-    let mut indexes: Vec<u32> = (0..width * height).collect();
-    indexes.shuffle(&mut thread_rng());
-
-    let start = Instant::now();
-    if let Some(progress) = progress {
-        indexes
-            .into_par_iter()
-            .progress_with(progress.clone())
-            .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
-            .for_each(process_pixel);
-
-        progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
-    } else {
-        indexes.into_par_iter().for_each(process_pixel);
-    }
-    let elapsed = start.elapsed();
-    let image = RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
-
-    (image, elapsed)
-}
+use std::thread::sleep;
+use std::time::Instant;
 
 fn main() {
     let matches = App::new("ray tracer")
@@ -146,7 +51,7 @@ fn main() {
     let scene_file = File::open(scene_path).expect("file not found");
     let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
-    let render_sequentially = matches.is_present("norandom");
+    let process_sequentially = matches.is_present("norandom");
 
     let mut scene: Scene = serde_json::from_reader(scene_file).expect("failed to parse scene");
 
@@ -168,7 +73,7 @@ fn main() {
     } else {
         let progress = ProgressBar::new((width * height).into());
         progress.set_draw_delta((width * height / 200).into());
-        if render_sequentially {
+        if process_sequentially {
             progress.set_style(ProgressStyle::default_bar().template(
                 "[{elapsed_precise} elapsed] \
                  {bar:40} {pos}/{len} pixels, {msg} rays",
@@ -184,7 +89,7 @@ fn main() {
 
     if let Some(filename) = output_filename {
         println!("Raytracing...");
-        let (image, duration) = raytrace(scene, progress);
+        let (image, duration) = scene.raytrace_to_image(progress);
         image.save(filename).expect("unable to write image");
         println!("Output written to {} in {:?}", filename, duration);
     } else {
@@ -205,7 +110,7 @@ fn main() {
         let buffer_mutex = Arc::new(Mutex::new(image_buffer));
 
         println!("Raytracing...");
-        raytrace_fb(scene, &buffer_mutex, progress, render_sequentially);
+        scene.raytrace_to_buffer(&buffer_mutex, process_sequentially, progress);
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
             {
@@ -216,24 +121,5 @@ fn main() {
             }
             sleep(std::time::Duration::from_millis(100));
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn it_converts_color_vecs_to_u32() {
-        let color = 0;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 0.0])), color);
-        let color = 255 << 24;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 1.0])), color);
-        let color = 255 << 24 | 255 << 16 | 255 << 8 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([1.0, 1.0, 1.0, 1.0])), color);
-        let color = 255 << 24 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 1.0, 1.0])), color);
-        let color = 255 << 24 | 255 << 16 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([1.0, -1.0, 2.0, 1.0])), color);
     }
 }
