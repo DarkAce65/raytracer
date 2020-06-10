@@ -85,7 +85,7 @@ fn main() {
         println!("Raytracing...");
         let (image, duration, _) = scene.raytrace_to_image(progress);
         image.save(filename).expect("unable to write image");
-        println!("Output written to {} in {:?}", filename, duration);
+        println!("Output written to {} in {:.3?}", filename, duration);
     } else {
         println!("Rendering to window - press escape to exit.");
         let mut window: Window = Window::new(
