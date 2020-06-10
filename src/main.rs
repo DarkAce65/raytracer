@@ -70,17 +70,13 @@ fn raytrace_fb(
     });
 }
 
-fn raytrace(
-    scene: RaytracingScene,
-    image_buffer: &mut Vec<u8>,
-    progress: Option<ProgressBar>,
-) -> Duration {
-    let mut indexes: Vec<u32> = (0..scene.get_width() * scene.get_height()).collect();
-    indexes.shuffle(&mut thread_rng());
-
-    let buffer_mutex = Arc::new(Mutex::new(image_buffer));
-    let rays = AtomicU64::new(0);
+fn raytrace(scene: RaytracingScene, progress: Option<ProgressBar>) -> (RgbaImage, Duration) {
     let width = scene.get_width();
+    let height = scene.get_height();
+
+    let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
+    let buffer_mutex = Arc::new(Mutex::new(&mut image_buffer));
+    let rays = AtomicU64::new(0);
 
     let process_pixel = |index| {
         let (color, r) = scene.screen_raycast(index % width, index / width);
@@ -94,8 +90,10 @@ fn raytrace(
         buffer[index + 3] = (color.w * 255.0) as u8;
     };
 
-    let start = Instant::now();
+    let mut indexes: Vec<u32> = (0..width * height).collect();
+    indexes.shuffle(&mut thread_rng());
 
+    let start = Instant::now();
     if let Some(progress) = progress {
         indexes
             .into_par_iter()
@@ -107,8 +105,10 @@ fn raytrace(
     } else {
         indexes.into_par_iter().for_each(process_pixel);
     }
+    let elapsed = start.elapsed();
+    let image = RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
 
-    start.elapsed()
+    (image, elapsed)
 }
 
 fn main() {
@@ -183,13 +183,8 @@ fn main() {
     };
 
     if let Some(filename) = output_filename {
-        let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
-
         println!("Raytracing...");
-        let duration = raytrace(scene, &mut image_buffer, progress);
-
-        let image =
-            RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
+        let (image, duration) = raytrace(scene, progress);
         image.save(filename).expect("unable to write image");
         println!("Output written to {} in {:?}", filename, duration);
     } else {
