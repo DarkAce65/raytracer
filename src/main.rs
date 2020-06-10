@@ -1,15 +1,9 @@
 #![warn(clippy::all)]
 
-mod core;
-mod lights;
-mod primitives;
-mod ray_intersection;
-mod scene;
-
-use crate::scene::Scene;
 use clap::{App, Arg};
 use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
+use raytrace::Scene;
 use std::fs::File;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
