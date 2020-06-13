@@ -1,4 +1,4 @@
-#![warn(clippy::all)]
+#![deny(clippy::all)]
 
 use raytrace::Scene;
 use std::fs::File;
