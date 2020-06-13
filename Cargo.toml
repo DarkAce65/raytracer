@@ -5,9 +5,22 @@ authors = ["DarkAce65 <tvdood99@gmail.com>"]
 edition = "2018"
 default-run = "raytrace"
 
+[lib]
+doctest = false
+bench = false
+
+[[bin]]
+name = "raytrace"
+test = false
+bench = false
+doc = false
+
 [[bin]]
 name = "render-scenes"
 path = "src/render_scenes.rs"
+test = false
+bench = false
+doc = false
 
 [profile.dev]
 opt-level = 3
