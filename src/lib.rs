@@ -21,4 +21,4 @@ mod scene;
 pub use crate::core::Transform;
 pub use crate::lights::{AmbientLight, Light, PointLight};
 pub use crate::primitives::{Cube, Group, Mesh, Object3D, Plane, Sphere, Triangle};
-pub use crate::scene::Scene;
+pub use crate::scene::{Camera, RenderOptions, Scene};

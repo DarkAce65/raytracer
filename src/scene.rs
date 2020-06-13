@@ -6,17 +6,14 @@ use crate::lights::Light;
 use crate::primitives::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
 use image::RgbaImage;
-use indicatif::ParallelProgressIterator;
-use indicatif::ProgressBar;
+use indicatif::{ParallelProgressIterator, ProgressBar};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
 use rand::{seq::SliceRandom, thread_rng};
 use rayon::prelude::*;
-use serde::de::{self, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
-use std::fmt;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -36,118 +33,23 @@ fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     a << 24 | r << 16 | g << 8 | b
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct Camera {
-    fov: f64,
-    position: Point3<f64>,
-    camera_to_world: Matrix4<f64>,
+    pub fov: f64,
+    pub position: Point3<f64>,
+    pub target: Point3<f64>,
+    pub up: Unit<Vector3<f64>>,
 }
 
 impl Default for Camera {
     fn default() -> Self {
-        Camera::new(
-            Camera::default_fov(),
-            Camera::default_position(),
-            Camera::default_target(),
-            Camera::default_up(),
-        )
-    }
-}
-
-impl Camera {
-    pub fn new(fov: f64, eye: Point3<f64>, target: Point3<f64>, up: Unit<Vector3<f64>>) -> Self {
         Self {
-            fov,
-            position: eye,
-            camera_to_world: Matrix4::look_at_rh(&eye, &target, &up).transpose(),
+            fov: 65.0,
+            position: Point3::from([0.0, 0.0, 1.0]),
+            target: Point3::origin(),
+            up: Vector3::y_axis(),
         }
-    }
-
-    pub fn default_fov() -> f64 {
-        65.0
-    }
-    pub fn default_position() -> Point3<f64> {
-        Point3::from([0.0, 0.0, 1.0])
-    }
-    pub fn default_target() -> Point3<f64> {
-        Point3::origin()
-    }
-    pub fn default_up() -> Unit<Vector3<f64>> {
-        Vector3::y_axis()
-    }
-}
-
-impl<'de> Deserialize<'de> for Camera {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(field_identifier, rename_all = "lowercase")]
-        enum Field {
-            Fov,
-            Position,
-            Target,
-            Up,
-        }
-
-        struct CameraVisitor;
-
-        impl<'de> Visitor<'de> for CameraVisitor {
-            type Value = Camera;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Camera")
-            }
-
-            fn visit_map<V>(self, mut map: V) -> Result<Camera, V::Error>
-            where
-                V: MapAccess<'de>,
-            {
-                let mut fov = None;
-                let mut position = None;
-                let mut target = None;
-                let mut up = None;
-
-                while let Some(key) = map.next_key()? {
-                    match key {
-                        Field::Fov => {
-                            if fov.is_some() {
-                                return Err(de::Error::duplicate_field("fov"));
-                            }
-                            fov = Some(map.next_value()?);
-                        }
-                        Field::Position => {
-                            if position.is_some() {
-                                return Err(de::Error::duplicate_field("position"));
-                            }
-                            position = Some(map.next_value()?);
-                        }
-                        Field::Target => {
-                            if target.is_some() {
-                                return Err(de::Error::duplicate_field("target"));
-                            }
-                            target = Some(map.next_value()?);
-                        }
-                        Field::Up => {
-                            if up.is_some() {
-                                return Err(de::Error::duplicate_field("up"));
-                            }
-                            up = Some(map.next_value()?);
-                        }
-                    }
-                }
-
-                let fov = fov.unwrap_or_else(Camera::default_fov);
-                let position = position.ok_or_else(|| de::Error::missing_field("position"))?;
-                let target = target.unwrap_or_else(Camera::default_target);
-                let up = up.unwrap_or_else(Camera::default_up);
-
-                Ok(Camera::new(fov, position, target, up))
-            }
-        }
-
-        deserializer.deserialize_map(CameraVisitor)
     }
 }
 
@@ -190,12 +92,7 @@ impl Default for Scene {
         Self {
             render_options: RenderOptions::default(),
             loaded: false,
-            camera: Camera::new(
-                Camera::default_fov(),
-                Camera::default_position(),
-                Camera::default_target(),
-                Camera::default_up(),
-            ),
+            camera: Camera::default(),
             lights: Vec::new(),
             objects: Vec::new(),
 
@@ -242,9 +139,29 @@ impl Scene {
 }
 
 #[derive(Debug)]
+struct RaytracingCamera {
+    fov: f64,
+    position: Point3<f64>,
+    camera_to_world: Matrix4<f64>,
+}
+
+impl From<Camera> for RaytracingCamera {
+    fn from(camera: Camera) -> Self {
+        let camera_to_world =
+            Matrix4::look_at_rh(&camera.position, &camera.target, &camera.up).transpose();
+
+        Self {
+            fov: camera.fov,
+            position: camera.position,
+            camera_to_world,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct RaytracingScene {
     render_options: RenderOptions,
-    camera: Camera,
+    camera: RaytracingCamera,
     lights: Vec<Light>,
     textures: HashMap<String, Texture>,
     object_tree: KdTreeAccelerator,
@@ -261,7 +178,7 @@ impl RaytracingScene {
 
         Self {
             render_options: scene.render_options,
-            camera: scene.camera,
+            camera: scene.camera.into(),
             lights: scene.lights,
             textures: scene.textures,
             object_tree,
@@ -710,12 +627,7 @@ mod test {
                 max_depth: 5,
                 ..RenderOptions::default()
             },
-            Camera::new(
-                Camera::default_fov(),
-                Camera::default_position(),
-                Camera::default_target(),
-                Camera::default_up(),
-            ),
+            Camera::default(),
         );
 
         scene.add_light(Light::Ambient(AmbientLight::new(Vector3::from([
@@ -782,12 +694,11 @@ mod test {
                     max_depth: 5,
                     ..RenderOptions::default()
                 },
-                Camera::new(
-                    Camera::default_fov(),
-                    Point3::from([2.0, 5.0, 15.0]),
-                    Point3::from([-1.0, 0.0, 0.0]),
-                    Camera::default_up(),
-                ),
+                Camera {
+                    position: Point3::from([2.0, 5.0, 15.0]),
+                    target: Point3::from([-1.0, 0.0, 0.0]),
+                    ..Camera::default()
+                },
             );
 
             scene.add_light(Light::Ambient(AmbientLight::new(Vector3::from([
