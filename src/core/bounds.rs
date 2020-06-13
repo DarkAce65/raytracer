@@ -305,24 +305,31 @@ impl KdTreeAccelerator {
             })
             .collect();
 
-        let indexes = (0..bounded_objects.len()).collect();
-        let max_depth = (8.0 + 1.3 * (bounded_objects.len() as f64).log2()) as u8;
-        let max_bad_refines = 3;
+        let (tree, bounded_objects) = if bounded_objects.is_empty() {
+            (KdTree::Leaf(Vec::new()), bounded_objects)
+        } else {
+            let indexes = (0..bounded_objects.len()).collect();
+            let max_depth = (8.0 + 1.3 * (bounded_objects.len() as f64).log2()) as u8;
+            let max_bad_refines = 3;
 
-        let bounding_volumes: Vec<BoundingVolume> = bounded_objects
-            .iter()
-            .map(|object| object.bounding_volume)
-            .collect();
+            let bounding_volumes: Vec<BoundingVolume> = bounded_objects
+                .iter()
+                .map(|object| object.bounding_volume)
+                .collect();
 
-        let tree = KdTree::build(
-            &bounded_objects,
-            KdTreeConstructionOptions::default(),
-            max_depth,
-            max_bad_refines,
-            build_bounding_volume(&bounding_volumes),
-            indexes,
-        )
-        .unwrap_or_else(|| KdTree::Leaf(Vec::new()));
+            (
+                KdTree::build(
+                    &bounded_objects,
+                    KdTreeConstructionOptions::default(),
+                    max_depth,
+                    max_bad_refines,
+                    build_bounding_volume(&bounding_volumes),
+                    indexes,
+                )
+                .unwrap_or_else(|| KdTree::Leaf(Vec::new())),
+                bounded_objects,
+            )
+        };
 
         Self {
             unbounded_objects,

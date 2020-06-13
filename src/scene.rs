@@ -43,6 +43,17 @@ pub struct Camera {
     camera_to_world: Matrix4<f64>,
 }
 
+impl Default for Camera {
+    fn default() -> Self {
+        Camera::new(
+            Camera::default_fov(),
+            Camera::default_position(),
+            Camera::default_target(),
+            Camera::default_up(),
+        )
+    }
+}
+
 impl Camera {
     pub fn new(fov: f64, eye: Point3<f64>, target: Point3<f64>, up: Unit<Vector3<f64>>) -> Self {
         Self {
@@ -194,9 +205,10 @@ impl Default for Scene {
 }
 
 impl Scene {
-    pub fn new(render_options: RenderOptions) -> Self {
+    pub fn new(render_options: RenderOptions, camera: Camera) -> Self {
         Self {
             render_options,
+            camera,
             ..Scene::default()
         }
     }
@@ -623,6 +635,10 @@ impl RaytracingScene {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::core::{Material, PhongMaterial};
+    use crate::lights::{AmbientLight, PointLight};
+    use crate::primitives::Sphere;
+    use serde_json::json;
 
     #[allow(clippy::shadow_unrelated)]
     #[test]
@@ -637,5 +653,177 @@ mod test {
         assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 1.0, 1.0])), color);
         let color = 255 << 24 | 255 << 16 | 255;
         assert_eq!(to_argb_u32(Vector4::from([1.0, 0.0, 1.0, 1.0])), color);
+    }
+
+    #[test]
+    fn it_builds_a_raytracing_scene_from_an_empty_scene_json() {
+        let scene_json = json!({});
+        let scene: Result<Scene, serde_json::error::Error> = serde_json::from_value(scene_json);
+        assert!(scene.is_ok(), "failed to deserialize scene");
+
+        scene.unwrap().build_raytracing_scene();
+    }
+
+    #[test]
+    fn it_builds_a_raytracing_scene_from_a_scene_json() {
+        let scene_json = json!({
+          "max_depth": 5,
+          "width": 200,
+          "height": 200,
+          "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
+          "lights": [
+            { "type": "ambient", "color": [0.01, 0.01, 0.01] },
+            {
+              "type": "point",
+              "transform": [{ "translate": [-8, 3, 0] }],
+              "color": [0.5, 0.5, 0.5]
+            }
+          ],
+          "objects": [
+            {
+              "type": "sphere",
+              "radius": 1,
+              "transform": [{ "rotate": [[0, 1, 0], 30] }, { "translate": [0, 2, 0] }],
+              "material": { "type": "phong", "color": [1, 0.1, 0.1] }
+            }
+          ]
+        });
+
+        let scene: Result<Scene, serde_json::error::Error> = serde_json::from_value(scene_json);
+        assert!(scene.is_ok(), "failed to deserialize scene");
+
+        scene.unwrap().build_raytracing_scene();
+    }
+
+    #[test]
+    fn it_builds_a_raytracing_scene_from_an_empty_scene() {
+        let scene = Scene::new(RenderOptions::default(), Camera::default());
+        scene.build_raytracing_scene();
+    }
+
+    #[test]
+    fn it_builds_a_raytracing_scene_from_a_scene() {
+        let mut scene = Scene::new(
+            RenderOptions {
+                width: 200,
+                height: 200,
+                max_depth: 5,
+                ..RenderOptions::default()
+            },
+            Camera::new(
+                Camera::default_fov(),
+                Camera::default_position(),
+                Camera::default_target(),
+                Camera::default_up(),
+            ),
+        );
+
+        scene.add_light(Light::Ambient(AmbientLight::new(Vector3::from([
+            0.01, 0.01, 0.01,
+        ]))));
+        scene.add_light(Light::Point(Box::new(PointLight::new(
+            Vector3::from([0.5, 0.5, 0.5]),
+            Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
+        ))));
+
+        scene.add_object(Object3D::Sphere(Box::new(Sphere::new(
+            1.0,
+            Transform::identity()
+                .rotate(Vector3::y_axis(), 30.0)
+                .translate(Vector3::from([0.0, 2.0, 0.0])),
+            Material::Phong(PhongMaterial {
+                color: Vector3::from([1.0, 0.1, 0.1]),
+                ..PhongMaterial::default()
+            }),
+        ))));
+
+        scene.build_raytracing_scene();
+    }
+
+    #[test]
+    fn it_produces_matching_renders() {
+        let (json_image, _, _) = {
+            let scene_json = json!({
+              "max_depth": 5,
+              "width": 200,
+              "height": 200,
+              "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
+              "lights": [
+                { "type": "ambient", "color": [0.01, 0.01, 0.01] },
+                {
+                  "type": "point",
+                  "transform": [{ "translate": [-8, 3, 0] }],
+                  "color": [0.5, 0.5, 0.5]
+                }
+              ],
+              "objects": [
+                {
+                  "type": "sphere",
+                  "radius": 1,
+                  "transform": [{ "rotate": [[0, 1, 0], 30] }, { "translate": [0, 2, 0] }],
+                  "material": { "type": "phong", "color": [1, 0.1, 0.1] }
+                }
+              ]
+            });
+
+            let scene: Result<Scene, serde_json::error::Error> = serde_json::from_value(scene_json);
+            assert!(scene.is_ok(), "failed to deserialize scene");
+
+            let scene = scene.unwrap().build_raytracing_scene();
+            println!("Raytracing json scene...");
+            scene.raytrace_to_image(None)
+        };
+
+        let (constructed_image, _, _) = {
+            let mut scene = Scene::new(
+                RenderOptions {
+                    width: 200,
+                    height: 200,
+                    max_depth: 5,
+                    ..RenderOptions::default()
+                },
+                Camera::new(
+                    Camera::default_fov(),
+                    Point3::from([2.0, 5.0, 15.0]),
+                    Point3::from([-1.0, 0.0, 0.0]),
+                    Camera::default_up(),
+                ),
+            );
+
+            scene.add_light(Light::Ambient(AmbientLight::new(Vector3::from([
+                0.01, 0.01, 0.01,
+            ]))));
+            scene.add_light(Light::Point(Box::new(PointLight::new(
+                Vector3::from([0.5, 0.5, 0.5]),
+                Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
+            ))));
+
+            scene.add_object(Object3D::Sphere(Box::new(Sphere::new(
+                1.0,
+                Transform::identity()
+                    .rotate(Vector3::y_axis(), 30.0)
+                    .translate(Vector3::from([0.0, 2.0, 0.0])),
+                Material::Phong(PhongMaterial {
+                    color: Vector3::from([1.0, 0.1, 0.1]),
+                    ..PhongMaterial::default()
+                }),
+            ))));
+
+            let scene = scene.build_raytracing_scene();
+            println!("Raytracing constructed scene...");
+            scene.raytrace_to_image(None)
+        };
+
+        println!("Comparing output...");
+        assert_eq!(json_image.dimensions(), constructed_image.dimensions());
+        for (x, y, color) in json_image.enumerate_pixels() {
+            assert_eq!(
+                color,
+                constructed_image.get_pixel(x, y),
+                "pixel color doesn't match at ({}, {})",
+                x,
+                y
+            );
+        }
     }
 }
