@@ -28,6 +28,21 @@ impl Default for Plane {
 }
 
 impl Plane {
+    pub fn new(normal: Unit<Vector3<f64>>, transform: Transform, material: Material) -> Self {
+        Self {
+            normal,
+            transform,
+            material,
+            ..Plane::default()
+        }
+    }
+
+    pub fn add_child(&mut self, object: Object3D) {
+        if let Some(children) = self.children.as_mut() {
+            children.push(object);
+        }
+    }
+
     pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 

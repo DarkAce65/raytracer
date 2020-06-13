@@ -142,7 +142,7 @@ impl<'de> Deserialize<'de> for Camera {
 
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-struct RenderOptions {
+pub struct RenderOptions {
     width: u32,
     height: u32,
     max_depth: u8,
@@ -194,6 +194,25 @@ impl Default for Scene {
 }
 
 impl Scene {
+    pub fn new(render_options: RenderOptions) -> Self {
+        Self {
+            render_options,
+            ..Scene::default()
+        }
+    }
+
+    pub fn add_light(&mut self, light: Light) {
+        self.lights.push(light)
+    }
+
+    pub fn add_object(&mut self, object: Object3D) {
+        if self.loaded {
+            panic!("objects cannot be added after scene assets have loaded")
+        }
+
+        self.objects.push(object)
+    }
+
     pub fn load_assets(&mut self, asset_base: &Path) {
         if self.loaded {
             panic!("assets are already loaded for scene")

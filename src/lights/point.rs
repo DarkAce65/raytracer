@@ -18,6 +18,12 @@ impl Default for PointLight {
     }
 }
 
+impl PointLight {
+    pub fn new(color: Vector3<f64>, transform: Transform) -> Self {
+        Self { color, transform }
+    }
+}
+
 impl Transformed for PointLight {
     fn get_transform(&self) -> &Transform {
         &self.transform

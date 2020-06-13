@@ -17,6 +17,12 @@ impl Default for AmbientLight {
     }
 }
 
+impl AmbientLight {
+    pub fn new(color: Vector3<f64>) -> Self {
+        Self { color }
+    }
+}
+
 impl Transformed for AmbientLight {
     fn get_transform(&self) -> &Transform {
         unimplemented!()

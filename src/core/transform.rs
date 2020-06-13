@@ -22,7 +22,7 @@ pub struct Transform {
 
 impl Default for Transform {
     fn default() -> Self {
-        Self::new(Affine3::identity())
+        Self::identity()
     }
 }
 
@@ -35,6 +35,10 @@ impl fmt::Debug for Transform {
 impl_op_ex!(*|a: &Transform, b: &Transform| -> Transform { Transform::new(a.matrix * b.matrix) });
 
 impl Transform {
+    pub fn identity() -> Self {
+        Self::new(Affine3::identity())
+    }
+
     pub fn new(matrix: Affine3<f64>) -> Self {
         Self {
             matrix,

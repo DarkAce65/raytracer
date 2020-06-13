@@ -104,6 +104,12 @@ impl Triangle {
         Unit::new_normalize(edge1.cross(&edge2))
     }
 
+    pub fn add_child(&mut self, object: Object3D) {
+        if let Some(children) = self.children.as_mut() {
+            children.push(object);
+        }
+    }
+
     pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 

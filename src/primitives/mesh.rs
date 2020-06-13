@@ -20,6 +20,21 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    pub fn new(file: String, transform: Transform, material: Material) -> Self {
+        Self {
+            file,
+            transform,
+            material,
+            children: None,
+        }
+    }
+
+    pub fn add_child(&mut self, object: Object3D) {
+        if let Some(children) = self.children.as_mut() {
+            children.push(object);
+        }
+    }
+
     pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 

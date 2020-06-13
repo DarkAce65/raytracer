@@ -12,6 +12,17 @@ pub struct Group {
 }
 
 impl Group {
+    pub fn new(transform: Transform) -> Self {
+        Self {
+            transform,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn add_child(&mut self, object: Object3D) {
+        self.children.push(object);
+    }
+
     pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
         let mut objects: Vec<Box<dyn RaytracingObject>> = Vec::new();

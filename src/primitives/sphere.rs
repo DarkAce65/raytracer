@@ -20,8 +20,8 @@ pub struct Sphere {
 impl Default for Sphere {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             radius: 1.0,
+            transform: Transform::default(),
             material: Material::default(),
 
             children: None,
@@ -30,6 +30,21 @@ impl Default for Sphere {
 }
 
 impl Sphere {
+    pub fn new(radius: f64, transform: Transform, material: Material) -> Self {
+        Self {
+            radius,
+            transform,
+            material,
+            ..Sphere::default()
+        }
+    }
+
+    pub fn add_child(&mut self, object: Object3D) {
+        if let Some(children) = self.children.as_mut() {
+            children.push(object);
+        }
+    }
+
     pub fn flatten_to_world(self, transform: &Transform) -> Vec<Box<dyn RaytracingObject>> {
         let transform = transform * self.transform;
 

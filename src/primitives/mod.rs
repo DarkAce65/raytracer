@@ -61,6 +61,17 @@ impl Object3D {
         }
     }
 
+    pub fn add_child(&mut self, object: Object3D) {
+        match self {
+            Object3D::Cube(cube) => cube.add_child(object),
+            Object3D::Triangle(triangle) => triangle.add_child(object),
+            Object3D::Plane(plane) => plane.add_child(object),
+            Object3D::Sphere(sphere) => sphere.add_child(object),
+            Object3D::Mesh(mesh) => mesh.add_child(object),
+            Object3D::Group(group) => group.add_child(object),
+        }
+    }
+
     fn get_children_mut(&mut self) -> Option<&mut Vec<Object3D>> {
         match self {
             Object3D::Cube(cube) => cube.children.as_mut(),
