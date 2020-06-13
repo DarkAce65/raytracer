@@ -17,7 +17,7 @@ fn main() {
     let output_dir = "renders";
     let iterations = 3;
 
-    for scene in scenes.iter() {
+    for scene in &scenes {
         let scene_path = Path::new(scene);
         let scene_file = File::open(scene_path).expect("file not found");
 
@@ -34,7 +34,7 @@ fn main() {
 
         println!("Raytracing {}...", scene_path.display());
         for i in 0..iterations {
-            print!("└ Iteration {}: tracing...", i + 1);
+            print!("\u{2514} Iteration {}: tracing...", i + 1);
             io::stdout().flush().unwrap();
 
             let (image, duration, ray_count) = scene.raytrace_to_image(None);
@@ -42,7 +42,7 @@ fn main() {
             ray_count_sum += ray_count;
 
             println!(
-                "\r│ Iteration {}: rendered in {:.3?} ({} rays)",
+                "\r\u{2502} Iteration {}: rendered in {:.3?} ({} rays)",
                 i + 1,
                 duration,
                 ray_count
@@ -50,12 +50,15 @@ fn main() {
 
             if i == iterations - 1 {
                 println!(
-                    "│ Avg time: {:.3?} (avg {} rays)",
+                    "\u{2502} Avg time: {:.3?} (avg {} rays)",
                     duration_sum / iterations,
                     ray_count_sum / iterations as u64
                 );
                 image.save(&output_filename).expect("unable to write image");
-                println!("└ Wrote rendered image to {}", output_filename.display());
+                println!(
+                    "\u{2514} Wrote rendered image to {}",
+                    output_filename.display()
+                );
             }
         }
         println!();

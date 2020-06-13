@@ -355,13 +355,13 @@ impl KdTreeAccelerator {
                 right,
                 ..
             } => {
-                if !bounding_volume.intersect(ray) {
-                    None
-                } else {
+                if bounding_volume.intersect(ray) {
                     self.raycast_tree(left, ray)
                         .into_iter()
                         .chain(self.raycast_tree(right, ray).into_iter())
                         .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+                } else {
+                    None
                 }
             }
             KdTree::Leaf(object_indexes) => object_indexes
@@ -379,11 +379,11 @@ impl KdTreeAccelerator {
                 right,
                 ..
             } => {
-                if !bounding_volume.intersect(ray) {
-                    false
-                } else {
+                if bounding_volume.intersect(ray) {
                     self.shadow_cast_tree(left, ray, max_distance)
                         || self.shadow_cast_tree(right, ray, max_distance)
+                } else {
+                    false
                 }
             }
             KdTree::Leaf(object_indexes) => object_indexes

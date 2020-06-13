@@ -248,8 +248,8 @@ impl RaytracingScene {
 
     fn get_color_phong(
         &self,
-        ray: Ray,
-        intersection: Intersection,
+        ray: &Ray,
+        intersection: &Intersection,
         material: &PhongMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
@@ -270,7 +270,7 @@ impl RaytracingScene {
                 direction: reflection_dir,
                 refractive_index: 1.0,
             };
-            let (color, r) = self.get_color(reflection_ray);
+            let (color, r) = self.get_color(&reflection_ray);
             ray_count += r;
             color.xyz().component_mul(&material_color)
         } else {
@@ -280,7 +280,7 @@ impl RaytracingScene {
         let mut ambient_light = Vector3::zero();
         let mut irradiance = Vector3::zero();
         if material.reflectivity < 1.0 {
-            for light in self.lights.iter() {
+            for light in &self.lights {
                 match light {
                     Light::Ambient(light) => {
                         ambient_light += light.color.component_mul(&material_color);
@@ -327,8 +327,8 @@ impl RaytracingScene {
 
     fn get_color_physical(
         &self,
-        ray: Ray,
-        intersection: Intersection,
+        ray: &Ray,
+        intersection: &Intersection,
         material: &PhysicalMaterial,
     ) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
@@ -361,7 +361,7 @@ impl RaytracingScene {
                     direction: refraction_dir,
                     refractive_index: material.refractive_index,
                 };
-                let (color, r) = self.get_color(refraction_ray);
+                let (color, r) = self.get_color(&refraction_ray);
                 ray_count += r;
                 refraction += color.xyz().component_mul(&material_color);
             }
@@ -369,7 +369,7 @@ impl RaytracingScene {
 
         let mut reflection: Vector3<f64> = Vector3::zero();
         if self.render_options.max_reflected_rays > 0 {
-            let d = 0.5f64.powi(depth as i32);
+            let d = 0.5_f64.powi(depth as i32);
             let reflected_rays = (self.render_options.max_reflected_rays as f64 * d) as u8;
             if reflected_rays > 0 {
                 let max_angle = (FRAC_PI_2 * material.roughness).cos();
@@ -383,7 +383,7 @@ impl RaytracingScene {
                         direction,
                         refractive_index: 1.0,
                     };
-                    let (color, r) = self.get_color(reflection_ray);
+                    let (color, r) = self.get_color(&reflection_ray);
                     ray_count += r;
                     reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
                 }
@@ -394,7 +394,7 @@ impl RaytracingScene {
         let mut ambient_light = Vector3::zero();
         let mut irradiance = Vector3::zero();
         let diffuse = material_color * FRAC_1_PI;
-        for light in self.lights.iter() {
+        for light in &self.lights {
             match light {
                 Light::Ambient(light) => {
                     ambient_light += light.color.component_mul(&material_color);
@@ -445,7 +445,7 @@ impl RaytracingScene {
         (color.insert_row(3, 1.0), ray_count)
     }
 
-    fn get_color(&self, ray: Ray) -> (Vector4<f64>, u64) {
+    fn get_color(&self, ray: &Ray) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
         if ray.get_depth() >= self.render_options.max_depth {
@@ -458,9 +458,9 @@ impl RaytracingScene {
             let material = intersection.object.get_material();
 
             let (color, r) = match material {
-                Material::Phong(material) => self.get_color_phong(ray, intersection, material),
+                Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {
-                    self.get_color_physical(ray, intersection, material)
+                    self.get_color_physical(&ray, &intersection, material)
                 }
             };
 
@@ -505,7 +505,7 @@ impl RaytracingScene {
 
     fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
         let ray = self.build_camera_ray(x, y);
-        let (color, ray_count) = self.get_color(ray);
+        let (color, ray_count) = self.get_color(&ray);
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
     }
 
@@ -598,6 +598,7 @@ impl RaytracingScene {
 mod test {
     use super::*;
 
+    #[allow(clippy::shadow_unrelated)]
     #[test]
     fn it_converts_color_vecs_to_u32() {
         let color = 0;

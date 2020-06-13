@@ -41,7 +41,7 @@ impl Mesh {
             load_obj(&asset_base.join(&self.file), true).expect("failed to load object");
 
         let mut children: Vec<Object3D> = Vec::new();
-        for model in models.iter() {
+        for model in &models {
             let mesh = &model.mesh;
 
             let positions: Vec<Point3<f64>> = mesh

@@ -159,7 +159,7 @@ mod test {
             rotation.matrix(),
             Affine3::from_matrix_unchecked(Matrix4::from_axis_angle(
                 &Vector3::y_axis(),
-                50.0f64.to_radians()
+                50.0_f64.to_radians()
             ))
         );
         assert_eq!(
@@ -183,7 +183,7 @@ mod test {
             rotation.inverse(),
             Affine3::from_matrix_unchecked(Matrix4::from_axis_angle(
                 &Vector3::y_axis(),
-                50.0f64.to_radians()
+                50.0_f64.to_radians()
             ))
             .inverse()
         );
@@ -211,7 +211,7 @@ mod test {
         assert_eq!(
             rotation.inverse_transpose(),
             Affine3::from_matrix_unchecked(
-                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0f64.to_radians()).transpose()
+                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0_f64.to_radians()).transpose()
             )
             .inverse()
         );
@@ -245,7 +245,7 @@ mod test {
         assert_eq!(
             full.matrix(),
             Affine3::from_matrix_unchecked(
-                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0f64.to_radians())
+                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0_f64.to_radians())
                     .append_nonuniform_scaling(&Vector3::from([3.0, 2.0, 1.0]))
                     .append_translation(&Vector3::from([5.0, 2.0, 3.0]))
             )
@@ -257,7 +257,7 @@ mod test {
         assert_eq!(
             full.inverse(),
             Affine3::from_matrix_unchecked(
-                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0f64.to_radians())
+                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0_f64.to_radians())
                     .append_nonuniform_scaling(&Vector3::from([3.0, 2.0, 1.0]))
                     .append_translation(&Vector3::from([5.0, 2.0, 3.0]))
             )
@@ -273,7 +273,7 @@ mod test {
         assert_eq!(
             full.inverse_transpose(),
             Affine3::from_matrix_unchecked(
-                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0f64.to_radians())
+                Matrix4::from_axis_angle(&Vector3::y_axis(), 50.0_f64.to_radians())
                     .append_nonuniform_scaling(&Vector3::from([3.0, 2.0, 1.0]))
                     .append_translation(&Vector3::from([5.0, 2.0, 3.0]))
                     .transpose()

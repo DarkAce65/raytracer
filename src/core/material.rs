@@ -197,10 +197,9 @@ mod test {
 
     impl PartialEq for Material {
         fn eq(&self, other: &Material) -> bool {
-            use Material::*;
             match (self, other) {
-                (Phong(a), Phong(b)) => a == b,
-                (Physical(a), Physical(b)) => a == b,
+                (Material::Phong(a), Material::Phong(b)) => a == b,
+                (Material::Physical(a), Material::Physical(b)) => a == b,
                 _ => false,
             }
         }
@@ -228,7 +227,7 @@ mod test {
             .unwrap(),
             Material::Phong(PhongMaterial {
                 color: Vector3::from([1.0, 0.3, 0.4]),
-                ..Default::default()
+                ..PhongMaterial::default()
             })
         );
 
@@ -240,7 +239,7 @@ mod test {
             .unwrap(),
             Material::Physical(PhysicalMaterial {
                 color: Vector3::from([1.0, 0.3, 0.4]),
-                ..Default::default()
+                ..PhysicalMaterial::default()
             })
         );
     }
