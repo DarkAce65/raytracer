@@ -83,7 +83,6 @@ impl Triangle {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_with_positions(
         positions: [Point3<f64>; 3],
         transform: Transform,
