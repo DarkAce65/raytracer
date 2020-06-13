@@ -37,8 +37,13 @@ impl Mesh {
     }
 
     pub fn load_assets(&mut self, asset_base: &Path) {
-        let (models, _) =
-            load_obj(&asset_base.join(&self.file), true).expect("failed to load object");
+        let (models, _) = load_obj(&asset_base.join(&self.file), true).unwrap_or_else(|err| {
+            panic!(format!(
+                "failed to load object at path \"{}\": {}",
+                &asset_base.join(&self.file).display(),
+                err
+            ))
+        });
 
         let mut children: Vec<Object3D> = Vec::new();
         for model in &models {

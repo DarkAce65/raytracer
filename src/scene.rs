@@ -165,6 +165,7 @@ impl Default for RenderOptions {
 pub struct Scene {
     #[serde(flatten)]
     render_options: RenderOptions,
+    loaded: bool,
     camera: Camera,
     lights: Vec<Light>,
     objects: Vec<Object3D>,
@@ -177,6 +178,7 @@ impl Default for Scene {
     fn default() -> Self {
         Self {
             render_options: RenderOptions::default(),
+            loaded: false,
             camera: Camera::new(
                 Camera::default_fov(),
                 Camera::default_position(),
@@ -193,9 +195,14 @@ impl Default for Scene {
 
 impl Scene {
     pub fn load_assets(&mut self, asset_base: &Path) {
+        if self.loaded {
+            panic!("assets are already loaded for scene")
+        }
+
         for object in &mut self.objects {
             Object3D::load_assets(object, asset_base, &mut self.textures);
         }
+        self.loaded = true;
     }
 
     pub fn build_raytracing_scene(self) -> RaytracingScene {
