@@ -18,7 +18,7 @@ mod primitives;
 mod ray_intersection;
 mod scene;
 
-pub use crate::core::Transform;
+pub use crate::core::{Material, PhongMaterial, PhysicalMaterial, Transform};
 pub use crate::lights::{AmbientLight, Light, PointLight};
 pub use crate::primitives::{Cube, Group, Mesh, Object3D, Plane, Sphere, Triangle};
 pub use crate::scene::{Camera, RenderOptions, Scene};

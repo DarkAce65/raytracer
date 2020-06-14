@@ -56,10 +56,10 @@ impl Default for Camera {
 #[derive(Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct RenderOptions {
-    width: u32,
-    height: u32,
-    max_depth: u8,
-    max_reflected_rays: u8,
+    pub width: u32,
+    pub height: u32,
+    pub max_depth: u8,
+    pub max_reflected_rays: u8,
 }
 
 impl Default for RenderOptions {
@@ -554,7 +554,7 @@ mod test {
     use super::*;
     use crate::core::{Material, PhongMaterial};
     use crate::lights::{AmbientLight, PointLight};
-    use crate::primitives::Sphere;
+    use crate::primitives::Cube;
     use serde_json::json;
 
     #[allow(clippy::shadow_unrelated)]
@@ -598,8 +598,8 @@ mod test {
           ],
           "objects": [
             {
-              "type": "sphere",
-              "radius": 1,
+              "type": "cube",
+              "size": 1,
               "transform": [{ "rotate": [[0, 1, 0], 30] }, { "translate": [0, 2, 0] }],
               "material": { "type": "phong", "color": [1, 0.1, 0.1] }
             }
@@ -638,7 +638,7 @@ mod test {
             Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
         ))));
 
-        scene.add_object(Object3D::Sphere(Box::new(Sphere::new(
+        scene.add_object(Object3D::Cube(Box::new(Cube::new(
             1.0,
             Transform::identity()
                 .rotate(Vector3::y_axis(), 30.0)
@@ -670,8 +670,8 @@ mod test {
               ],
               "objects": [
                 {
-                  "type": "sphere",
-                  "radius": 1,
+                  "type": "cube",
+                  "size": 1,
                   "transform": [{ "rotate": [[0, 1, 0], 30] }, { "translate": [0, 2, 0] }],
                   "material": { "type": "phong", "color": [1, 0.1, 0.1] }
                 }
@@ -709,7 +709,7 @@ mod test {
                 Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
             ))));
 
-            scene.add_object(Object3D::Sphere(Box::new(Sphere::new(
+            scene.add_object(Object3D::Cube(Box::new(Cube::new(
                 1.0,
                 Transform::identity()
                     .rotate(Vector3::y_axis(), 30.0)
