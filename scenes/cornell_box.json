@@ -1,0 +1,58 @@
+{
+  "width": 800,
+  "height": 800,
+  "camera": {
+    "fov": 38.2,
+    "position": [278, 273, -800],
+    "target": [278, 273, 0]
+  },
+  "lights": [
+    {
+      "type": "point",
+      "color": [1, 0.67, 0.21],
+      "transform": [{ "translate": [278, 548, 279.5] }]
+    }
+  ],
+  "objects": [
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/short_block.obj",
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/tall_block.obj",
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/light.obj",
+      "material": { "type": "phong", "emissive": [1, 1, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/floor.obj",
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/back_wall.obj",
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/ceiling.obj",
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/right_wall.obj",
+      "material": { "type": "phong", "color": [0.025, 0.236, 0.025] }
+    },
+    {
+      "type": "mesh",
+      "file": "models/cornell_box/left_wall.obj",
+      "material": { "type": "phong", "color": [0.57, 0.025, 0.025] }
+    }
+  ]
+}
