@@ -22,10 +22,15 @@ test = false
 bench = false
 doc = false
 
+[[bench]]
+name = "test_bench"
+harness = false
+
 [profile.dev]
 opt-level = 3
 
 [dev-dependencies]
+criterion = "0.3"
 more-asserts = "0.2"
 
 [dependencies]

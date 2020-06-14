@@ -1,0 +1,22 @@
+{
+  "max_depth": 5,
+  "width": 200,
+  "height": 200,
+  "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
+  "lights": [
+    { "type": "ambient", "color": [0.01, 0.01, 0.01] },
+    {
+      "type": "point",
+      "transform": [{ "translate": [-8, 3, 0] }],
+      "color": [0.5, 0.5, 0.5]
+    }
+  ],
+  "objects": [
+    {
+      "type": "cube",
+      "size": 1,
+      "transform": [{ "rotate": [[0, 1, 0], 30] }, { "translate": [0, 2, 0] }],
+      "material": { "type": "phong", "color": [1, 0.1, 0.1] }
+    }
+  ]
+}

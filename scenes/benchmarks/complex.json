@@ -1,0 +1,204 @@
+{
+  "max_depth": 5,
+  "width": 200,
+  "height": 200,
+  "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
+  "lights": [
+    { "type": "ambient", "color": [0.01, 0.01, 0.01] },
+    {
+      "type": "point",
+      "transform": [{ "translate": [-8, 3, 0] }],
+      "color": [0.5, 0.5, 0.5]
+    },
+    {
+      "type": "point",
+      "transform": [{ "translate": [-2, 5, -10] }],
+      "color": [0.5, 0, 0]
+    },
+    {
+      "type": "point",
+      "transform": [{ "translate": [3, 5, -3] }],
+      "color": [0, 0.3, 0.5]
+    }
+  ],
+  "objects": [
+    {
+      "type": "cube",
+      "size": 120,
+      "transform": [{ "translate": [30, 49, -40] }],
+      "material": { "type": "phong", "side": "Back", "color": [0.6, 0.6, 0.6] }
+    },
+    {
+      "type": "sphere",
+      "radius": 1,
+      "transform": [{ "translate": [0, 0, -5] }],
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "sphere",
+      "radius": 4,
+      "transform": [{ "translate": [-9, -6, -10] }],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "../textures/test.jpg"
+      }
+    },
+    {
+      "type": "mesh",
+      "file": "../models/deer.obj",
+      "transform": [
+        { "scale": [0.005, 0.005, 0.005] },
+        { "translate": [-10, 0, -10] }
+      ],
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "triangle",
+      "vertices": [
+        [-1, 1, 0],
+        [-1, -1, 0],
+        [1, 0, 0]
+      ],
+      "transform": [
+        { "scale": [2, 3, 3] },
+        { "rotate": [[1, 0, 0], 25] },
+        { "rotate": [[0, 1, 0], -45] },
+        { "translate": [6, -1, -1] }
+      ],
+      "material": {
+        "type": "phong",
+        "color": [0.7, 0.7, 0.4],
+        "reflectivity": 0.4
+      }
+    },
+    {
+      "type": "group",
+      "transform": [{ "translate": [0, 6, -20] }],
+      "children": [
+        {
+          "type": "sphere",
+          "radius": 6,
+          "transform": [
+            { "scale": [1.1, 1.1, 1.1] },
+            { "translate": [-6, 0, 2] }
+          ],
+          "material": {
+            "type": "physical",
+            "color": [1, 0.25, 0.1],
+            "metalness": 0.6,
+            "roughness": 0.1
+          }
+        },
+        {
+          "type": "cube",
+          "size": 6,
+          "transform": [
+            { "rotate": [[-0.25, 0.9, 0], -45] },
+            { "translate": [6, 0, -2] }
+          ],
+          "material": {
+            "type": "phong",
+            "color": [1, 1, 1],
+            "reflectivity": 1
+          },
+          "children": [
+            {
+              "type": "cube",
+              "size": 1,
+              "transform": [
+                { "rotate": [[0, 1, 0], 20] },
+                { "translate": [1, -2, 5] }
+              ],
+              "material": {
+                "type": "phong",
+                "color": [0.7, 0, 0.7],
+                "reflectivity": 0.3
+              }
+            },
+            {
+              "type": "sphere",
+              "radius": 2,
+              "transform": [{ "translate": [6, 1, -1] }],
+              "material": {
+                "type": "phong",
+                "color": [0.3, 0.4, 0.6]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sphere",
+      "radius": 4,
+      "transform": [{ "translate": [-6, -9, -3] }],
+      "material": {
+        "type": "phong",
+        "color": [0.4, 0.25, 0.6],
+        "specular": [0.5, 0.5, 0.5],
+        "shininess": 100,
+        "reflectivity": 0.3
+      },
+      "children": [
+        {
+          "type": "cube",
+          "size": 2,
+          "transform": [
+            { "scale": [0.8, 0.8, 0.8] },
+            { "rotate": [[0, 0, 1], 45] },
+            { "rotate": [[0, 1, 0], 45] },
+            { "translate": [2, 4, 1] }
+          ],
+          "material": { "type": "phong", "color": [0.5, 0.1, 0.1] }
+        }
+      ]
+    },
+    {
+      "type": "sphere",
+      "radius": 5,
+      "transform": [{ "translate": [-20, -9, -40] }],
+      "material": { "type": "phong", "color": [0.1, 0.5, 0.1] }
+    },
+    {
+      "type": "sphere",
+      "radius": 1.5,
+      "transform": [{ "translate": [2, -10, -2] }],
+      "material": { "type": "phong", "emissive": [0, 1, 0] }
+    },
+    {
+      "type": "cube",
+      "size": 2,
+      "transform": [
+        { "scale": [1.2, 1.2, 1.2] },
+        { "rotate": [[0, 0, 1], 60] },
+        { "translate": [1, -2, -2] }
+      ],
+      "material": { "type": "phong", "color": [0.9, 0.7, 0.1] },
+      "children": [
+        {
+          "type": "sphere",
+          "radius": 1,
+          "transform": [
+            { "scale": [2.5, 0.8, 1.5] },
+            { "rotate": [[1, 1, 0], 10] },
+            { "rotate": [[0, 0, 1], -30] },
+            { "translate": [-2, -2, 0] }
+          ],
+          "material": { "type": "phong", "color": [0.2, 0.6, 0.6] }
+        },
+        {
+          "type": "sphere",
+          "radius": 2.5,
+          "transform": [{ "translate": [0.5, -1.5, -2.5] }],
+          "material": {
+            "type": "phong",
+            "color": [0, 0.25, 0.5],
+            "specular": [1, 1, 1],
+            "shininess": 10
+          }
+        }
+      ]
+    }
+  ]
+}
