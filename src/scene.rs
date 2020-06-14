@@ -458,7 +458,7 @@ impl RaytracingScene {
         }
     }
 
-    fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
+    pub fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
         let ray = self.build_camera_ray(x, y);
         let (color, ray_count) = self.get_color(&ray);
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
