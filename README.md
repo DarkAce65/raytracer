@@ -2,9 +2,15 @@
 
 A ray tracer written in Rust which implements Blinn-Phong shading and physically-based rendering using a Metallic-Roughness workflow
 
+#### References
+- [_Physically Based Rendering: From Theory To Implementation_](http://www.pbr-book.org/)
+- [Scratchapixel](https://www.scratchapixel.com)
+- https://bheisler.github.io/post/writing-raytracer-in-rust-part-1/
+- [three.js](https://threejs.org/)
+
 ### Building/Running
 
-*Make sure Rust and `cargo` are installed.*
+*Make sure [Rust and `cargo`](https://www.rust-lang.org/learn/get-started) are installed.*
 
 - For a live visualization of the ray tracer, run `cargo run -- scenes/scene.json`
 - To output to a file, run `cargo run -- -o image.png scenes/scene.json`
@@ -13,7 +19,7 @@ A ray tracer written in Rust which implements Blinn-Phong shading and physically
 
 ### Renders
 
-All renders are in the [renders](./renders/renders.md) folder.
+Other renders can be found in the [renders](./renders/renders.md) folder.
 
 `scenes/scene.json` (800 x 800 pixels, 6,615,349 rays, 2.370s on i7 8650U):
 
