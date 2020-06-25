@@ -238,7 +238,7 @@ impl RaytracingScene {
             for light in &self.lights {
                 match light {
                     Light::Ambient(light) => {
-                        ambient_light += light.color.component_mul(&material_color);
+                        ambient_light += light.get_color().component_mul(&material_color);
                     }
                     Light::Point(light) => {
                         let light_position = light.get_position();
@@ -257,12 +257,13 @@ impl RaytracingScene {
 
                             ray_count += 1;
                             if !self.shadow_cast(&shadow_ray, light_distance) {
-                                irradiance += light.color.component_mul(&material_color) * n_dot_l;
+                                let light_color = light.get_color(light_distance);
+                                irradiance += light_color.component_mul(&material_color) * n_dot_l;
 
                                 let half_vec = Unit::new_normalize(light_dir - ray.direction);
                                 let n_dot_h = normal.dot(&half_vec);
                                 if n_dot_h > 0.0 {
-                                    irradiance += light.color.component_mul(&material.specular)
+                                    irradiance += light_color.component_mul(&material.specular)
                                         * n_dot_h.powf(material.shininess);
                                 }
                             }
@@ -352,7 +353,7 @@ impl RaytracingScene {
         for light in &self.lights {
             match light {
                 Light::Ambient(light) => {
-                    ambient_light += light.color.component_mul(&material_color);
+                    ambient_light += light.get_color().component_mul(&material_color);
                 }
                 Light::Point(light) => {
                     let light_position = light.get_position();
@@ -374,7 +375,8 @@ impl RaytracingScene {
                             let half_vec = Unit::new_normalize(light_dir - ray.direction);
                             let n_dot_h = normal.dot(&half_vec).max(0.0);
 
-                            let radiance = light.color * n_dot_l;
+                            let light_color = light.get_color(light_distance);
+                            let radiance = light_color * n_dot_l;
 
                             let ndf = core::ndf(n_dot_h, roughness);
                             let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
@@ -635,6 +637,7 @@ mod test {
         ]))));
         scene.add_light(Light::Point(Box::new(PointLight::new(
             Vector3::from([0.5, 0.5, 0.5]),
+            1.0,
             Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
         ))));
 
@@ -706,6 +709,7 @@ mod test {
             ]))));
             scene.add_light(Light::Point(Box::new(PointLight::new(
                 Vector3::from([0.5, 0.5, 0.5]),
+                1.0,
                 Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
             ))));
 

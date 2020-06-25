@@ -1,4 +1,3 @@
-use crate::core::{Transform, Transformed};
 use nalgebra::Vector3;
 use num_traits::identities::Zero;
 use serde::Deserialize;
@@ -6,7 +5,7 @@ use serde::Deserialize;
 #[derive(Copy, Clone, Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AmbientLight {
-    pub color: Vector3<f64>,
+    color: Vector3<f64>,
 }
 
 impl Default for AmbientLight {
@@ -21,10 +20,8 @@ impl AmbientLight {
     pub fn new(color: Vector3<f64>) -> Self {
         Self { color }
     }
-}
 
-impl Transformed for AmbientLight {
-    fn get_transform(&self) -> &Transform {
-        unimplemented!()
+    pub fn get_color(&self) -> Vector3<f64> {
+        self.color
     }
 }

@@ -1,12 +1,13 @@
 use crate::core::{Transform, Transformed};
-use nalgebra::Vector3;
+use nalgebra::{clamp, Vector3};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PointLight {
     transform: Transform,
-    pub color: Vector3<f64>,
+    color: Vector3<f64>,
+    intensity: f64,
 }
 
 impl Default for PointLight {
@@ -14,13 +15,22 @@ impl Default for PointLight {
         Self {
             transform: Transform::default(),
             color: Vector3::from([1.0; 3]),
+            intensity: 10.0,
         }
     }
 }
 
 impl PointLight {
-    pub fn new(color: Vector3<f64>, transform: Transform) -> Self {
-        Self { color, transform }
+    pub fn new(color: Vector3<f64>, intensity: f64, transform: Transform) -> Self {
+        Self {
+            transform,
+            color,
+            intensity,
+        }
+    }
+
+    pub fn get_color(&self, distance: f64) -> Vector3<f64> {
+        (self.intensity * self.color / distance.powi(2)).map(|c| clamp(c, 0.0, 1.0))
     }
 }
 

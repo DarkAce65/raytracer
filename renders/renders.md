@@ -2,31 +2,31 @@
 
 #### `scenes/scene.json`
 
-800 x 800 pixels, 6,615,349 rays, 2.370s on i7 8650U
+800 x 800 pixels, 6,615,033 rays, 2.148s on i7 8650U
 
 ![scene.json](./scene.png)
 
 #### `scenes/mesh.json`
 
-800 x 800 pixels, 1,510,058 rays, 923ms on i7 8650U
+800 x 800 pixels, 1,510,058 rays, 934ms on i7 8650U
 
 ![mesh.json](./mesh.png)
 
 #### `scenes/refraction.json`
 
-800 x 800 pixels, 22,266,483 rays, 1.626s on i7 8650U
+800 x 800 pixels, 25,368,533 rays, 1.642s on i7 8650U
 
 ![refraction.json](./refraction.png)
 
 #### `scenes/physical.json`
 
-800 x 800 pixels, 74,799,019 rays, 10.554s on i7 8650U
+800 x 800 pixels, 74,787,671 rays, 11.229s on i7 8650U
 
 ![physical.json](./physical.png)
 
 #### `scenes/mesh_test.json`
 
-800 x 800 pixels, 2,004,244 rays, 1.539s on i7 8650U
+800 x 800 pixels, 2,004,244 rays, 1.801s on i7 8650U
 
 ![mesh_test.json](./mesh_test.png)
 

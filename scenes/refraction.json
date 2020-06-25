@@ -8,6 +8,12 @@
     {
       "type": "point",
       "transform": [{ "translate": [-3, 7, 6] }],
+      "color": [1, 1, 1],
+      "intensity": 30
+    },
+    {
+      "type": "point",
+      "transform": [{ "translate": [-1, 0, -2] }],
       "color": [1, 1, 1]
     }
   ],
