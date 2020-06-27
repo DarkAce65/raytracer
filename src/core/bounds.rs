@@ -338,6 +338,10 @@ impl KdTreeAccelerator {
         }
     }
 
+    pub fn get_num_objects(&self) -> usize {
+        self.unbounded_objects.len() + self.bounded_objects.len()
+    }
+
     pub fn raycast(&self, ray: &Ray) -> Option<Intersection> {
         self.unbounded_objects
             .iter()

@@ -193,6 +193,10 @@ impl RaytracingScene {
         self.render_options.height
     }
 
+    pub fn get_num_objects(&self) -> usize {
+        self.object_tree.get_num_objects()
+    }
+
     fn raycast(&self, ray: &Ray) -> Option<Intersection> {
         self.object_tree.raycast(ray)
     }

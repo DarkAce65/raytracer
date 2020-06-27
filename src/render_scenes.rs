@@ -32,7 +32,11 @@ fn main() {
         let mut duration_sum = Duration::new(0, 0);
         let mut ray_count_sum = 0;
 
-        println!("Raytracing {}...", scene_path.display());
+        println!(
+            "Raytracing {} ({} primitives)...",
+            scene_path.display(),
+            scene.get_num_objects()
+        );
         for i in 0..iterations {
             print!("\u{2514} Iteration {}: tracing...", i + 1);
             io::stdout().flush().unwrap();

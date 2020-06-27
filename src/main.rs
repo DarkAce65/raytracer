@@ -56,8 +56,9 @@ fn main() {
     let now = Instant::now();
     let scene = scene.build_raytracing_scene();
     println!(
-        "Took {:?} to pre-process scene and construct bounding boxes.",
-        now.elapsed()
+        "Took {:?} to pre-process scene and construct bounding boxes for {} primitives.",
+        now.elapsed(),
+        scene.get_num_objects()
     );
 
     let (width, height) = (scene.get_width(), scene.get_height());
