@@ -9,6 +9,7 @@ use image::RgbaImage;
 use indicatif::{ParallelProgressIterator, ProgressBar};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
 use num_traits::identities::Zero;
+use rand::Rng;
 use rand::{seq::SliceRandom, thread_rng};
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -58,6 +59,7 @@ impl Default for Camera {
 pub struct RenderOptions {
     pub width: u32,
     pub height: u32,
+    pub samples_per_pixel: u8,
     pub max_depth: u8,
     pub max_reflected_rays: u8,
 }
@@ -65,10 +67,11 @@ pub struct RenderOptions {
 impl Default for RenderOptions {
     fn default() -> Self {
         Self {
-            max_depth: 3,
-            max_reflected_rays: 32,
             width: 100,
             height: 100,
+            samples_per_pixel: 4,
+            max_depth: 3,
+            max_reflected_rays: 32,
         }
     }
 }
@@ -431,9 +434,11 @@ impl RaytracingScene {
         }
     }
 
-    fn build_camera_ray(&self, x: u32, y: u32) -> Ray {
+    fn build_camera_rays(&self, x: u32, y: u32, samples: u8) -> Vec<Ray> {
         assert!(x < self.get_width() && y < self.get_height());
+        assert!(samples >= 1);
 
+        let (x, y) = (x as f64, y as f64);
         let (width, height) = (
             (self.get_width() - 1) as f64,
             (self.get_height() - 1) as f64,
@@ -441,32 +446,61 @@ impl RaytracingScene {
         let aspect = width / height;
         let fov = (self.camera.fov.to_radians() / 2.0).tan();
 
-        let (x, y) = (x as f64 + 0.5, y as f64 + 0.5); // Center ray in pixel
-        let (x, y) = (x / width, y / height); // Map to [0, 1]
-        let (x, y) = (x * 2.0 - 1.0, 1.0 - y * 2.0); // Map to [-1, 1]
+        let mut ray_pixel_positions = Vec::with_capacity(samples.into());
+        ray_pixel_positions.push((x + 0.5, y + 0.5));
 
-        // Apply fov and scale to aspect ratio
-        let (x, y) = if width < height {
-            (x * aspect, y)
-        } else {
-            (x, y / aspect)
-        };
-        let (x, y) = (x * fov, y * fov);
-
-        let direction = Vector3::from([x, y, -1.0]).normalize();
-        let direction = (self.camera.camera_to_world * direction.to_homogeneous()).xyz();
-
-        Ray {
-            ray_type: RayType::Primary,
-            origin: self.camera.position,
-            direction,
-            refractive_index: 1.0,
+        let mut rng = rand::thread_rng();
+        for _ in 0..(samples - 1) {
+            let rx: f64 = rng.gen();
+            let ry: f64 = rng.gen();
+            ray_pixel_positions.push((x + rx, y + ry));
         }
+
+        ray_pixel_positions
+            .into_iter()
+            .map(|(x, y)| {
+                let (x, y) = (x / width, y / height); // Map to [0, 1]
+                let (x, y) = (x * 2.0 - 1.0, 1.0 - y * 2.0); // Map to [-1, 1]
+
+                // Apply fov and scale to aspect ratio
+                let (x, y) = if width < height {
+                    (x * aspect, y)
+                } else {
+                    (x, y / aspect)
+                };
+                let (x, y) = (x * fov, y * fov);
+
+                let direction = Vector3::from([x, y, -1.0]).normalize();
+                let direction = (self.camera.camera_to_world * direction.to_homogeneous()).xyz();
+
+                Ray {
+                    ray_type: RayType::Primary,
+                    origin: self.camera.position,
+                    direction,
+                    refractive_index: 1.0,
+                }
+            })
+            .collect()
     }
 
     pub fn screen_raycast(&self, x: u32, y: u32) -> (Vector4<f64>, u64) {
-        let ray = self.build_camera_ray(x, y);
-        let (color, ray_count) = self.get_color(&ray);
+        let samples = self.render_options.samples_per_pixel;
+        let rays = self.build_camera_rays(x, y, samples);
+
+        let (color, ray_count) = if samples == 1 {
+            self.get_color(rays.first().unwrap())
+        } else {
+            let mut color = Vector4::zero();
+            let mut ray_count = 0;
+            for ray in &rays {
+                let (c, r) = self.get_color(ray);
+                color += c;
+                ray_count += r;
+            }
+
+            (color / samples as f64, ray_count)
+        };
+
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)
     }
 
