@@ -66,7 +66,7 @@ impl Default for RenderOptions {
     fn default() -> Self {
         Self {
             max_depth: 3,
-            max_reflected_rays: 16,
+            max_reflected_rays: 32,
             width: 100,
             height: 100,
         }
@@ -325,7 +325,7 @@ impl RaytracingScene {
 
         let mut reflection: Vector3<f64> = Vector3::zero();
         if self.render_options.max_reflected_rays > 0 {
-            let d = 0.5_f64.powi(depth as i32);
+            let d = 0.125_f64.powi(depth as i32);
             let reflected_rays = (self.render_options.max_reflected_rays as f64 * d) as u8;
             if reflected_rays > 0 {
                 let max_angle = (FRAC_PI_2 * material.roughness).cos();

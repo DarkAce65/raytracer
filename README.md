@@ -21,7 +21,7 @@ A ray tracer written in Rust which implements Blinn-Phong shading and physically
 
 Other renders can be found in the [renders](./renders/renders.md) folder.
 
-`scenes/scene.json` (800 x 800 pixels, 6,615,033 rays, 2.148s on i7 8650U):
+`scenes/scene.json` (800 x 800 pixels, 9,877,194 rays, 3.401s on i7 8650U):
 
 ![scene.json](./renders/scene.png)
 
