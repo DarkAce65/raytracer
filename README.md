@@ -41,8 +41,6 @@ USAGE:
 FLAGS:
     -h, --help           Prints help information
         --no-progress    Hide progress bar
-        --no-random      Render to window sequentially instead of randomly
-                         If --output is specified, --no-random has no effect
     -V, --version        Prints version information
 
 OPTIONS:

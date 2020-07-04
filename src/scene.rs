@@ -549,7 +549,6 @@ impl RaytracingScene {
     pub fn raytrace_to_buffer(
         self,
         buffer_mutex: &Arc<Mutex<Vec<u32>>>,
-        process_sequentially: bool,
         progress: Option<ProgressBar>,
     ) {
         let width = self.get_width();
@@ -570,9 +569,7 @@ impl RaytracingScene {
             };
 
             let mut indexes: Vec<u32> = (0..width * height).collect();
-            if !process_sequentially {
-                indexes.shuffle(&mut thread_rng());
-            }
+            indexes.shuffle(&mut thread_rng());
 
             if let Some(progress) = progress {
                 indexes
@@ -691,92 +688,5 @@ mod test {
         ))));
 
         scene.build_raytracing_scene();
-    }
-
-    #[test]
-    fn it_produces_matching_renders() {
-        let (json_image, _, _) = {
-            let scene_json = json!({
-              "max_depth": 5,
-              "width": 200,
-              "height": 200,
-              "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
-              "lights": [
-                { "type": "ambient", "color": [0.01, 0.01, 0.01] },
-                {
-                  "type": "point",
-                  "transform": [{ "translate": [-8, 3, 0] }],
-                  "color": [0.5, 0.5, 0.5]
-                }
-              ],
-              "objects": [
-                {
-                  "type": "cube",
-                  "size": 1,
-                  "transform": [{ "rotate": [[0, 1, 0], 30] }, { "translate": [0, 2, 0] }],
-                  "material": { "type": "phong", "color": [1, 0.1, 0.1] }
-                }
-              ]
-            });
-
-            let scene: Result<Scene, serde_json::error::Error> = serde_json::from_value(scene_json);
-            assert!(scene.is_ok(), "failed to deserialize scene");
-
-            let scene = scene.unwrap().build_raytracing_scene();
-            println!("Raytracing json scene...");
-            scene.raytrace_to_image(None)
-        };
-
-        let (constructed_image, _, _) = {
-            let mut scene = Scene::new(
-                RenderOptions {
-                    width: 200,
-                    height: 200,
-                    max_depth: 5,
-                    ..RenderOptions::default()
-                },
-                Camera {
-                    position: Point3::from([2.0, 5.0, 15.0]),
-                    target: Point3::from([-1.0, 0.0, 0.0]),
-                    ..Camera::default()
-                },
-            );
-
-            scene.add_light(Light::Ambient(AmbientLight::new(Vector3::from([
-                0.01, 0.01, 0.01,
-            ]))));
-            scene.add_light(Light::Point(Box::new(PointLight::new(
-                Vector3::from([0.5, 0.5, 0.5]),
-                1.0,
-                Transform::identity().translate(Vector3::from([-8.0, 3.0, 0.0])),
-            ))));
-
-            scene.add_object(Object3D::Cube(Box::new(Cube::new(
-                1.0,
-                Transform::identity()
-                    .rotate(Vector3::y_axis(), 30.0)
-                    .translate(Vector3::from([0.0, 2.0, 0.0])),
-                Material::Phong(PhongMaterial {
-                    color: Vector3::from([1.0, 0.1, 0.1]),
-                    ..PhongMaterial::default()
-                }),
-            ))));
-
-            let scene = scene.build_raytracing_scene();
-            println!("Raytracing constructed scene...");
-            scene.raytrace_to_image(None)
-        };
-
-        println!("Comparing output...");
-        assert_eq!(json_image.dimensions(), constructed_image.dimensions());
-        for (x, y, color) in json_image.enumerate_pixels() {
-            assert_eq!(
-                color,
-                constructed_image.get_pixel(x, y),
-                "pixel color doesn't match at ({}, {})",
-                x,
-                y
-            );
-        }
     }
 }

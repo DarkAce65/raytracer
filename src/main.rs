@@ -35,17 +35,12 @@ fn main() {
                 .long("no-progress")
                 .help("Hide progress bar"),
         )
-        .arg(Arg::with_name("norandom").long("no-random").help(
-            "Render to window sequentially instead of randomly\n\
-             If --output is specified, --no-random has no effect",
-        ))
         .get_matches();
 
     let scene_path = Path::new(matches.value_of("scene").unwrap());
     let scene_file = File::open(scene_path).expect("file not found");
     let output_filename = matches.value_of("output");
     let hide_progress = matches.is_present("noprogress");
-    let process_sequentially = matches.is_present("norandom");
 
     let mut scene: Scene = serde_json::from_reader(scene_file).expect("failed to parse scene");
 
@@ -68,17 +63,11 @@ fn main() {
     } else {
         let progress = ProgressBar::new((width * height).into());
         progress.set_draw_delta((width * height / 200).into());
-        if process_sequentially {
-            progress.set_style(ProgressStyle::default_bar().template(
-                "[{elapsed_precise} elapsed] \
-                 {bar:40} {pos}/{len} pixels, {msg} rays",
-            ));
-        } else {
-            progress.set_style(ProgressStyle::default_bar().template(
-                "[{elapsed_precise} elapsed] [{eta_precise} left] \
-                 {bar:40} {pos}/{len} pixels, {msg} rays",
-            ));
-        }
+        progress.set_style(ProgressStyle::default_bar().template(
+            "[{elapsed_precise} elapsed] [{eta_precise} left] \
+             {bar:40} {pos}/{len} pixels, {msg} rays",
+        ));
+
         Some(progress)
     };
 
@@ -105,7 +94,7 @@ fn main() {
         let buffer_mutex = Arc::new(Mutex::new(image_buffer));
 
         println!("Raytracing...");
-        scene.raytrace_to_buffer(&buffer_mutex, process_sequentially, progress);
+        scene.raytrace_to_buffer(&buffer_mutex, progress);
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
             {
