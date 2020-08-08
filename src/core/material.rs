@@ -123,7 +123,12 @@ impl Material {
             if !textures.contains_key(texture_path) {
                 let texture_path = texture_path.to_string();
                 let mut texture = Texture::new(&texture_path);
-                texture.load(asset_base).expect("failed to load texture");
+                texture.load(asset_base).unwrap_or_else(|err| {
+                    panic!(format!(
+                        "failed to load texture at path \"{}\": {}",
+                        texture_path, err
+                    ))
+                });
                 textures.insert(texture_path, texture);
             }
         }
