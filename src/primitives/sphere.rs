@@ -156,11 +156,11 @@ impl Primitive for RaytracingSphere {
         _object_normal: &Unit<Vector3<f64>>,
         _intermediate: IntermediateData,
     ) -> Vector2<f64> {
-        let hit_point = object_hit_point.coords.map(|c| c / self.radius / 2.0);
+        let hit_point = object_hit_point.coords.map(|c| c / self.radius);
 
         Vector2::new(
-            0.5 - hit_point.z.atan2(hit_point.x) * FRAC_1_PI / 2.0,
-            0.5 + (2.0 * hit_point.y).asin() * FRAC_1_PI,
+            hit_point.x.atan2(hit_point.z) * FRAC_1_PI * 0.5 + 0.5,
+            hit_point.y.asin() * FRAC_1_PI + 0.5,
         )
     }
 }
