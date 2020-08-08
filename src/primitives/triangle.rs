@@ -253,7 +253,7 @@ impl Primitive for RaytracingTriangle {
     ) -> Unit<Vector3<f64>> {
         let (u, v, w) = match intermediate {
             IntermediateData::Barycentric(u, v, w) => (u, v, w),
-            _ => unreachable!(),
+            IntermediateData::Empty => unreachable!(),
         };
 
         Unit::new_normalize(
@@ -271,7 +271,7 @@ impl Primitive for RaytracingTriangle {
     ) -> Vector2<f64> {
         let (u, v, w) = match intermediate {
             IntermediateData::Barycentric(u, v, w) => (u, v, w),
-            _ => unreachable!(),
+            IntermediateData::Empty => unreachable!(),
         };
 
         w * self.vertex_data[0].texcoords

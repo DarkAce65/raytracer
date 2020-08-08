@@ -424,7 +424,7 @@ impl Default for KdTreeConstructionOptions {
     }
 }
 
-pub enum KdTree {
+enum KdTree {
     Node {
         split_axis: Axis,
         split_location: f64,
@@ -523,7 +523,7 @@ impl KdTree {
                     let cost = options.traversal_cost
                         + options.intersection_cost
                             * (1.0 - empty_bonus)
-                            * (area_below * below as f64 + area_above * above as f64);
+                            * (area_below * f64::from(below) + area_above * above as f64);
 
                     if cost < best_cost {
                         best_cost = cost;

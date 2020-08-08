@@ -322,8 +322,8 @@ impl RaytracingScene {
 
         let mut reflection: Vector3<f64> = Vector3::zero();
         if self.render_options.max_reflected_rays > 0 {
-            let d = 0.125_f64.powi(depth as i32);
-            let reflected_rays = (self.render_options.max_reflected_rays as f64 * d) as u8;
+            let d = 0.125_f64.powi(i32::from(depth));
+            let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u8;
             if reflected_rays > 0 {
                 let max_angle = (FRAC_PI_2 * material.roughness).cos();
                 let reflection_dir = utils::reflect(&ray.direction, &normal);
@@ -340,7 +340,7 @@ impl RaytracingScene {
                     ray_count += r;
                     reflection += FRAC_PI_2 * color.xyz().component_mul(&f);
                 }
-                reflection /= reflected_rays as f64;
+                reflection /= f64::from(reflected_rays);
             }
         }
 
@@ -428,10 +428,10 @@ impl RaytracingScene {
         assert!(x < self.get_width() && y < self.get_height());
         assert!(samples >= 1);
 
-        let (x, y) = (x as f64, y as f64);
+        let (x, y) = (f64::from(x), f64::from(y));
         let (width, height) = (
-            (self.get_width() - 1) as f64,
-            (self.get_height() - 1) as f64,
+            f64::from(self.get_width() - 1),
+            f64::from(self.get_height() - 1),
         );
         let aspect = width / height;
         let fov = (self.camera.fov.to_radians() / 2.0).tan();
@@ -490,7 +490,7 @@ impl RaytracingScene {
                 ray_count += r;
             }
 
-            (color / samples as f64, ray_count)
+            (color / f64::from(samples), ray_count)
         };
 
         (color.map(|c| c.powf(1.0 / GAMMA)), ray_count)

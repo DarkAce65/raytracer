@@ -68,7 +68,11 @@ impl Mesh {
                 .positions
                 .chunks_exact(3)
                 .map(|position| {
-                    Point3::new(position[0] as f64, position[1] as f64, position[2] as f64)
+                    Point3::new(
+                        f64::from(position[0]),
+                        f64::from(position[1]),
+                        f64::from(position[2]),
+                    )
                 })
                 .collect();
             let normals: Vec<Unit<Vector3<f64>>> = mesh
@@ -76,16 +80,16 @@ impl Mesh {
                 .chunks_exact(3)
                 .map(|normal| {
                     Unit::new_normalize(Vector3::new(
-                        normal[0] as f64,
-                        normal[1] as f64,
-                        normal[2] as f64,
+                        f64::from(normal[0]),
+                        f64::from(normal[1]),
+                        f64::from(normal[2]),
                     ))
                 })
                 .collect();
             let texcoords: Vec<Vector2<f64>> = mesh
                 .texcoords
                 .chunks_exact(2)
-                .map(|texcoords| Vector2::new(texcoords[0] as f64, texcoords[1] as f64))
+                .map(|texcoords| Vector2::new(f64::from(texcoords[0]), f64::from(texcoords[1])))
                 .collect();
 
             for face_indices in mesh.indices.chunks_exact(3) {

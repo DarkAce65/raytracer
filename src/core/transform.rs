@@ -1,4 +1,4 @@
-use auto_ops::*;
+use auto_ops::impl_op_ex;
 use nalgebra::{Affine3, Matrix4, Point3, Rotation3, Translation3, Unit, Vector3};
 use once_cell::sync::OnceCell;
 use serde::de::{SeqAccess, Visitor};

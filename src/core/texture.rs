@@ -49,7 +49,7 @@ impl Texture {
         let (x, y) = (uv.x % 1.0, 1.0 - uv.y % 1.0);
         let x = if x < 0.0 { x + 1.0 } else { x };
         let y = if y < 0.0 { y + 1.0 } else { y };
-        let (x, y) = (x * w as f64, y * h as f64);
+        let (x, y) = (x * f64::from(w), y * f64::from(h));
         let (x, y) = (clamp(x as u32, 0, w), clamp(y as u32, 0, h));
 
         let pixel = self
@@ -59,11 +59,11 @@ impl Texture {
             .get_pixel(x, y);
         let channels = pixel.channels();
 
-        let norm = std::u8::MAX as f64;
+        let norm = f64::from(std::u8::MAX);
         Vector3::new(
-            channels[0] as f64 / norm,
-            channels[1] as f64 / norm,
-            channels[2] as f64 / norm,
+            f64::from(channels[0]) / norm,
+            f64::from(channels[1]) / norm,
+            f64::from(channels[2]) / norm,
         )
     }
 }
