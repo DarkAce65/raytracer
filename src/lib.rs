@@ -17,6 +17,7 @@ mod lights;
 mod primitives;
 mod ray_intersection;
 mod scene;
+mod utils;
 
 pub use crate::core::{Material, PhongMaterial, PhysicalMaterial, Transform};
 pub use crate::lights::{AmbientLight, Light, PointLight};

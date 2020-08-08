@@ -1,8 +1,9 @@
 use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
 use crate::core::{
-    quadratic, BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
+    BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
 };
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
+use crate::utils;
 use nalgebra::{Point3, Unit, Vector2, Vector3};
 use serde::Deserialize;
 use std::f64::consts::FRAC_1_PI;
@@ -105,7 +106,7 @@ impl Intersectable for RaytracingSphere {
         let b = 2.0 * ray_proj;
         let c = hypot.magnitude_squared() - self.radius * self.radius;
 
-        if let Some((t0, t1)) = quadratic(a, b, c) {
+        if let Some((t0, t1)) = utils::quadratic(a, b, c) {
             debug_assert!(t0 <= t1);
 
             let t = match (self.material.side(), ray.ray_type) {

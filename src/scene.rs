@@ -1,10 +1,10 @@
 use crate::core::{
-    self, remap_value, KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture,
-    Transform, Transformed,
+    KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture, Transform, Transformed,
 };
 use crate::lights::Light;
 use crate::primitives::Object3D;
 use crate::ray_intersection::{Intersection, Ray, RayType};
+use crate::utils;
 use image::RgbaImage;
 use indicatif::{ParallelProgressIterator, ProgressBar};
 use nalgebra::{clamp, Matrix4, Point3, Unit, Vector3, Vector4};
@@ -23,16 +23,6 @@ use std::time::{Duration, Instant};
 
 const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
-
-fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
-    let (r, g, b, a) = (
-        (rgba.x * 255.0) as u32,
-        (rgba.y * 255.0) as u32,
-        (rgba.z * 255.0) as u32,
-        (rgba.w * 255.0) as u32,
-    );
-    a << 24 | r << 16 | g << 8 | b
-}
 
 #[derive(Debug, Deserialize)]
 #[serde(default)]
@@ -225,7 +215,7 @@ impl RaytracingScene {
         let emissive_light = material.emissive;
 
         let reflection = if material.reflectivity > 0.0 {
-            let reflection_dir = core::reflect(&ray.direction, &normal).into_inner();
+            let reflection_dir = utils::reflect(&ray.direction, &normal).into_inner();
             let reflection_ray = Ray {
                 ray_type: RayType::Secondary(depth + 1),
                 origin: hit_point + (reflection_dir * BIAS),
@@ -307,7 +297,7 @@ impl RaytracingScene {
 
         let roughness = material.roughness.max(0.04);
         let base_reflectivity = Vector3::repeat(0.04).lerp(&material_color, material.metalness);
-        let f = core::fresnel(n_dot_v, base_reflectivity);
+        let f = utils::fresnel(n_dot_v, base_reflectivity);
         let k_s = f;
         let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
 
@@ -316,7 +306,7 @@ impl RaytracingScene {
         let mut refraction: Vector3<f64> = Vector3::zero();
         if material.opacity < 1.0 {
             let eta = ray.refractive_index / material.refractive_index;
-            if let Some(refraction_dir) = core::refract(&ray.direction, &normal, eta) {
+            if let Some(refraction_dir) = utils::refract(&ray.direction, &normal, eta) {
                 let refraction_dir = refraction_dir.into_inner();
                 let refraction_ray = Ray {
                     ray_type: RayType::Secondary(depth + 1),
@@ -336,10 +326,10 @@ impl RaytracingScene {
             let reflected_rays = (self.render_options.max_reflected_rays as f64 * d) as u8;
             if reflected_rays > 0 {
                 let max_angle = (FRAC_PI_2 * material.roughness).cos();
-                let reflection_dir = core::reflect(&ray.direction, &normal);
+                let reflection_dir = utils::reflect(&ray.direction, &normal);
                 for _ in 0..reflected_rays {
                     let direction =
-                        core::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
+                        utils::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
                     let reflection_ray = Ray {
                         ray_type: RayType::Secondary(depth + 1),
                         origin: hit_point + (direction * BIAS),
@@ -385,8 +375,8 @@ impl RaytracingScene {
                             let light_color = light.get_color(light_distance);
                             let radiance = light_color * n_dot_l;
 
-                            let ndf = core::ndf(n_dot_h, roughness);
-                            let g = core::geometry_function(n_dot_v, n_dot_l, roughness);
+                            let ndf = utils::ndf(n_dot_h, roughness);
+                            let g = utils::geometry_function(n_dot_v, n_dot_l, roughness);
 
                             let specular = if n_dot_v == 0.0 {
                                 Vector3::zero()
@@ -460,8 +450,8 @@ impl RaytracingScene {
             .into_iter()
             .map(|(x, y)| {
                 let (x, y) = (
-                    remap_value(x, (0.0, width), (-1.0, 1.0)),
-                    remap_value(y, (0.0, height), (1.0, -1.0)),
+                    utils::remap_value(x, (0.0, width), (-1.0, 1.0)),
+                    utils::remap_value(y, (0.0, height), (1.0, -1.0)),
                 );
 
                 // Apply fov and scale to aspect ratio
@@ -567,7 +557,7 @@ impl RaytracingScene {
                 rays.fetch_add(r, Ordering::SeqCst);
 
                 let mut buffer = buffer_mutex.lock().unwrap();
-                buffer[index as usize] = to_argb_u32(color);
+                buffer[index as usize] = utils::to_argb_u32(color);
             };
 
             let mut indexes: Vec<u32> = (0..width * height).collect();
@@ -595,21 +585,6 @@ mod test {
     use crate::lights::{AmbientLight, PointLight};
     use crate::primitives::Cube;
     use serde_json::json;
-
-    #[allow(clippy::shadow_unrelated)]
-    #[test]
-    fn it_converts_color_vecs_to_u32() {
-        let color = 0;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 0.0])), color);
-        let color = 255 << 24;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 1.0])), color);
-        let color = 255 << 24 | 255 << 16 | 255 << 8 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([1.0, 1.0, 1.0, 1.0])), color);
-        let color = 255 << 24 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 1.0, 1.0])), color);
-        let color = 255 << 24 | 255 << 16 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([1.0, 0.0, 1.0, 1.0])), color);
-    }
 
     #[test]
     fn it_builds_a_raytracing_scene_from_an_empty_scene_json() {
