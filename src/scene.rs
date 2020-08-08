@@ -1,6 +1,6 @@
 use crate::core::{
-    self, KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture, Transform,
-    Transformed,
+    self, remap_value, KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture,
+    Transform, Transformed,
 };
 use crate::lights::Light;
 use crate::primitives::Object3D;
@@ -459,8 +459,10 @@ impl RaytracingScene {
         ray_pixel_positions
             .into_iter()
             .map(|(x, y)| {
-                let (x, y) = (x / width, y / height); // Map to [0, 1]
-                let (x, y) = (x * 2.0 - 1.0, 1.0 - y * 2.0); // Map to [-1, 1]
+                let (x, y) = (
+                    remap_value(x, (0.0, width), (-1.0, 1.0)),
+                    remap_value(y, (0.0, height), (1.0, -1.0)),
+                );
 
                 // Apply fov and scale to aspect ratio
                 let (x, y) = if width < height {

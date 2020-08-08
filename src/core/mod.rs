@@ -4,6 +4,7 @@ mod texture;
 mod transform;
 
 use nalgebra::{Point2, Point3, Unit, Vector2, Vector3};
+use num_traits::Float;
 use rand::Rng;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 use std::f64::EPSILON;
@@ -12,6 +13,12 @@ pub use bounds::*;
 pub use material::*;
 pub use texture::*;
 pub use transform::*;
+
+pub fn remap_value<F: Float>(num: F, domain: (F, F), range: (F, F)) -> F {
+    assert!(domain.0 < domain.1, "domain values must be of the form (min, max) - range values can be swapped for this behavior");
+
+    (num - domain.0) * (range.1 - range.0) / (domain.1 - domain.0) + range.0
+}
 
 pub fn reflect(incident: &Vector3<f64>, normal: &Vector3<f64>) -> Unit<Vector3<f64>> {
     Unit::new_normalize(incident - 2.0 * incident.dot(&normal) * normal)
@@ -109,6 +116,16 @@ pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Un
 mod test {
     use super::*;
     use more_asserts::assert_le;
+
+    #[test]
+    fn it_maps_numbers() {
+        assert_eq!(remap_value(1.0, (0.0, 1.0), (0.0, 5.0)), 5.0);
+        assert_eq!(remap_value(0.5, (0.0, 1.0), (0.0, 5.0)), 2.5);
+        assert_eq!(remap_value(0.5, (0.0, 1.0), (0.0, 10.0)), 5.0);
+        assert_eq!(remap_value(0.5, (0.0, 0.5), (0.0, 10.0)), 10.0);
+        assert_eq!(remap_value(-1.0, (0.0, 1.0), (0.0, 10.0)), -10.0);
+        assert_eq!(remap_value(2.0, (0.0, 1.0), (0.0, 10.0)), 20.0);
+    }
 
     #[test]
     fn it_solves_quadratic_eqs() {
