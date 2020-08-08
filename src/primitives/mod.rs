@@ -14,12 +14,12 @@ use std::fmt::Debug;
 use std::marker::{Send, Sync};
 use std::path::Path;
 
-pub use cube::*;
-pub use group::*;
-pub use mesh::*;
-pub use plane::*;
-pub use sphere::*;
-pub use triangle::*;
+pub use cube::{Cube, RaytracingCube};
+pub use group::Group;
+pub use mesh::Mesh;
+pub use plane::{Plane, RaytracingPlane};
+pub use sphere::{RaytracingSphere, Sphere};
+pub use triangle::{RaytracingTriangle, Triangle};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "lowercase")]

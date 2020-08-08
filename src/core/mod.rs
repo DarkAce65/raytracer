@@ -3,7 +3,7 @@ mod material;
 mod texture;
 mod transform;
 
-pub use bounds::*;
-pub use material::*;
-pub use texture::*;
-pub use transform::*;
+pub use bounds::{BoundedObject, BoundingVolume, KdTreeAccelerator, ObjectWithBounds};
+pub use material::{Material, MaterialSide, PhongMaterial, PhysicalMaterial};
+pub use texture::Texture;
+pub use transform::{Transform, Transformed};

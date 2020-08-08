@@ -5,9 +5,9 @@ mod sampling;
 use nalgebra::Vector4;
 use num_traits::Float;
 
-pub use physical_material_equations::*;
-pub use rays::*;
-pub use sampling::*;
+pub use physical_material_equations::{fresnel, geometry_function, ndf};
+pub use rays::{reflect, refract};
+pub use sampling::{cosine_sample_hemisphere, uniform_sample_cone};
 
 pub fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
     let (r, g, b, a) = (
