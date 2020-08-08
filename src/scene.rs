@@ -49,9 +49,9 @@ impl Default for Camera {
 pub struct RenderOptions {
     pub width: u32,
     pub height: u32,
-    pub samples_per_pixel: u8,
     pub max_depth: u8,
-    pub max_reflected_rays: u8,
+    pub samples_per_pixel: u16,
+    pub max_reflected_rays: u16,
 }
 
 impl Default for RenderOptions {
@@ -59,8 +59,8 @@ impl Default for RenderOptions {
         Self {
             width: 100,
             height: 100,
-            samples_per_pixel: 4,
             max_depth: 3,
+            samples_per_pixel: 4,
             max_reflected_rays: 32,
         }
     }
@@ -424,7 +424,7 @@ impl RaytracingScene {
         }
     }
 
-    fn build_camera_rays(&self, x: u32, y: u32, samples: u8) -> Vec<Ray> {
+    fn build_camera_rays(&self, x: u32, y: u32, samples: u16) -> Vec<Ray> {
         assert!(x < self.get_width() && y < self.get_height());
         assert!(samples >= 1);
 
