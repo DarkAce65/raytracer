@@ -46,10 +46,11 @@ impl Texture {
     pub fn get_color(&self, uv: Vector2<f64>) -> Vector3<f64> {
         let (w, h) = (self.width - 1, self.height - 1);
 
-        let (x, y) = (uv.x % 1.0, 1.0 - uv.y % 1.0);
+        let (x, y) = (uv.x % 1.0, uv.y % 1.0);
         let x = if x < 0.0 { x + 1.0 } else { x };
         let y = if y < 0.0 { y + 1.0 } else { y };
-        let (x, y) = (x * f64::from(w), y * f64::from(h));
+
+        let (x, y) = (x * f64::from(w), (1.0 - y) * f64::from(h));
         let (x, y) = (clamp(x as u32, 0, w), clamp(y as u32, 0, h));
 
         let pixel = self
