@@ -1,6 +1,7 @@
 use super::{HasMaterial, Object3D, Primitive, RaytracingObject};
 use crate::core::{
-    BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform, Transformed,
+    Axis, AxisDirection, BoundingVolume, Material, MaterialSide, ObjectWithBounds, Transform,
+    Transformed,
 };
 use crate::ray_intersection::{IntermediateData, Intersectable, Intersection, Ray, RayType};
 use nalgebra::{Point3, Unit, Vector2, Vector3};
@@ -101,46 +102,74 @@ impl Intersectable for RaytracingCube {
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
 
-        let d0 = (-ray.origin.x - ray_sign.x * half) / ray.direction.x;
-        let d1 = (-ray.origin.x + ray_sign.x * half) / ray.direction.x;
-        let dy_min = (-ray.origin.y - ray_sign.y * half) / ray.direction.y;
-        let dy_max = (-ray.origin.y + ray_sign.y * half) / ray.direction.y;
+        let mut hit_axis_close = AxisDirection(Axis::X, ray_sign.x < 0.0);
+        let mut hit_axis_far = AxisDirection(Axis::X, ray_sign.x > 0.0);
 
-        if dy_max < d0 || d1 < dy_min {
+        let d_close = (-ray.origin.x - ray_sign.x * half) / ray.direction.x;
+        let d_far = (-ray.origin.x + ray_sign.x * half) / ray.direction.x;
+
+        let dy_close = (-ray.origin.y - ray_sign.y * half) / ray.direction.y;
+        let dy_far = (-ray.origin.y + ray_sign.y * half) / ray.direction.y;
+
+        if dy_far < d_close || d_far < dy_close {
             return None;
         }
 
-        let d0 = if dy_min > d0 { dy_min } else { d0 };
-        let d1 = if d1 > dy_max { dy_max } else { d1 };
+        let d_close = if dy_close > d_close {
+            hit_axis_close = AxisDirection(Axis::Y, ray_sign.y < 0.0);
+            dy_close
+        } else {
+            d_close
+        };
+        let d_far = if d_far > dy_far {
+            hit_axis_far = AxisDirection(Axis::Y, ray_sign.y > 0.0);
+            dy_far
+        } else {
+            d_far
+        };
 
-        let dz_min = (-ray.origin.z - ray_sign.z * half) / ray.direction.z;
-        let dz_max = (-ray.origin.z + ray_sign.z * half) / ray.direction.z;
+        let dz_close = (-ray.origin.z - ray_sign.z * half) / ray.direction.z;
+        let dz_far = (-ray.origin.z + ray_sign.z * half) / ray.direction.z;
 
-        if dz_max < d0 || d1 < dz_min {
+        if dz_far < d_close || d_far < dz_close {
             return None;
         }
 
-        let d0 = if dz_min > d0 { dz_min } else { d0 };
-        let d1 = if d1 > dz_max { dz_max } else { d1 };
+        let d_close = if dz_close > d_close {
+            hit_axis_close = AxisDirection(Axis::Z, ray_sign.z < 0.0);
+            dz_close
+        } else {
+            d_close
+        };
+        let d_far = if d_far > dz_far {
+            hit_axis_far = AxisDirection(Axis::Z, ray_sign.z > 0.0);
+            dz_far
+        } else {
+            d_far
+        };
 
-        debug_assert!(d0 <= d1);
+        debug_assert!(d_close <= d_far);
 
-        let d = match (self.material.side(), ray.ray_type) {
+        let (d, hit_axis) = match (self.material.side(), ray.ray_type) {
             (MaterialSide::Both, _) | (_, RayType::Shadow) => {
-                if d0 < 0.0 {
-                    d1
+                if d_close < 0.0 {
+                    (d_far, hit_axis_far)
                 } else {
-                    d0
+                    (d_close, hit_axis_close)
                 }
             }
-            (MaterialSide::Front, _) => d0,
-            (MaterialSide::Back, _) => d1,
+            (MaterialSide::Front, _) => (d_close, hit_axis_close),
+            (MaterialSide::Back, _) => (d_far, hit_axis_far),
         };
         if d < 0.0 {
             return None;
         }
 
-        Some(Intersection::new(self, d))
+        Some(Intersection::new_with_data(
+            self,
+            d,
+            IntermediateData::CubeHitFace(hit_axis),
+        ))
     }
 }
 
@@ -158,55 +187,55 @@ impl Primitive for RaytracingCube {
 
     fn surface_normal(
         &self,
-        object_hit_point: &Point3<f64>,
-        _intermediate: IntermediateData,
+        _object_hit_point: &Point3<f64>,
+        intermediate: IntermediateData,
     ) -> Unit<Vector3<f64>> {
-        let normal = object_hit_point.coords;
-        let normal_sign = normal.map(|c| c.signum());
-        let normal = normal.map(|c| c.abs());
-        if normal.x > normal.y {
-            if normal.x > normal.z {
-                if normal_sign.x < 0.0 {
-                    -Vector3::x_axis()
+        match intermediate {
+            IntermediateData::CubeHitFace(axis_direction) => {
+                let AxisDirection(axis, positive) = axis_direction;
+                let normal = match axis {
+                    Axis::X => Vector3::x_axis(),
+                    Axis::Y => Vector3::y_axis(),
+                    Axis::Z => Vector3::z_axis(),
+                };
+
+                if positive {
+                    normal
                 } else {
-                    Vector3::x_axis()
+                    -normal
                 }
-            } else if normal_sign.z < 0.0 {
-                -Vector3::z_axis()
-            } else {
-                Vector3::z_axis()
             }
-        } else if normal.y > normal.z {
-            if normal_sign.y < 0.0 {
-                -Vector3::y_axis()
-            } else {
-                Vector3::y_axis()
-            }
-        } else if normal_sign.z < 0.0 {
-            -Vector3::z_axis()
-        } else {
-            Vector3::z_axis()
+            _ => unreachable!(),
         }
     }
 
     fn uv(
         &self,
         object_hit_point: &Point3<f64>,
-        object_normal: &Unit<Vector3<f64>>,
-        _intermediate: IntermediateData,
+        _object_normal: &Unit<Vector3<f64>>,
+        intermediate: IntermediateData,
     ) -> Vector2<f64> {
-        let hit_point = object_hit_point.coords.map(|c| c / self.size);
+        let hit_point = object_hit_point.coords.map(|c| c / self.size + 0.5);
 
-        if object_normal.x > object_normal.y {
-            if object_normal.x > object_normal.z {
-                Vector2::new(hit_point.y + 0.5, hit_point.z + 0.5)
-            } else {
-                Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+        match intermediate {
+            IntermediateData::CubeHitFace(axis_direction) => {
+                let AxisDirection(axis, positive) = axis_direction;
+
+                if positive {
+                    match axis {
+                        Axis::X => Vector2::new(-hit_point.z, hit_point.y),
+                        Axis::Y => Vector2::new(hit_point.x, -hit_point.z),
+                        Axis::Z => Vector2::new(hit_point.x, hit_point.y),
+                    }
+                } else {
+                    match axis {
+                        Axis::X => Vector2::new(hit_point.z, hit_point.y),
+                        Axis::Y => Vector2::new(hit_point.x, hit_point.z),
+                        Axis::Z => Vector2::new(-hit_point.x, hit_point.y),
+                    }
+                }
             }
-        } else if object_normal.y > object_normal.z {
-            Vector2::new(hit_point.x + 0.5, hit_point.z + 0.5)
-        } else {
-            Vector2::new(hit_point.x + 0.5, hit_point.y + 0.5)
+            _ => unreachable!(),
         }
     }
 }

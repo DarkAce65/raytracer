@@ -1,4 +1,4 @@
-use crate::core::MaterialSide;
+use crate::core::{AxisDirection, MaterialSide};
 use crate::primitives::RaytracingObject;
 use nalgebra::{Affine3, Point3, Unit, Vector2, Vector3};
 
@@ -46,7 +46,8 @@ impl Ray {
 #[derive(Debug, Copy, Clone)]
 pub enum IntermediateData {
     Empty,
-    Barycentric(f64, f64, f64),
+    CubeHitFace(AxisDirection), // Axis pointing to hit face in object space
+    Barycentric(f64, f64, f64), // Barycentric coordinates of hit point
 }
 
 #[derive(Debug)]

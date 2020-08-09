@@ -43,3 +43,6 @@ impl From<usize> for Axis {
         }
     }
 }
+
+#[derive(Copy, Clone, Debug)]
+pub struct AxisDirection(pub Axis, pub bool);
