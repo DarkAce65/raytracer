@@ -32,6 +32,12 @@ _spp = samples per pixel_
 
 ![mesh_test.json](./mesh_test.png)
 
+#### `scenes/test.json`
+
+800 x 800 pixels (4 spp), 9 primitives, 6,851,919 rays, 457ms on i7 8650U
+
+![test.json](./test.png)
+
 # Model credits
 - [Utah teapot](https://en.wikipedia.org/wiki/Utah_teapot)
 - [Low Poly Deer](https://free3d.com/3d-model/low-poly-deer-72513.html) by snippysnappets

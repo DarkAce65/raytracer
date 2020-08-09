@@ -1,0 +1,126 @@
+{
+  "samples_per_pixel": 4,
+  "width": 800,
+  "height": 800,
+  "camera": { "position": [5, 1, 5] },
+  "lights": [
+    { "type": "ambient", "color": [0.1, 0.1, 0.1] },
+    {
+      "type": "point",
+      "transform": [{ "translate": [3, 5, 0] }],
+      "color": [1, 1, 1]
+    },
+    {
+      "type": "point",
+      "transform": [{ "translate": [0, 5, 2] }],
+      "color": [1, 1, 1]
+    },
+    {
+      "type": "point",
+      "transform": [{ "translate": [3, 5, 3] }],
+      "color": [1, 1, 1]
+    }
+  ],
+  "objects": [
+    {
+      "type": "sphere",
+      "radius": 1,
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
+    },
+    {
+      "type": "sphere",
+      "radius": 0.6,
+      "transform": [{ "translate": [2, 1, -1] }],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
+    },
+    {
+      "type": "cube",
+      "size": 1,
+      "transform": [{ "translate": [3, -0.4, 1] }],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
+    },
+    {
+      "type": "cube",
+      "size": 1,
+      "transform": [
+        { "rotate": [[0, 1, 0], 110] },
+        { "translate": [1, -0.6, 3] }
+      ],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
+    },
+    {
+      "type": "cube",
+      "size": 0.5,
+      "transform": [
+        { "rotate": [[1, 0, 0], -80] },
+        { "translate": [3, -0.6, 3] }
+      ],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
+    },
+    {
+      "type": "cube",
+      "size": 1,
+      "transform": [
+        { "rotate": [[1, 0, -1], -30] },
+        { "translate": [2, 2, 2] }
+      ],
+      "material": {
+        "type": "phong",
+        "color": [1, 1, 1],
+        "texture": "textures/test.jpg"
+      }
+    },
+    {
+      "type": "group",
+      "transform": [{ "translate": [0, -1.5, 0] }],
+      "children": [
+        {
+          "type": "plane",
+          "material": {
+            "type": "phong",
+            "color": [1, 1, 1],
+            "texture": "textures/checker.png"
+          }
+        },
+        {
+          "type": "sphere",
+          "radius": 0.2,
+          "transform": [{ "translate": [2, 0, 0] }],
+          "material": {
+            "type": "phong",
+            "color": [1, 0, 0]
+          }
+        },
+        {
+          "type": "sphere",
+          "radius": 0.2,
+          "transform": [{ "translate": [0, 0, 2] }],
+          "material": {
+            "type": "phong",
+            "color": [0, 1, 0]
+          }
+        }
+      ]
+    }
+  ]
+}
