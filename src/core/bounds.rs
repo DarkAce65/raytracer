@@ -114,29 +114,29 @@ impl BoundingVolume {
         let half = (self.bounds_max - self.bounds_min) / 2.0;
         let half = half.component_mul(&ray.direction.map(|c| c.signum()));
 
-        let d0 = (translated_center.x - half.x) / ray.direction.x;
-        let d1 = (translated_center.x + half.x) / ray.direction.x;
-        let dy_min = (translated_center.y - half.y) / ray.direction.y;
-        let dy_max = (translated_center.y + half.y) / ray.direction.y;
+        let d_near = (translated_center.x - half.x) / ray.direction.x;
+        let d_far = (translated_center.x + half.x) / ray.direction.x;
+        let dy_near = (translated_center.y - half.y) / ray.direction.y;
+        let dy_far = (translated_center.y + half.y) / ray.direction.y;
 
-        if dy_max < d0 || d1 < dy_min {
+        if dy_far < d_near || d_far < dy_near {
             return false;
         }
 
-        let d0 = if dy_min > d0 { dy_min } else { d0 };
-        let d1 = if d1 > dy_max { dy_max } else { d1 };
+        let d_near = if dy_near > d_near { dy_near } else { d_near };
+        let d_far = if d_far > dy_far { dy_far } else { d_far };
 
-        let dz_min = (translated_center.z - half.z) / ray.direction.z;
-        let dz_max = (translated_center.z + half.z) / ray.direction.z;
+        let dz_near = (translated_center.z - half.z) / ray.direction.z;
+        let dz_far = (translated_center.z + half.z) / ray.direction.z;
 
-        if dz_max < d0 || d1 < dz_min {
+        if dz_far < d_near || d_far < dz_near {
             return false;
         }
 
-        let d0 = if dz_min > d0 { dz_min } else { d0 };
-        let d1 = if d1 > dz_max { dz_max } else { d1 };
+        let d_near = if dz_near > d_near { dz_near } else { d_near };
+        let d_far = if d_far > dz_far { dz_far } else { d_far };
 
-        if d0 < 0.0 && d1 < 0.0 {
+        if d_near < 0.0 && d_far < 0.0 {
             return false;
         }
 
