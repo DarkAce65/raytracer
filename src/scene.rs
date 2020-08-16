@@ -303,23 +303,6 @@ impl RaytracingScene {
 
         let emissive_light = material.emissive;
 
-        let mut refraction: Vector3<f64> = Vector3::zero();
-        if material.opacity < 1.0 {
-            let eta = ray.refractive_index / material.refractive_index;
-            if let Some(refraction_dir) = utils::refract(&ray.direction, &normal, eta) {
-                let refraction_dir = refraction_dir.into_inner();
-                let refraction_ray = Ray {
-                    ray_type: RayType::Secondary(depth + 1),
-                    origin: hit_point + (refraction_dir * BIAS),
-                    direction: refraction_dir,
-                    refractive_index: material.refractive_index,
-                };
-                let (color, r) = self.get_color(&refraction_ray);
-                ray_count += r;
-                refraction += color.xyz().component_mul(&material_color);
-            }
-        }
-
         let mut reflection: Vector3<f64> = Vector3::zero();
         if self.render_options.max_reflected_rays > 0 {
             let d = 0.125_f64.powi(i32::from(depth));
@@ -393,8 +376,27 @@ impl RaytracingScene {
             };
         }
 
-        let color = (1.0 - material.opacity) * refraction
-            + material.opacity * (emissive_light + ambient_light + reflection + irradiance);
+        let color = emissive_light + ambient_light + reflection + irradiance;
+        let color = if material.opacity < 1.0 {
+            let mut refraction: Vector3<f64> = Vector3::zero();
+            let eta = ray.refractive_index / material.refractive_index;
+            if let Some(refraction_dir) = utils::refract(&ray.direction, &normal, eta) {
+                let refraction_dir = refraction_dir.into_inner();
+                let refraction_ray = Ray {
+                    ray_type: RayType::Secondary(depth + 1),
+                    origin: hit_point + (refraction_dir * BIAS),
+                    direction: refraction_dir,
+                    refractive_index: material.refractive_index,
+                };
+                let (color, r) = self.get_color(&refraction_ray);
+                ray_count += r;
+                refraction += color.xyz().component_mul(&material_color);
+            }
+
+            refraction.lerp(&color, material.opacity)
+        } else {
+            color
+        };
 
         (color.insert_row(3, 1.0), ray_count)
     }
