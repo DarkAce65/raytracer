@@ -4,7 +4,7 @@ _spp = samples per pixel_
 
 #### `scenes/scene.json`
 
-800 x 800 pixels (4 spp), 1,523 primitives, 39,508,885 rays, 14.413s on i7 8650U
+800 x 800 pixels (4 spp), 1,524 primitives, 51,754,796 rays, 17.629s on i7 8650U
 
 ![scene.json](./scene.png)
 
@@ -16,7 +16,7 @@ _spp = samples per pixel_
 
 #### `scenes/refraction.json`
 
-800 x 800 pixels (4 spp), 6 primitives, 138,278,886 rays, 9.631s on i7 8650U
+800 x 800 pixels (4 spp), 6 primitives, 139,727,690 rays, 8.539s on i7 8650U
 
 ![refraction.json](./refraction.png)
 
