@@ -393,7 +393,7 @@ impl RaytracingScene {
             };
         }
 
-        let color = (1.0 - material.opacity) * k_s.component_mul(&refraction)
+        let color = (1.0 - material.opacity) * refraction
             + material.opacity * (emissive_light + ambient_light + reflection + irradiance);
 
         (color.insert_row(3, 1.0), ray_count)
