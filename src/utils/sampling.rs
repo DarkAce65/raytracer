@@ -61,22 +61,117 @@ mod test {
     use super::*;
     use more_asserts::assert_le;
 
-    #[test]
-    fn it_generates_hemisphere_samples() {
-        let mut i = 0;
-        loop {
-            if i >= 1000 {
-                break;
-            }
+    const PRECISION: f64 = 1e-6;
 
+    #[test]
+    fn it_samples_a_hemisphere() {
+        for _ in 0..10_000 {
             let vec: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
             let sampled = cosine_sample_hemisphere(&vec);
             let dot = sampled.dot(&vec);
 
-            assert_le!(0.0, dot);
-            assert_le!(dot, 1.0);
+            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+        }
+    }
 
-            i += 1;
+    #[test]
+    fn it_samples_a_cone() {
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..10_000 {
+            let direction: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
+            let max_angle = rng.gen::<f64>() * PI;
+            let sampled = uniform_sample_cone(&direction, max_angle);
+            let dot = sampled.dot(&direction);
+
+            assert_le!(dot.min(1.0).acos(), max_angle + PRECISION);
+        }
+    }
+
+    #[test]
+    fn it_samples_a_cone_z_direction() {
+        let mut rng = rand::thread_rng();
+
+        // +z, random max angle
+        let direction = Vector3::z_axis();
+        for _ in 0..10_000 {
+            let max_angle = rng.gen::<f64>() * PI;
+            let sampled = uniform_sample_cone(&direction, max_angle);
+            let dot = sampled.dot(&direction);
+
+            assert_le!(dot.min(1.0).acos(), max_angle + PRECISION);
+        }
+
+        // -z, random max angle
+        let direction = -Vector3::z_axis();
+        for _ in 0..10_000 {
+            let max_angle = rng.gen::<f64>() * PI;
+            let sampled = uniform_sample_cone(&direction, max_angle);
+            let dot = sampled.dot(&direction);
+
+            assert_le!(dot.min(1.0).acos(), max_angle + PRECISION);
+        }
+    }
+
+    #[test]
+    fn it_samples_a_cone_angle_edges() {
+        // random direction, 0 max angle
+        let zero_angle = 0.0;
+        for _ in 0..10_000 {
+            let direction: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
+            let sampled = uniform_sample_cone(&direction, zero_angle);
+            let dot = sampled.dot(&direction);
+
+            assert_le!(dot.min(1.0).acos(), zero_angle + PRECISION);
+        }
+
+        // random direction, PI max angle
+        for _ in 0..10_000 {
+            let direction: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
+            let sampled = uniform_sample_cone(&direction, PI);
+            let dot = sampled.dot(&direction);
+
+            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+        }
+    }
+
+    #[test]
+    fn it_samples_a_cone_angle_edges_z_direction() {
+        let zero_angle = 0.0;
+
+        let positive_z = Vector3::z_axis();
+        let negative_z = -Vector3::z_axis();
+
+        // +z, 0 max angle
+        for _ in 0..10_000 {
+            let sampled = uniform_sample_cone(&positive_z, zero_angle);
+            let dot = sampled.dot(&positive_z);
+
+            assert_le!(dot.min(1.0).acos(), zero_angle + PRECISION);
+        }
+
+        // -z, 0 max angle
+        for _ in 0..10_000 {
+            let sampled = uniform_sample_cone(&negative_z, zero_angle);
+            let dot = sampled.dot(&negative_z);
+
+            assert_le!(dot.min(1.0).acos(), zero_angle + PRECISION);
+        }
+
+        // +z, PI max angle
+        for _ in 0..10_000 {
+            let sampled = uniform_sample_cone(&positive_z, PI);
+            let dot = sampled.dot(&positive_z);
+
+            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+        }
+
+        // -z, PI max angle
+        for _ in 0..10_000 {
+            let sampled = uniform_sample_cone(&negative_z, PI);
+            let dot = sampled.dot(&negative_z);
+
+            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
         }
     }
 }
