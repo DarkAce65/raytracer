@@ -38,20 +38,34 @@ pub fn cosine_sample_hemisphere(direction: &Unit<Vector3<f64>>) -> Unit<Vector3<
 
 // Sample a cone in the direction of the given direction
 pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Unit<Vector3<f64>> {
+    debug_assert!(0.0 <= max_angle && max_angle <= FRAC_PI_2);
+
+    if max_angle < EPSILON {
+        return *direction;
+    }
+
     let mut rng = rand::thread_rng();
-    let rnd: f64 = rng.gen();
-    let z = 1.0 - rnd + rnd * max_angle;
-    let radius = (1.0 - z * z).sqrt();
+
+    let theta = (rng.gen::<f64>()).acos();
+    let theta = theta * max_angle / FRAC_PI_2;
+    let z = theta.cos();
+    let radius = theta.sin();
 
     let phi = rng.gen::<f64>() * 2.0 * PI;
 
+    let u = direction.cross(&Vector3::z_axis());
+    let mag = u.magnitude();
+    if mag < EPSILON {
+        return Unit::new_normalize(Vector3::new(
+            radius * phi.cos(),
+            radius * phi.sin(),
+            direction.z.signum() * z,
+        ));
+    }
+
     let w = direction.into_inner();
-    let u = if w.x.abs() > EPSILON {
-        direction.cross(&Vector3::y_axis())
-    } else {
-        direction.cross(&Vector3::x_axis())
-    };
-    let v = direction.cross(&u);
+    let u = u.normalize();
+    let v = direction.cross(&u).normalize();
 
     Unit::new_normalize(u * radius * phi.cos() + v * radius * phi.sin() + w * z)
 }
@@ -80,7 +94,7 @@ mod test {
 
         for _ in 0..10_000 {
             let direction: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
-            let max_angle = rng.gen::<f64>() * PI;
+            let max_angle = rng.gen::<f64>() * FRAC_PI_2;
             let sampled = uniform_sample_cone(&direction, max_angle);
             let dot = sampled.dot(&direction);
 
@@ -95,7 +109,7 @@ mod test {
         // +z, random max angle
         let direction = Vector3::z_axis();
         for _ in 0..10_000 {
-            let max_angle = rng.gen::<f64>() * PI;
+            let max_angle = rng.gen::<f64>() * FRAC_PI_2;
             let sampled = uniform_sample_cone(&direction, max_angle);
             let dot = sampled.dot(&direction);
 
@@ -105,7 +119,7 @@ mod test {
         // -z, random max angle
         let direction = -Vector3::z_axis();
         for _ in 0..10_000 {
-            let max_angle = rng.gen::<f64>() * PI;
+            let max_angle = rng.gen::<f64>() * FRAC_PI_2;
             let sampled = uniform_sample_cone(&direction, max_angle);
             let dot = sampled.dot(&direction);
 
@@ -125,13 +139,13 @@ mod test {
             assert_le!(dot.min(1.0).acos(), zero_angle + PRECISION);
         }
 
-        // random direction, PI max angle
+        // random direction, PI/2 max angle
         for _ in 0..10_000 {
             let direction: Unit<Vector3<f64>> = Unit::new_normalize(Vector3::new_random());
-            let sampled = uniform_sample_cone(&direction, PI);
+            let sampled = uniform_sample_cone(&direction, FRAC_PI_2);
             let dot = sampled.dot(&direction);
 
-            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+            assert_le!(dot.min(1.0).acos(), FRAC_PI_2 + PRECISION);
         }
     }
 
@@ -158,20 +172,20 @@ mod test {
             assert_le!(dot.min(1.0).acos(), zero_angle + PRECISION);
         }
 
-        // +z, PI max angle
+        // +z, PI/2 max angle
         for _ in 0..10_000 {
-            let sampled = uniform_sample_cone(&positive_z, PI);
+            let sampled = uniform_sample_cone(&positive_z, FRAC_PI_2);
             let dot = sampled.dot(&positive_z);
 
-            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+            assert_le!(dot.min(1.0).acos(), FRAC_PI_2 + PRECISION);
         }
 
-        // -z, PI max angle
+        // -z, PI/2 max angle
         for _ in 0..10_000 {
-            let sampled = uniform_sample_cone(&negative_z, PI);
+            let sampled = uniform_sample_cone(&negative_z, FRAC_PI_2);
             let dot = sampled.dot(&negative_z);
 
-            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+            assert_le!(dot.min(1.0).acos(), FRAC_PI_2 + PRECISION);
         }
     }
 }

@@ -308,7 +308,7 @@ impl RaytracingScene {
             let d = 0.125_f64.powi(i32::from(depth));
             let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u8;
             if reflected_rays > 0 {
-                let max_angle = (FRAC_PI_2 * material.roughness).cos();
+                let max_angle = FRAC_PI_2 * material.roughness;
                 let reflection_dir = utils::reflect(&ray.direction, &normal);
                 for _ in 0..reflected_rays {
                     let direction =
