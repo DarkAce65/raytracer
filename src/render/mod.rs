@@ -37,6 +37,7 @@ pub struct RenderOptions {
     pub max_depth: u8,
     pub samples_per_pixel: u16,
     pub max_reflected_rays: u16,
+    pub max_ambient_occlusion_distance: f64,
 }
 
 impl Default for RenderOptions {
@@ -47,6 +48,7 @@ impl Default for RenderOptions {
             max_depth: 3,
             samples_per_pixel: 4,
             max_reflected_rays: 32,
+            max_ambient_occlusion_distance: 10.0,
         }
     }
 }
