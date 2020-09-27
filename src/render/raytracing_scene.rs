@@ -337,7 +337,12 @@ impl RaytracingScene {
 
             let (ambient_occlusion, occlusion_ray_count) =
                 self.compute_ambient_occlusion(&intersection, ray.get_depth());
-            let color = color * ambient_occlusion;
+            let color = Vector4::new(
+                color.x * ambient_occlusion,
+                color.y * ambient_occlusion,
+                color.z * ambient_occlusion,
+                color.w,
+            );
             ray_count += occlusion_ray_count;
 
             (color.map(|c| clamp(c, 0.0, 1.0)), ray_count)
