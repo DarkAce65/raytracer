@@ -193,7 +193,7 @@ impl RaytracingScene {
         let mut reflection: Vector3<f64> = Vector3::zero();
         if self.render_options.max_reflected_rays > 0 {
             let d = 0.125_f64.powi(i32::from(depth));
-            let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u8;
+            let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u16;
             if reflected_rays > 0 {
                 let max_angle = FRAC_PI_2 * material.roughness;
                 let reflection_dir = utils::reflect(&ray.direction, &normal);
@@ -327,18 +327,18 @@ impl RaytracingScene {
             intersection.compute_data(&ray);
             let material = intersection.object.get_material();
 
-            let (color, r) = match material {
+            let (color, material_ray_count) = match material {
                 Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {
                     self.get_color_physical(&ray, &intersection, material)
                 }
             };
-            let ray_count = ray_count + r;
+            ray_count += material_ray_count;
 
-            let (ambient_occlusion, r) =
+            let (ambient_occlusion, occlusion_ray_count) =
                 self.compute_ambient_occlusion(&intersection, ray.get_depth());
             let color = color * ambient_occlusion;
-            let ray_count = ray_count + r;
+            ray_count += occlusion_ray_count;
 
             (color.map(|c| clamp(c, 0.0, 1.0)), ray_count)
         } else {
