@@ -13,6 +13,7 @@ fn main() {
         "scenes/refraction.json",
         "scenes/mesh.json",
         "scenes/mesh_test.json",
+        "scenes/occlusion.json",
         "scenes/test.json",
     ];
     let output_dir = "renders";

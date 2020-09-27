@@ -32,6 +32,12 @@ _spp = samples per pixel_
 
 ![mesh_test.json](./mesh_test.png)
 
+#### `scenes/occlusion.json`
+
+800 x 800 pixels (1 spp), 8 primitives, 54,781,516 rays, 5.461s on i7 8650U
+
+![occlusion.json](./occlusion.png)
+
 #### `scenes/test.json`
 
 800 x 800 pixels (4 spp), 9 primitives, 6,851,919 rays, 457ms on i7 8650U
