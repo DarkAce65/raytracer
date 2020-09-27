@@ -1,6 +1,7 @@
 use super::{Axis, Transform};
 use crate::primitives::RaytracingObject;
 use crate::ray_intersection::{Intersectable, Intersection, Ray};
+use itertools::{Either, Itertools};
 use nalgebra::Point3;
 use std::cmp::Ordering::{self, Equal};
 use std::fmt;
@@ -245,29 +246,14 @@ pub struct KdTreeAccelerator {
 
 impl KdTreeAccelerator {
     pub fn new(objects: Vec<Box<dyn RaytracingObject>>) -> Self {
-        let (unbounded_objects, bounded_objects): (Vec<ObjectWithBounds>, Vec<ObjectWithBounds>) =
+        let (unbounded_objects, bounded_objects): (Vec<UnboundedObject>, Vec<BoundedObject>) =
             objects
                 .into_iter()
                 .map(|object| object.into_bounded_object())
-                .partition(|object| match object {
-                    ObjectWithBounds::Unbounded(_) => true,
-                    ObjectWithBounds::Bounded(_) => false,
+                .partition_map(|object| match object {
+                    ObjectWithBounds::Unbounded(object) => Either::Left(object),
+                    ObjectWithBounds::Bounded(object) => Either::Right(object),
                 });
-
-        let unbounded_objects: Vec<UnboundedObject> = unbounded_objects
-            .into_iter()
-            .map(|object| match object {
-                ObjectWithBounds::Unbounded(object) => object,
-                ObjectWithBounds::Bounded(_) => unreachable!(),
-            })
-            .collect();
-        let bounded_objects: Vec<BoundedObject> = bounded_objects
-            .into_iter()
-            .map(|object| match object {
-                ObjectWithBounds::Unbounded(_) => unreachable!(),
-                ObjectWithBounds::Bounded(object) => object,
-            })
-            .collect();
 
         let (tree, bounded_objects) = if bounded_objects.is_empty() {
             (KdTree::Leaf(Vec::new()), bounded_objects)

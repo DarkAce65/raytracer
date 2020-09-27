@@ -38,6 +38,7 @@ auto_ops = "0.1"
 clap = "2.33"
 image = { version = "0.23", default-features = false, features = ["jpeg", "png", "jpeg_rayon"] }
 indicatif = { version = "0.15", features = ["with_rayon"] }
+itertools = "0.9"
 minifb = "0.19"
 nalgebra = { version = "0.22", features = ["serde-serialize"] }
 num-traits = "0.2"
