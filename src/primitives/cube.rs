@@ -98,7 +98,7 @@ impl Transformed for RaytracingCube {
 }
 
 impl Intersectable for RaytracingCube {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
         let ray_sign = ray.direction.map(|c| c.signum());
         let half = self.size / 2.0;
 
@@ -150,7 +150,7 @@ impl Intersectable for RaytracingCube {
 
         debug_assert!(d_near <= d_far);
 
-        let (d, hit_axis) = match (self.material.side(), ray.ray_type) {
+        let (distance, hit_axis) = match (self.material.side(), ray.ray_type) {
             (MaterialSide::Both, _) | (_, RayType::Shadow) => {
                 if d_near < 0.0 {
                     (d_far, hit_axis_far)
@@ -161,13 +161,13 @@ impl Intersectable for RaytracingCube {
             (MaterialSide::Front, _) => (d_near, hit_axis_near),
             (MaterialSide::Back, _) => (d_far, hit_axis_far),
         };
-        if d < 0.0 {
+        if distance < 0.0 || (max_distance.is_some() && max_distance.unwrap() < distance) {
             return None;
         }
 
         Some(Intersection::new_with_data(
             self,
-            d,
+            distance,
             IntermediateData::CubeHitFace(hit_axis),
         ))
     }

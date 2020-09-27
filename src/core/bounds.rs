@@ -109,7 +109,7 @@ impl BoundingVolume {
         2.0 * (dx * dy + dy * dz + dx * dz)
     }
 
-    pub fn intersect(&self, ray: &Ray) -> bool {
+    pub fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> bool {
         let translated_center = self.center - ray.origin;
         let half = (self.bounds_max - self.bounds_min) / 2.0;
         let half = half.component_mul(&ray.direction.map(|c| c.signum()));
@@ -140,6 +140,12 @@ impl BoundingVolume {
             return false;
         }
 
+        debug_assert!(d_near <= d_far);
+
+        if max_distance.is_some() && max_distance.unwrap() < d_near {
+            return false;
+        }
+
         true
     }
 }
@@ -148,10 +154,10 @@ impl BoundingVolume {
 pub struct UnboundedObject(Box<dyn RaytracingObject>);
 
 impl Intersectable for UnboundedObject {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
         let object = &self.0;
         let ray = &ray.transform(object.get_transform().inverse());
-        object.intersect(ray)
+        object.intersect(ray, max_distance)
     }
 }
 
@@ -162,13 +168,13 @@ pub struct BoundedObject {
 }
 
 impl Intersectable for BoundedObject {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
-        if !self.bounding_volume.intersect(ray) {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
+        if !self.bounding_volume.intersect(ray, max_distance) {
             return None;
         }
 
         let ray = &ray.transform(self.object.get_transform().inverse());
-        self.object.intersect(ray)
+        self.object.intersect(ray, max_distance)
     }
 }
 
@@ -192,10 +198,10 @@ impl ObjectWithBounds {
 }
 
 impl Intersectable for ObjectWithBounds {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
         match self {
-            Self::Unbounded(object) => object.intersect(ray),
-            Self::Bounded(object) => object.intersect(ray),
+            Self::Unbounded(object) => object.intersect(ray, max_distance),
+            Self::Bounded(object) => object.intersect(ray, max_distance),
         }
     }
 }
@@ -309,20 +315,25 @@ impl KdTreeAccelerator {
     pub fn raycast(&self, ray: &Ray) -> Option<Intersection> {
         self.unbounded_objects
             .iter()
-            .filter_map(|object| object.intersect(ray))
-            .chain(self.raycast_tree(&self.tree, ray))
+            .filter_map(|object| object.intersect(ray, None))
+            .chain(self.raycast_tree(&self.tree, ray, None))
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
     }
 
     pub fn shadow_cast(&self, ray: &Ray, max_distance: f64) -> bool {
         self.unbounded_objects
             .iter()
-            .filter_map(|object| object.intersect(ray))
+            .filter_map(|object| object.intersect(ray, Some(max_distance)))
             .any(|intersection| intersection.distance <= max_distance)
-            || self.shadow_cast_tree(&self.tree, ray, max_distance)
+            || self.shadow_cast_tree(&self.tree, ray, Some(max_distance))
     }
 
-    fn raycast_tree(&self, tree: &KdTree, ray: &Ray) -> Option<Intersection> {
+    fn raycast_tree(
+        &self,
+        tree: &KdTree,
+        ray: &Ray,
+        max_distance: Option<f64>,
+    ) -> Option<Intersection> {
         match tree {
             KdTree::Node {
                 bounding_volume,
@@ -330,10 +341,10 @@ impl KdTreeAccelerator {
                 right,
                 ..
             } => {
-                if bounding_volume.intersect(ray) {
-                    self.raycast_tree(left, ray)
+                if bounding_volume.intersect(ray, max_distance) {
+                    self.raycast_tree(left, ray, max_distance)
                         .into_iter()
-                        .chain(self.raycast_tree(right, ray).into_iter())
+                        .chain(self.raycast_tree(right, ray, max_distance).into_iter())
                         .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
                 } else {
                     None
@@ -341,12 +352,12 @@ impl KdTreeAccelerator {
             }
             KdTree::Leaf(object_indexes) => object_indexes
                 .iter()
-                .filter_map(|index| self.bounded_objects[*index].intersect(&ray))
+                .filter_map(|index| self.bounded_objects[*index].intersect(&ray, max_distance))
                 .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal)),
         }
     }
 
-    fn shadow_cast_tree(&self, tree: &KdTree, ray: &Ray, max_distance: f64) -> bool {
+    fn shadow_cast_tree(&self, tree: &KdTree, ray: &Ray, max_distance: Option<f64>) -> bool {
         match tree {
             KdTree::Node {
                 bounding_volume,
@@ -354,17 +365,18 @@ impl KdTreeAccelerator {
                 right,
                 ..
             } => {
-                if bounding_volume.intersect(ray) {
+                if bounding_volume.intersect(ray, max_distance) {
                     self.shadow_cast_tree(left, ray, max_distance)
                         || self.shadow_cast_tree(right, ray, max_distance)
                 } else {
                     false
                 }
             }
-            KdTree::Leaf(object_indexes) => object_indexes
-                .iter()
-                .filter_map(|index| self.bounded_objects[*index].intersect(&ray))
-                .any(|intersection| intersection.distance <= max_distance),
+            KdTree::Leaf(object_indexes) => object_indexes.iter().any(|index| {
+                self.bounded_objects[*index]
+                    .intersect(&ray, max_distance)
+                    .is_some()
+            }),
         }
     }
 }
