@@ -2,6 +2,7 @@
   "max_depth": 5,
   "width": 800,
   "height": 800,
+  "max_occlusion_distance": 10,
   "camera": { "position": [2, 5, 15], "target": [-1, 0, 0] },
   "lights": [
     { "type": "ambient", "color": [0.01, 0.01, 0.01] },
