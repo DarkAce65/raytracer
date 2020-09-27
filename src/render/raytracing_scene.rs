@@ -288,7 +288,7 @@ impl RaytracingScene {
         (color.insert_row(3, 1.0), ray_count)
     }
 
-    fn compute_ambient_occlusion(&self, intersection: &Intersection, depth: u8) -> f64 {
+    fn compute_ambient_occlusion(&self, intersection: &Intersection, depth: u8) -> (f64, u64) {
         let d = 0.125_f64.powi(i32::from(depth));
         let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u16;
         let mut ambient_occlusion = 0;
@@ -309,7 +309,10 @@ impl RaytracingScene {
             }
         }
 
-        f64::from(ambient_occlusion) / f64::from(reflected_rays)
+        (
+            f64::from(ambient_occlusion) / f64::from(reflected_rays),
+            reflected_rays.into(),
+        )
     }
 
     fn get_color(&self, ray: &Ray) -> (Vector4<f64>, u64) {
@@ -330,11 +333,14 @@ impl RaytracingScene {
                     self.get_color_physical(&ray, &intersection, material)
                 }
             };
+            let ray_count = ray_count + r;
 
-            let ambient_occlusion = self.compute_ambient_occlusion(&intersection, ray.get_depth());
+            let (ambient_occlusion, r) =
+                self.compute_ambient_occlusion(&intersection, ray.get_depth());
             let color = color * ambient_occlusion;
+            let ray_count = ray_count + r;
 
-            (color.map(|c| clamp(c, 0.0, 1.0)), ray_count + r)
+            (color.map(|c| clamp(c, 0.0, 1.0)), ray_count)
         } else {
             (Vector4::zero(), ray_count)
         }
