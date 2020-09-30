@@ -3,6 +3,7 @@ use crate::primitives::RaytracingObject;
 use crate::ray_intersection::{Intersectable, Intersection, Ray};
 use nalgebra::Point3;
 use std::cmp::Ordering::{self, Equal};
+use std::f64::EPSILON;
 use std::fmt;
 
 fn build_bounding_volume(bounding_volumes: &[BoundingVolume]) -> BoundingVolume {
@@ -336,16 +337,35 @@ impl KdTreeAccelerator {
     ) -> Option<Intersection> {
         match tree {
             KdTree::Node {
+                split_axis,
+                split_location,
                 bounding_volume,
                 left,
                 right,
-                ..
             } => {
                 if bounding_volume.intersect(ray, max_distance) {
-                    self.raycast_tree(left, ray, max_distance)
-                        .into_iter()
-                        .chain(self.raycast_tree(right, ray, max_distance).into_iter())
-                        .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+                    let split_index = usize::from(split_axis);
+                    let left_first = ray.origin[split_index] < *split_location
+                        || ((ray.origin[split_index] - *split_location).abs() < EPSILON
+                            && ray.direction[split_index] > 0.0);
+
+                    let (first, second) = if left_first {
+                        (left, right)
+                    } else {
+                        (right, left)
+                    };
+
+                    let close_intersection = self.raycast_tree(first, ray, max_distance);
+                    if let Some(close_intersection) = close_intersection {
+                        let max_distance = Some(close_intersection.distance);
+
+                        Some(close_intersection)
+                            .into_iter()
+                            .chain(self.raycast_tree(second, ray, max_distance).into_iter())
+                            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+                    } else {
+                        self.raycast_tree(second, ray, max_distance)
+                    }
                 } else {
                     None
                 }
@@ -360,14 +380,26 @@ impl KdTreeAccelerator {
     fn shadow_cast_tree(&self, tree: &KdTree, ray: &Ray, max_distance: Option<f64>) -> bool {
         match tree {
             KdTree::Node {
+                split_axis,
+                split_location,
                 bounding_volume,
                 left,
                 right,
-                ..
             } => {
                 if bounding_volume.intersect(ray, max_distance) {
-                    self.shadow_cast_tree(left, ray, max_distance)
-                        || self.shadow_cast_tree(right, ray, max_distance)
+                    let split_index = usize::from(split_axis);
+                    let left_first = ray.origin[split_index] < *split_location
+                        || ((ray.origin[split_index] - *split_location).abs() < EPSILON
+                            && ray.direction[split_index] > 0.0);
+
+                    let (first, second) = if left_first {
+                        (left, right)
+                    } else {
+                        (right, left)
+                    };
+
+                    self.shadow_cast_tree(first, ray, max_distance)
+                        || self.shadow_cast_tree(second, ray, max_distance)
                 } else {
                     false
                 }

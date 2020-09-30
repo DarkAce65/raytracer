@@ -33,6 +33,16 @@ impl From<Axis> for usize {
     }
 }
 
+impl From<&Axis> for usize {
+    fn from(axis: &Axis) -> Self {
+        match axis {
+            Axis::X => 0,
+            Axis::Y => 1,
+            Axis::Z => 2,
+        }
+    }
+}
+
 impl From<usize> for Axis {
     fn from(axis: usize) -> Self {
         match axis {
