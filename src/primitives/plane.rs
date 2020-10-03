@@ -96,7 +96,7 @@ impl Transformed for RaytracingPlane {
 }
 
 impl Intersectable for RaytracingPlane {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
         let n_dot_v = self.normal.dot(&-ray.direction);
 
         if match (self.material.side(), ray.ray_type) {
@@ -108,11 +108,11 @@ impl Intersectable for RaytracingPlane {
         }
 
         let distance = ray.origin.coords.dot(&self.normal) / n_dot_v;
-        if distance >= 0.0 {
-            return Some(Intersection::new(self, distance));
+        if distance < 0.0 || (max_distance.is_some() && max_distance.unwrap() < distance) {
+            return None;
         }
 
-        None
+        Some(Intersection::new(self, distance))
     }
 }
 

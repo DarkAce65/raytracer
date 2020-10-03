@@ -99,35 +99,33 @@ impl Transformed for RaytracingSphere {
 }
 
 impl Intersectable for RaytracingSphere {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
         let hypot = ray.origin.coords;
         let ray_proj = hypot.dot(&ray.direction);
         let a = ray.direction.magnitude_squared();
         let b = 2.0 * ray_proj;
         let c = hypot.magnitude_squared() - self.radius * self.radius;
 
-        if let Some((t0, t1)) = utils::quadratic(a, b, c) {
-            debug_assert!(t0 <= t1);
+        let (t0, t1) = utils::quadratic(a, b, c)?;
+        debug_assert!(t0 <= t1);
 
-            let t = match (self.material.side(), ray.ray_type) {
-                (MaterialSide::Both, _) | (_, RayType::Shadow) => {
-                    if t0 < 0.0 {
-                        t1
-                    } else {
-                        t0
-                    }
+        let distance = match (self.material.side(), ray.ray_type) {
+            (MaterialSide::Both, _) | (_, RayType::Shadow) => {
+                if t0 < 0.0 {
+                    t1
+                } else {
+                    t0
                 }
-                (MaterialSide::Front, _) => t0,
-                (MaterialSide::Back, _) => t1,
-            };
-            if t < 0.0 {
-                return None;
             }
+            (MaterialSide::Front, _) => t0,
+            (MaterialSide::Back, _) => t1,
+        };
 
-            return Some(Intersection::new(self, t));
+        if distance < 0.0 || (max_distance.is_some() && max_distance.unwrap() < distance) {
+            return None;
         }
 
-        None
+        Some(Intersection::new(self, distance))
     }
 }
 

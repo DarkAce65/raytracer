@@ -3,7 +3,7 @@ use crate::primitives::RaytracingObject;
 use nalgebra::{Affine3, Point3, Unit, Vector2, Vector3};
 
 pub trait Intersectable {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection>;
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection>;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

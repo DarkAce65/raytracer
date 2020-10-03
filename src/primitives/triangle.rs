@@ -191,7 +191,7 @@ impl Transformed for RaytracingTriangle {
 }
 
 impl Intersectable for RaytracingTriangle {
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray, max_distance: Option<f64>) -> Option<Intersection> {
         let edge1 = self.vertex_data[1].position - self.vertex_data[0].position;
         let edge2 = self.vertex_data[2].position - self.vertex_data[0].position;
         let p_vec = ray.direction.cross(&edge2);
@@ -219,7 +219,7 @@ impl Intersectable for RaytracingTriangle {
 
         let distance = edge2.dot(&q_vec) / det;
 
-        if distance < 0.0 {
+        if distance < 0.0 || (max_distance.is_some() && max_distance.unwrap() < distance) {
             return None;
         }
 
