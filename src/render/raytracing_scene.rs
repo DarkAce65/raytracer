@@ -290,7 +290,7 @@ impl RaytracingScene {
 
     fn compute_ambient_occlusion(&self, intersection: &Intersection, depth: u8) -> (f64, u64) {
         let d = 0.125_f64.powi(i32::from(depth));
-        let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u16;
+        let reflected_rays = (f64::from(self.render_options.max_occlusion_rays) * d) as u16;
         let mut ambient_occlusion = 0;
         for _ in 0..reflected_rays {
             let direction =
@@ -301,10 +301,7 @@ impl RaytracingScene {
                 direction,
                 refractive_index: 1.0,
             };
-            if !self.shadow_cast(
-                &occlusion_ray,
-                self.render_options.max_ambient_occlusion_distance,
-            ) {
+            if !self.shadow_cast(&occlusion_ray, self.render_options.max_occlusion_distance) {
                 ambient_occlusion += 1;
             }
         }
@@ -337,7 +334,12 @@ impl RaytracingScene {
 
             let (ambient_occlusion, occlusion_ray_count) =
                 self.compute_ambient_occlusion(&intersection, ray.get_depth());
-            let color = color * ambient_occlusion;
+            let color = Vector4::new(
+                color.x * ambient_occlusion,
+                color.y * ambient_occlusion,
+                color.z * ambient_occlusion,
+                color.w,
+            );
             ray_count += occlusion_ray_count;
 
             (color.map(|c| clamp(c, 0.0, 1.0)), ray_count)
