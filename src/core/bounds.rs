@@ -333,7 +333,7 @@ impl KdTreeAccelerator {
                     let split_index = usize::from(split_axis);
                     let left_first = ray.origin[split_index] < *split_location
                         || ((ray.origin[split_index] - *split_location).abs() < EPSILON
-                            && ray.direction[split_index] > 0.0);
+                            && ray.direction[split_index] <= 0.0);
 
                     let (first, second) = if left_first {
                         (left, right)
@@ -376,7 +376,7 @@ impl KdTreeAccelerator {
                     let split_index = usize::from(split_axis);
                     let left_first = ray.origin[split_index] < *split_location
                         || ((ray.origin[split_index] - *split_location).abs() < EPSILON
-                            && ray.direction[split_index] > 0.0);
+                            && ray.direction[split_index] <= 0.0);
 
                     let (first, second) = if left_first {
                         (left, right)
