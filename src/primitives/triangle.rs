@@ -219,6 +219,10 @@ impl Intersectable for RaytracingTriangle {
 
         let distance = edge2.dot(&q_vec) / det;
 
+        if distance < 0.0 {
+            return None;
+        }
+
         Some(Intersection::new_with_data(
             self,
             distance,
