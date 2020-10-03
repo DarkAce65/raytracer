@@ -193,7 +193,7 @@ impl RaytracingScene {
         let mut reflection: Vector3<f64> = Vector3::zero();
         if self.render_options.max_reflected_rays > 0 {
             let d = 0.125_f64.powi(i32::from(depth));
-            let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u8;
+            let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u16;
             if reflected_rays > 0 {
                 let max_angle = FRAC_PI_2 * material.roughness;
                 let reflection_dir = utils::reflect(&ray.direction, &normal);
@@ -288,6 +288,30 @@ impl RaytracingScene {
         (color.insert_row(3, 1.0), ray_count)
     }
 
+    fn compute_ambient_occlusion(&self, intersection: &Intersection, depth: u8) -> (f64, u64) {
+        let d = 0.125_f64.powi(i32::from(depth));
+        let reflected_rays = (f64::from(self.render_options.max_occlusion_rays) * d) as u16;
+        let mut ambient_occlusion = 0;
+        for _ in 0..reflected_rays {
+            let direction =
+                utils::uniform_sample_cone(&intersection.get_normal(), FRAC_PI_2).into_inner();
+            let occlusion_ray = Ray {
+                ray_type: RayType::Secondary(depth + 1),
+                origin: intersection.get_hit_point() + (direction * BIAS),
+                direction,
+                refractive_index: 1.0,
+            };
+            if !self.shadow_cast(&occlusion_ray, self.render_options.max_occlusion_distance) {
+                ambient_occlusion += 1;
+            }
+        }
+
+        (
+            f64::from(ambient_occlusion) / f64::from(reflected_rays),
+            reflected_rays.into(),
+        )
+    }
+
     fn get_color(&self, ray: &Ray) -> (Vector4<f64>, u64) {
         let mut ray_count = 0;
 
@@ -300,14 +324,25 @@ impl RaytracingScene {
             intersection.compute_data(&ray);
             let material = intersection.object.get_material();
 
-            let (color, r) = match material {
+            let (color, material_ray_count) = match material {
                 Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {
                     self.get_color_physical(&ray, &intersection, material)
                 }
             };
+            ray_count += material_ray_count;
 
-            (color.map(|c| clamp(c, 0.0, 1.0)), ray_count + r)
+            let (ambient_occlusion, occlusion_ray_count) =
+                self.compute_ambient_occlusion(&intersection, ray.get_depth());
+            let color = Vector4::new(
+                color.x * ambient_occlusion,
+                color.y * ambient_occlusion,
+                color.z * ambient_occlusion,
+                color.w,
+            );
+            ray_count += occlusion_ray_count;
+
+            (color.map(|c| clamp(c, 0.0, 1.0)), ray_count)
         } else {
             (Vector4::zero(), ray_count)
         }
