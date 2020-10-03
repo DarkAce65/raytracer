@@ -41,7 +41,7 @@ impl From<Camera> for RaytracingCamera {
 
 #[derive(Debug)]
 pub struct RaytracingScene {
-    render_options: RenderOptions,
+    pub render_options: RenderOptions,
     camera: RaytracingCamera,
     lights: Vec<Light>,
     textures: HashMap<String, Texture>,

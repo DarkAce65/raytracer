@@ -11,7 +11,7 @@ use std::path::Path;
 #[serde(default, deny_unknown_fields)]
 pub struct Scene {
     #[serde(flatten)]
-    render_options: RenderOptions,
+    pub render_options: RenderOptions,
     loaded: bool,
     camera: Camera,
     lights: Vec<Light>,

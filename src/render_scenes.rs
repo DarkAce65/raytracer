@@ -9,9 +9,9 @@ use std::time::Duration;
 fn main() {
     let scenes = [
         "scenes/scene.json",
-        "scenes/physical.json",
-        "scenes/refraction.json",
         "scenes/mesh.json",
+        "scenes/refraction.json",
+        "scenes/physical.json",
         "scenes/mesh_test.json",
         "scenes/occlusion.json",
         "scenes/test.json",
@@ -55,10 +55,13 @@ fn main() {
             );
 
             if i == iterations - 1 {
-                println!(
-                    "\u{2502} Avg time: {:.3?} (avg {} rays)",
-                    duration_sum / iterations,
-                    ray_count_sum / iterations as u64
+                println!("\u{2502}\n\u{2502} Final render: {} x {} pixels, {} spp, {} primitives, {} rays, {:.3?}",
+                    scene.get_width(),
+                    scene.get_height(),
+                    scene.render_options.samples_per_pixel,
+                    scene.get_num_objects(),
+                    ray_count_sum / iterations as u64,
+                    duration_sum / iterations
                 );
                 image.save(&output_filename).expect("unable to write image");
                 println!(
