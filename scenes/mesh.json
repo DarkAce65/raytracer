@@ -1,7 +1,7 @@
 {
-  "samples_per_pixel": 8,
   "width": 800,
   "height": 800,
+  "samples_per_pixel": 8,
   "camera": { "position": [6, 5, 16], "target": [0, 2, 0] },
   "lights": [
     { "type": "ambient", "color": [0.01, 0.01, 0.01] },
