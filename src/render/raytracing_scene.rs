@@ -109,9 +109,11 @@ impl RaytracingScene {
                 direction: reflection_dir,
                 refractive_index: 1.0,
             };
-            let (color_data, stats) = self.get_color(&reflection_ray);
+            let (mut color_data, stats) = self.get_color(&reflection_ray);
+            color_data.color.component_mul_assign(&material_color);
             cast_stats += stats;
-            Some(color_data.color.component_mul(&material_color))
+
+            Some(color_data)
         } else {
             None
         };
@@ -162,7 +164,12 @@ impl RaytracingScene {
         );
 
         if let Some(reflection) = reflection {
-            color_data.color += material.reflectivity * reflection;
+            color_data.color += material.reflectivity * reflection.color;
+            color_data.ambient_occlusion = utils::lerp(
+                color_data.ambient_occlusion,
+                reflection.ambient_occlusion,
+                material.reflectivity,
+            );
         }
 
         (color_data, cast_stats)
@@ -200,7 +207,7 @@ impl RaytracingScene {
                 let max_angle = FRAC_PI_2 * material.roughness;
                 let reflection_dir = utils::reflect(&ray.direction, &normal);
 
-                let reflection = (0..reflected_rays).fold(Vector3::zero(), |acc, _| {
+                let mut reflection = (0..reflected_rays).fold(ColorData::zero(), |mut acc, _| {
                     let direction =
                         utils::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
                     let reflection_ray = Ray {
@@ -211,10 +218,18 @@ impl RaytracingScene {
                     };
                     let (color_data, stats) = self.get_color(&reflection_ray);
                     cast_stats += stats;
-                    acc + color_data.color
-                });
 
-                Some(reflection.component_mul(&(f * FRAC_PI_2 / f64::from(reflected_rays))))
+                    acc.color += color_data.color;
+                    acc.ambient_occlusion += color_data.ambient_occlusion;
+
+                    acc
+                });
+                reflection
+                    .color
+                    .component_mul_assign(&(f * FRAC_PI_2 / f64::from(reflected_rays)));
+                reflection.ambient_occlusion /= f64::from(reflected_rays);
+
+                Some(reflection)
             } else {
                 None
             }
@@ -293,7 +308,8 @@ impl RaytracingScene {
         let mut color_data = ColorData::new(emissive_light + ambient_light + irradiance);
 
         if let Some(reflection) = reflection {
-            color_data.color += reflection;
+            color_data.color += reflection.color;
+            color_data.ambient_occlusion *= reflection.ambient_occlusion;
         }
 
         if let Some(refraction) = refraction {
@@ -345,7 +361,7 @@ impl RaytracingScene {
             intersection.compute_data(&ray);
             let material = intersection.object.get_material();
 
-            let (mut material_color_data, material_stats) = match material {
+            let (mut color_data, material_stats) = match material {
                 Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {
                     self.get_color_physical(&ray, &intersection, material)
@@ -355,10 +371,11 @@ impl RaytracingScene {
 
             let (ambient_occlusion, ambient_occlusion_stats) =
                 self.compute_ambient_occlusion(&intersection, ray.get_depth());
-            material_color_data.color *= ambient_occlusion;
+            // color_data.color *= ambient_occlusion;
+            color_data.ambient_occlusion *= ambient_occlusion;
             cast_stats += ambient_occlusion_stats;
 
-            (material_color_data.clamp(), cast_stats)
+            (color_data.clamp(), cast_stats)
         } else {
             (ColorData::zero(), cast_stats)
         }
@@ -419,22 +436,25 @@ impl RaytracingScene {
         let samples = self.render_options.samples_per_pixel;
         let rays = self.build_camera_rays(x, y, samples);
 
-        let (color_data, stats) = if samples == 1 {
+        let (mut color_data, stats) = if samples == 1 {
             self.get_color(rays.first().unwrap())
         } else {
-            let mut color = Vector3::zero();
+            let mut color_data = ColorData::zero();
             let mut cast_stats = CastStats::zero();
             for ray in &rays {
-                let (color_data, stats) = self.get_color(ray);
-                color += color_data.color;
+                let (data, stats) = self.get_color(ray);
+                color_data.color += data.color;
+                color_data.ambient_occlusion += data.ambient_occlusion;
                 cast_stats += stats;
             }
 
-            (
-                ColorData::new(color / f64::from(samples)).clamp(),
-                cast_stats,
-            )
+            color_data.color /= f64::from(samples);
+            color_data.ambient_occlusion /= f64::from(samples);
+
+            (color_data.clamp(), cast_stats)
         };
+
+        color_data.color *= color_data.ambient_occlusion;
 
         (color_data.gamma_correct(), stats)
     }

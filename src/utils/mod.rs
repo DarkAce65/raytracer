@@ -20,6 +20,10 @@ pub fn to_argb_u32(rgb: Vector3<f64>) -> u32 {
     ALPHA_BIT_MASK | r << 16 | g << 8 | b
 }
 
+pub fn lerp<F: Float>(x0: F, x1: F, t: F) -> F {
+    x0 - x0 * t + x1 * t
+}
+
 pub fn remap_value<F: Float>(num: F, domain: (F, F), range: (F, F)) -> F {
     assert!(domain.0 < domain.1, "domain values must be of the form (min, max) - range values can be swapped for this behavior");
 

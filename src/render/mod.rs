@@ -13,11 +13,15 @@ const BIAS: f64 = 1e-10;
 
 pub struct ColorData {
     color: Vector3<f64>,
+    ambient_occlusion: f64,
 }
 
 impl ColorData {
     fn new(color: Vector3<f64>) -> Self {
-        Self { color }
+        Self {
+            color,
+            ambient_occlusion: 1.0,
+        }
     }
 
     fn zero() -> Self {
@@ -26,6 +30,7 @@ impl ColorData {
 
     fn clamp(mut self) -> Self {
         self.color = self.color.map(|c| clamp(c, 0.0, 1.0));
+        self.ambient_occlusion = clamp(self.ambient_occlusion, 0.0, 1.0);
         self
     }
 
