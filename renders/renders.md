@@ -34,7 +34,7 @@ _spp = samples per pixel_
 
 #### `scenes/occlusion.json`
 
-800 x 800 pixels (4 spp), 8 primitives, 29,345,257 rays, 1.929s on i7 8650U
+800 x 800 pixels (4 spp), 9 primitives, 47,779,384 rays, 3.022s on i7 8650U
 
 ![occlusion.json](./occlusion.png)
 
