@@ -118,40 +118,38 @@ impl RaytracingScene {
 
         let mut ambient_light = Vector3::zero();
         let mut irradiance = Vector3::zero();
-        for light in &self.lights {
-            match light {
-                Light::Ambient(light) => {
-                    ambient_light += light.get_color().component_mul(&material_color);
-                }
-                Light::Point(light) => {
-                    if material.reflectivity >= 1.0 {
-                        continue;
+        if material.reflectivity < 1.0 {
+            for light in &self.lights {
+                match light {
+                    Light::Ambient(light) => {
+                        ambient_light += light.get_color().component_mul(&material_color);
                     }
+                    Light::Point(light) => {
+                        let light_position = light.get_position();
+                        let light_dir = light_position - hit_point;
+                        let light_distance = light_dir.magnitude();
+                        let light_dir = light_dir.normalize();
 
-                    let light_position = light.get_position();
-                    let light_dir = light_position - hit_point;
-                    let light_distance = light_dir.magnitude();
-                    let light_dir = light_dir.normalize();
+                        let n_dot_l = normal.dot(&light_dir);
+                        if n_dot_l > 0.0 {
+                            let shadow_ray = Ray {
+                                ray_type: RayType::Shadow,
+                                origin: light_position,
+                                direction: -light_dir,
+                                refractive_index: 1.0,
+                            };
 
-                    let n_dot_l = normal.dot(&light_dir);
-                    if n_dot_l > 0.0 {
-                        let shadow_ray = Ray {
-                            ray_type: RayType::Shadow,
-                            origin: light_position,
-                            direction: -light_dir,
-                            refractive_index: 1.0,
-                        };
+                            cast_stats.ray_count += 1;
+                            if !self.shadow_cast(&shadow_ray, light_distance) {
+                                let light_color = light.get_color(light_distance);
+                                irradiance += light_color.component_mul(&material_color) * n_dot_l;
 
-                        cast_stats.ray_count += 1;
-                        if !self.shadow_cast(&shadow_ray, light_distance) {
-                            let light_color = light.get_color(light_distance);
-                            irradiance += light_color.component_mul(&material_color) * n_dot_l;
-
-                            let half_vec = Unit::new_normalize(light_dir - ray.direction);
-                            let n_dot_h = normal.dot(&half_vec);
-                            if n_dot_h > 0.0 {
-                                irradiance += light_color.component_mul(&material.specular)
-                                    * n_dot_h.powf(material.shininess);
+                                let half_vec = Unit::new_normalize(light_dir - ray.direction);
+                                let n_dot_h = normal.dot(&half_vec);
+                                if n_dot_h > 0.0 {
+                                    irradiance += light_color.component_mul(&material.specular)
+                                        * n_dot_h.powf(material.shininess);
+                                }
                             }
                         }
                     }
@@ -160,7 +158,7 @@ impl RaytracingScene {
         }
 
         let mut color_data = ColorData::new(
-            emissive_light + ambient_light + (1.0 - material.reflectivity) * irradiance,
+            emissive_light + (1.0 - material.reflectivity) * (ambient_light + irradiance),
         );
 
         if let Some(reflection) = reflection {
