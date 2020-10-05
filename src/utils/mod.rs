@@ -2,21 +2,22 @@ mod physical_material_equations;
 mod rays;
 mod sampling;
 
-use nalgebra::Vector4;
+use nalgebra::Vector3;
 use num_traits::Float;
 
 pub use physical_material_equations::{fresnel, geometry_function, ndf};
 pub use rays::{reflect, refract};
 pub use sampling::{cosine_sample_hemisphere, uniform_sample_cone};
 
-pub fn to_argb_u32(rgba: Vector4<f64>) -> u32 {
-    let (r, g, b, a) = (
-        (rgba.x * 255.0) as u32,
-        (rgba.y * 255.0) as u32,
-        (rgba.z * 255.0) as u32,
-        (rgba.w * 255.0) as u32,
+const ALPHA_BIT_MASK: u32 = 255 << 24;
+
+pub fn to_argb_u32(rgb: Vector3<f64>) -> u32 {
+    let (r, g, b) = (
+        (rgb.x * 255.0) as u32,
+        (rgb.y * 255.0) as u32,
+        (rgb.z * 255.0) as u32,
     );
-    a << 24 | r << 16 | g << 8 | b
+    ALPHA_BIT_MASK | r << 16 | g << 8 | b
 }
 
 pub fn remap_value<F: Float>(num: F, domain: (F, F), range: (F, F)) -> F {
@@ -46,16 +47,14 @@ mod test {
     #[allow(clippy::shadow_unrelated)]
     #[test]
     fn it_converts_color_vecs_to_u32() {
-        let color = 0;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 0.0])), color);
-        let color = 255 << 24;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 0.0, 1.0])), color);
-        let color = 255 << 24 | 255 << 16 | 255 << 8 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([1.0, 1.0, 1.0, 1.0])), color);
-        let color = 255 << 24 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([0.0, 0.0, 1.0, 1.0])), color);
-        let color = 255 << 24 | 255 << 16 | 255;
-        assert_eq!(to_argb_u32(Vector4::from([1.0, 0.0, 1.0, 1.0])), color);
+        let color = ALPHA_BIT_MASK;
+        assert_eq!(to_argb_u32(Vector3::from([0.0, 0.0, 0.0])), color);
+        let color = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
+        assert_eq!(to_argb_u32(Vector3::from([1.0, 1.0, 1.0])), color);
+        let color = ALPHA_BIT_MASK | 255;
+        assert_eq!(to_argb_u32(Vector3::from([0.0, 0.0, 1.0])), color);
+        let color = ALPHA_BIT_MASK | 255 << 16 | 255;
+        assert_eq!(to_argb_u32(Vector3::from([1.0, 0.0, 1.0])), color);
     }
 
     #[test]

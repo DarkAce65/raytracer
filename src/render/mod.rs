@@ -1,13 +1,55 @@
 mod raytracing_scene;
 mod scene;
 
-use nalgebra::{Point3, Unit, Vector3};
+use nalgebra::{clamp, Point3, Unit, Vector3};
+use num_traits::Zero;
 use serde::Deserialize;
+use std::ops::AddAssign;
 
 pub use scene::Scene;
 
 const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
+
+pub struct ColorData {
+    color: Vector3<f64>,
+}
+
+impl ColorData {
+    fn new(color: Vector3<f64>) -> Self {
+        Self { color }
+    }
+
+    fn zero() -> Self {
+        Self::new(Vector3::zero())
+    }
+
+    fn clamp(mut self) -> Self {
+        self.color = self.color.map(|c| clamp(c, 0.0, 1.0));
+        self
+    }
+
+    fn gamma_correct(mut self) -> Self {
+        self.color = self.color.map(|c| c.powf(1.0 / GAMMA));
+        self
+    }
+}
+
+pub struct CastStats {
+    ray_count: u64,
+}
+
+impl CastStats {
+    const fn zero() -> Self {
+        CastStats { ray_count: 0 }
+    }
+}
+
+impl AddAssign for CastStats {
+    fn add_assign(&mut self, rhs: Self) {
+        self.ray_count += rhs.ray_count;
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(default)]
