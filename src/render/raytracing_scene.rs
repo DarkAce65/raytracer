@@ -464,9 +464,12 @@ impl RaytracingScene {
 
         let progress = ProgressBar::new((width * height).into());
         progress.set_draw_delta((width * height / 200).into());
-        progress.set_style(ProgressStyle::default_bar().template(
-            "[{elapsed_precise} elapsed] [{eta_precise} left] {bar:40} {pos}/{len} pixels, {msg} rays",
-        ));
+        progress.set_style(ProgressStyle::default_bar().template(format!(
+            "{} {} {}",
+            "[{elapsed_precise} elapsed] [{eta_precise} left]",
+            "{bar:40}",
+            "{pos}/{len} pixels, {msg} rays",
+        )));
 
         progress
     }
