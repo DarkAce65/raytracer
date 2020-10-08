@@ -12,11 +12,16 @@ pub use sampling::{cosine_sample_hemisphere, uniform_sample_cone};
 const ALPHA_BIT_MASK: u32 = 255 << 24;
 
 pub fn to_argb_u32(rgb: Vector3<f64>) -> u32 {
-    let (r, g, b) = (
-        (rgb.x * 255.0) as u32,
-        (rgb.y * 255.0) as u32,
-        (rgb.z * 255.0) as u32,
-    );
+    let r = (rgb.x * 255.0) as u32;
+    let g = (rgb.y * 255.0) as u32;
+    let b = (rgb.z * 255.0) as u32;
+    ALPHA_BIT_MASK | r << 16 | g << 8 | b
+}
+
+pub fn mul_argb_u32(argb: u32, f: f64) -> u32 {
+    let r = (f64::from((argb >> 16) & 255) * f) as u32;
+    let g = (f64::from((argb >> 8) & 255) * f) as u32;
+    let b = (f64::from(argb & 255) * f) as u32;
     ALPHA_BIT_MASK | r << 16 | g << 8 | b
 }
 

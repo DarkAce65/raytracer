@@ -371,7 +371,6 @@ impl RaytracingScene {
 
             let (ambient_occlusion, ambient_occlusion_stats) =
                 self.compute_ambient_occlusion(&intersection, ray.get_depth());
-            // color_data.color *= ambient_occlusion;
             color_data.ambient_occlusion *= ambient_occlusion;
             cast_stats += ambient_occlusion_stats;
 
@@ -436,25 +435,24 @@ impl RaytracingScene {
         let samples = self.render_options.samples_per_pixel;
         let rays = self.build_camera_rays(x, y, samples);
 
-        let (mut color_data, stats) = if samples == 1 {
+        let (color_data, stats) = if samples == 1 {
             self.get_color(rays.first().unwrap())
         } else {
-            let mut color_data = ColorData::zero();
-            let mut cast_stats = CastStats::zero();
-            for ray in &rays {
+            let (mut color_data, mut cast_stats) = self.get_color(rays.first().unwrap());
+
+            for ray in& rays[1..] {
                 let (data, stats) = self.get_color(ray);
                 color_data.color += data.color;
                 color_data.ambient_occlusion += data.ambient_occlusion;
                 cast_stats += stats;
             }
 
-            color_data.color /= f64::from(samples);
-            color_data.ambient_occlusion /= f64::from(samples);
+            let inv_samples = 1.0 / f64::from(samples);
+            color_data.color *= inv_samples;
+            color_data.ambient_occlusion *= inv_samples;
 
             (color_data.clamp(), cast_stats)
         };
-
-        color_data.color *= color_data.ambient_occlusion;
 
         (color_data.gamma_correct(), stats)
     }
@@ -463,20 +461,29 @@ impl RaytracingScene {
         let width = self.get_width();
         let height = self.get_height();
 
+        let mut color_data_buffer: Vec<ColorData> = Vec::new();
+        for _ in 0..width * height {
+            color_data_buffer.push(ColorData::zero());
+        }
+        let color_data_buffer_mutex = Arc::new(Mutex::new(&mut color_data_buffer));
         let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
-        let buffer_mutex = Arc::new(Mutex::new(&mut image_buffer));
+        let image_buffer_mutex = Arc::new(Mutex::new(&mut image_buffer));
         let rays = AtomicU64::new(0);
 
-        let process_pixel = |index| {
+        let process_pixel = |index: &u32| {
             let (color_data, stats) = self.screen_raycast(index % width, index / width);
             rays.fetch_add(stats.ray_count, Ordering::SeqCst);
 
-            let index = (index * 4) as usize;
-            let mut buffer = buffer_mutex.lock().unwrap();
-            buffer[index] = (color_data.color.x * 255.0) as u8;
-            buffer[index + 1] = (color_data.color.y * 255.0) as u8;
-            buffer[index + 2] = (color_data.color.z * 255.0) as u8;
-            buffer[index + 3] = 255;
+            let index_usize = *index as usize;
+            let buffer_index = index_usize * 4;
+            let mut image_buffer = image_buffer_mutex.lock().unwrap();
+            image_buffer[buffer_index] = (color_data.color.x * 255.0) as u8;
+            image_buffer[buffer_index + 1] = (color_data.color.y * 255.0) as u8;
+            image_buffer[buffer_index + 2] = (color_data.color.z * 255.0) as u8;
+            image_buffer[buffer_index + 3] = 255;
+
+            let mut color_data_buffer = color_data_buffer_mutex.lock().unwrap();
+            color_data_buffer[index_usize] = color_data;
         };
 
         let mut indexes: Vec<u32> = (0..width * height).collect();
@@ -485,16 +492,33 @@ impl RaytracingScene {
         let start = Instant::now();
         if let Some(progress) = progress {
             indexes
-                .into_par_iter()
+                .par_iter()
                 .progress_with(progress.clone())
                 .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
                 .for_each(process_pixel);
 
             progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
         } else {
-            indexes.into_par_iter().for_each(process_pixel);
+            indexes.par_iter().for_each(process_pixel);
         }
+
+        indexes.iter().for_each(|index| {
+            let index_usize = *index as usize;
+            let buffer_index = index_usize * 4;
+
+            let ambient_occlusion = color_data_buffer[index_usize].ambient_occlusion;
+            let mut image_buffer = image_buffer_mutex.lock().unwrap();
+
+            image_buffer[buffer_index] =
+                (f64::from(image_buffer[buffer_index]) * ambient_occlusion) as u8;
+            image_buffer[buffer_index + 1] =
+                (f64::from(image_buffer[buffer_index + 1]) * ambient_occlusion) as u8;
+            image_buffer[buffer_index + 2] =
+                (f64::from(image_buffer[buffer_index + 2]) * ambient_occlusion) as u8;
+        });
+
         let duration = start.elapsed();
+
         let image =
             RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
 
@@ -503,24 +527,34 @@ impl RaytracingScene {
 
     pub fn raytrace_to_buffer(
         self,
-        buffer_mutex: &Arc<Mutex<Vec<u32>>>,
+        image_buffer_mutex: &Arc<Mutex<Vec<u32>>>,
         progress: Option<ProgressBar>,
     ) {
         let width = self.get_width();
         let height = self.get_height();
 
-        assert!(buffer_mutex.lock().unwrap().len() == (width * height) as usize);
+        assert!(image_buffer_mutex.lock().unwrap().len() == (width * height) as usize);
 
-        let buffer_mutex = Arc::clone(buffer_mutex);
+        let image_buffer_mutex = Arc::clone(image_buffer_mutex);
         spawn(move || {
-            let rays = AtomicU64::new(0);
+            let total_ray_count = AtomicU64::new(0);
 
-            let process_pixel = |index| {
+            let mut color_data_buffer: Vec<ColorData> = Vec::new();
+            for _ in 0..width * height {
+                color_data_buffer.push(ColorData::zero());
+            }
+            let color_data_buffer_mutex = Arc::new(Mutex::new(&mut color_data_buffer));
+
+            let process_pixel = |index: &u32| {
                 let (color_data, stats) = self.screen_raycast(index % width, index / width);
-                rays.fetch_add(stats.ray_count, Ordering::SeqCst);
+                total_ray_count.fetch_add(stats.ray_count, Ordering::SeqCst);
 
-                let mut buffer = buffer_mutex.lock().unwrap();
-                buffer[index as usize] = utils::to_argb_u32(color_data.color);
+                let index_usize = *index as usize;
+                let mut image_buffer = image_buffer_mutex.lock().unwrap();
+                image_buffer[index_usize] = utils::to_argb_u32(color_data.color);
+
+                let mut color_data_buffer = color_data_buffer_mutex.lock().unwrap();
+                color_data_buffer[index_usize] = color_data;
             };
 
             let mut indexes: Vec<u32> = (0..width * height).collect();
@@ -528,15 +562,26 @@ impl RaytracingScene {
 
             if let Some(progress) = progress {
                 indexes
-                    .into_par_iter()
+                    .par_iter()
                     .progress_with(progress.clone())
-                    .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
+                    .inspect(|_| {
+                        progress.set_message(&total_ray_count.load(Ordering::SeqCst).to_string())
+                    })
                     .for_each(process_pixel);
 
-                progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
+                progress.finish_with_message(&total_ray_count.load(Ordering::SeqCst).to_string());
             } else {
-                indexes.into_par_iter().for_each(process_pixel);
+                indexes.par_iter().for_each(process_pixel);
             }
+
+            indexes.iter().for_each(|index| {
+                let index_usize = *index as usize;
+                let mut image_buffer = image_buffer_mutex.lock().unwrap();
+                image_buffer[index_usize] = utils::mul_argb_u32(
+                    image_buffer[index_usize],
+                    color_data_buffer[index_usize].ambient_occlusion,
+                );
+            });
         });
     }
 }
