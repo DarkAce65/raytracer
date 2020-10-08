@@ -6,7 +6,8 @@ use crate::lights::Light;
 use crate::ray_intersection::{Intersection, Ray, RayType};
 use crate::utils;
 use image::RgbaImage;
-use indicatif::{ParallelProgressIterator, ProgressBar};
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use minifb::{Key, Window, WindowOptions};
 use nalgebra::{Matrix4, Point3, Unit, Vector3};
 use num_traits::identities::Zero;
 use rand::Rng;
@@ -15,8 +16,8 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread::spawn;
+use std::sync::{Arc, RwLock};
+use std::thread;
 use std::time::{Duration, Instant};
 
 #[derive(Debug)]
@@ -440,7 +441,7 @@ impl RaytracingScene {
         } else {
             let (mut color_data, mut cast_stats) = self.get_color(rays.first().unwrap());
 
-            for ray in& rays[1..] {
+            for ray in &rays[1..] {
                 let (data, stats) = self.get_color(ray);
                 color_data.color += data.color;
                 color_data.ambient_occlusion += data.ambient_occlusion;
@@ -457,36 +458,55 @@ impl RaytracingScene {
         (color_data.gamma_correct(), stats)
     }
 
-    pub fn raytrace_to_image(&self, progress: Option<ProgressBar>) -> (RgbaImage, Duration, u64) {
+    fn build_progress_bar(&self) -> ProgressBar {
         let width = self.get_width();
         let height = self.get_height();
+
+        let progress = ProgressBar::new((width * height).into());
+        progress.set_draw_delta((width * height / 200).into());
+        progress.set_style(ProgressStyle::default_bar().template(
+            "[{elapsed_precise} elapsed] [{eta_precise} left] {bar:40} {pos}/{len} pixels, {msg} rays",
+        ));
+
+        progress
+    }
+
+    pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, Duration, u64) {
+        let progress = if use_progress {
+            Some(self.build_progress_bar())
+        } else {
+            None
+        };
+
+        let width = self.get_width() as usize;
+        let height = self.get_height() as usize;
 
         let mut color_data_buffer: Vec<ColorData> = Vec::new();
         for _ in 0..width * height {
             color_data_buffer.push(ColorData::zero());
         }
-        let color_data_buffer_mutex = Arc::new(Mutex::new(&mut color_data_buffer));
-        let mut image_buffer: Vec<u8> = vec![0; (width * height * 4) as usize];
-        let image_buffer_mutex = Arc::new(Mutex::new(&mut image_buffer));
-        let rays = AtomicU64::new(0);
+        let color_data_buffer_lock = RwLock::new(color_data_buffer);
+        let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
+        let image_buffer_lock = RwLock::new(&mut image_buffer);
+        let total_ray_count = AtomicU64::new(0);
 
-        let process_pixel = |index: &u32| {
-            let (color_data, stats) = self.screen_raycast(index % width, index / width);
-            rays.fetch_add(stats.ray_count, Ordering::SeqCst);
+        let process_pixel = |&index| {
+            let (color_data, stats) =
+                self.screen_raycast((index % width) as u32, (index / width) as u32);
+            total_ray_count.fetch_add(stats.ray_count, Ordering::SeqCst);
 
-            let index_usize = *index as usize;
-            let buffer_index = index_usize * 4;
-            let mut image_buffer = image_buffer_mutex.lock().unwrap();
+            let buffer_index = index * 4;
+            let mut image_buffer = image_buffer_lock.write().unwrap();
             image_buffer[buffer_index] = (color_data.color.x * 255.0) as u8;
             image_buffer[buffer_index + 1] = (color_data.color.y * 255.0) as u8;
             image_buffer[buffer_index + 2] = (color_data.color.z * 255.0) as u8;
             image_buffer[buffer_index + 3] = 255;
 
-            let mut color_data_buffer = color_data_buffer_mutex.lock().unwrap();
-            color_data_buffer[index_usize] = color_data;
+            let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
+            color_data_buffer[index] = color_data;
         };
 
-        let mut indexes: Vec<u32> = (0..width * height).collect();
+        let mut indexes: Vec<usize> = (0..width * height).collect();
         indexes.shuffle(&mut thread_rng());
 
         let start = Instant::now();
@@ -494,21 +514,22 @@ impl RaytracingScene {
             indexes
                 .par_iter()
                 .progress_with(progress.clone())
-                .inspect(|_| progress.set_message(&rays.load(Ordering::SeqCst).to_string()))
+                .inspect(|_| {
+                    progress.set_message(&total_ray_count.load(Ordering::SeqCst).to_string())
+                })
                 .for_each(process_pixel);
 
-            progress.finish_with_message(&rays.load(Ordering::SeqCst).to_string());
+            progress.finish_with_message(&total_ray_count.load(Ordering::SeqCst).to_string());
         } else {
             indexes.par_iter().for_each(process_pixel);
         }
 
-        indexes.iter().for_each(|index| {
-            let index_usize = *index as usize;
-            let buffer_index = index_usize * 4;
+        indexes.iter().for_each(|&index| {
+            let color_data_buffer = color_data_buffer_lock.read().unwrap();
+            let ambient_occlusion = color_data_buffer[index].ambient_occlusion;
+            let mut image_buffer = image_buffer_lock.write().unwrap();
 
-            let ambient_occlusion = color_data_buffer[index_usize].ambient_occlusion;
-            let mut image_buffer = image_buffer_mutex.lock().unwrap();
-
+            let buffer_index = index * 4;
             image_buffer[buffer_index] =
                 (f64::from(image_buffer[buffer_index]) * ambient_occlusion) as u8;
             image_buffer[buffer_index + 1] =
@@ -519,45 +540,62 @@ impl RaytracingScene {
 
         let duration = start.elapsed();
 
-        let image =
-            RgbaImage::from_raw(width, height, image_buffer).expect("failed to convert buffer");
+        let image = RgbaImage::from_raw(width as u32, height as u32, image_buffer)
+            .expect("failed to convert buffer");
 
-        (image, duration, rays.load(Ordering::SeqCst))
+        (image, duration, total_ray_count.load(Ordering::SeqCst))
     }
 
-    pub fn raytrace_to_buffer(
-        self,
-        image_buffer_mutex: &Arc<Mutex<Vec<u32>>>,
-        progress: Option<ProgressBar>,
-    ) {
-        let width = self.get_width();
-        let height = self.get_height();
+    pub fn raytrace_to_buffer(self, use_progress: bool) {
+        let progress = if use_progress {
+            Some(self.build_progress_bar())
+        } else {
+            None
+        };
 
-        assert!(image_buffer_mutex.lock().unwrap().len() == (width * height) as usize);
+        let width = self.get_width() as usize;
+        let height = self.get_height() as usize;
 
-        let image_buffer_mutex = Arc::clone(image_buffer_mutex);
-        spawn(move || {
+        println!("Rendering to window - press escape to exit.");
+        let mut window: Window = Window::new(
+            "raytracer",
+            width,
+            height,
+            WindowOptions {
+                title: false,
+                borderless: true,
+                ..WindowOptions::default()
+            },
+        )
+        .unwrap();
+
+        let image_buffer: Vec<u32> = vec![0; width * height];
+        let image_buffer_lock = Arc::new(RwLock::new(image_buffer));
+
+        let ray_image_buffer_lock = image_buffer_lock.clone();
+        thread::spawn(move || {
+            println!("Raytracing...");
             let total_ray_count = AtomicU64::new(0);
 
             let mut color_data_buffer: Vec<ColorData> = Vec::new();
             for _ in 0..width * height {
                 color_data_buffer.push(ColorData::zero());
             }
-            let color_data_buffer_mutex = Arc::new(Mutex::new(&mut color_data_buffer));
+            let color_data_buffer_lock = RwLock::new(&mut color_data_buffer);
 
-            let process_pixel = |index: &u32| {
-                let (color_data, stats) = self.screen_raycast(index % width, index / width);
+            let process_pixel = |&index| {
+                let (color_data, stats) =
+                    self.screen_raycast((index % width) as u32, (index / width) as u32);
                 total_ray_count.fetch_add(stats.ray_count, Ordering::SeqCst);
 
-                let index_usize = *index as usize;
-                let mut image_buffer = image_buffer_mutex.lock().unwrap();
-                image_buffer[index_usize] = utils::to_argb_u32(color_data.color);
+                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+                image_buffer[index] = utils::to_argb_u32(color_data.color);
 
-                let mut color_data_buffer = color_data_buffer_mutex.lock().unwrap();
-                color_data_buffer[index_usize] = color_data;
+                let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
+                color_data_buffer[index] = color_data;
             };
 
-            let mut indexes: Vec<u32> = (0..width * height).collect();
+            let mut indexes: Vec<usize> = (0..width * height).collect();
             indexes.shuffle(&mut thread_rng());
 
             if let Some(progress) = progress {
@@ -574,14 +612,23 @@ impl RaytracingScene {
                 indexes.par_iter().for_each(process_pixel);
             }
 
-            indexes.iter().for_each(|index| {
-                let index_usize = *index as usize;
-                let mut image_buffer = image_buffer_mutex.lock().unwrap();
-                image_buffer[index_usize] = utils::mul_argb_u32(
-                    image_buffer[index_usize],
-                    color_data_buffer[index_usize].ambient_occlusion,
+            indexes.iter().for_each(|&index| {
+                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+                image_buffer[index] = utils::mul_argb_u32(
+                    image_buffer[index],
+                    color_data_buffer[index].ambient_occlusion,
                 );
             });
         });
+
+        while window.is_open() && !window.is_key_down(Key::Escape) {
+            let image_buffer = image_buffer_lock.read().unwrap();
+            window
+                .update_with_buffer(&image_buffer, width, height)
+                .unwrap();
+            drop(image_buffer);
+
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 }
