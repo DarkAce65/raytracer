@@ -472,12 +472,6 @@ impl RaytracingScene {
     }
 
     pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, Duration, u64) {
-        let progress = if use_progress {
-            Some(self.build_progress_bar())
-        } else {
-            None
-        };
-
         let width = self.get_width() as usize;
         let height = self.get_height() as usize;
 
@@ -510,7 +504,9 @@ impl RaytracingScene {
         indexes.shuffle(&mut thread_rng());
 
         let start = Instant::now();
-        if let Some(progress) = progress {
+        if use_progress {
+            let progress = self.build_progress_bar();
+
             indexes
                 .par_iter()
                 .progress_with(progress.clone())
@@ -547,12 +543,6 @@ impl RaytracingScene {
     }
 
     pub fn raytrace_to_buffer(self, use_progress: bool) {
-        let progress = if use_progress {
-            Some(self.build_progress_bar())
-        } else {
-            None
-        };
-
         let width = self.get_width() as usize;
         let height = self.get_height() as usize;
 
@@ -598,7 +588,9 @@ impl RaytracingScene {
             let mut indexes: Vec<usize> = (0..width * height).collect();
             indexes.shuffle(&mut thread_rng());
 
-            if let Some(progress) = progress {
+            if use_progress {
+                let progress = self.build_progress_bar();
+
                 indexes
                     .par_iter()
                     .progress_with(progress.clone())
