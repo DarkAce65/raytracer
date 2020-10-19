@@ -10,6 +10,7 @@ pub use scene::Scene;
 
 const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
+const GAUSSIAN_KERNEL_SIZE: usize = 5;
 
 pub struct ColorData {
     color: Vector3<f64>,

@@ -1,4 +1,4 @@
-use super::{Camera, CastStats, ColorData, RenderOptions, BIAS};
+use super::{Camera, CastStats, ColorData, RenderOptions, BIAS, GAUSSIAN_KERNEL_SIZE};
 use crate::core::{
     KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture, Transformed,
 };
@@ -458,6 +458,60 @@ impl RaytracingScene {
         (color_data.gamma_correct(), stats)
     }
 
+    fn post_process_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) {
+        let width = self.get_width() as usize;
+
+        let kernel = utils::compute_gaussian_kernel(GAUSSIAN_KERNEL_SIZE);
+        let half_kernel_size = GAUSSIAN_KERNEL_SIZE / 2;
+        let len = color_data_buffer_lock.read().unwrap().len();
+
+        for index in 0..len {
+            let row = (index / width) * width;
+
+            let mut smoothed_ambient_occlusion = 0.0;
+            {
+                let color_data_buffer = color_data_buffer_lock.read().unwrap();
+
+                for (x, kernel_weight) in kernel.iter().enumerate() {
+                    if index + x < row + half_kernel_size {
+                        continue;
+                    }
+                    let color_data_index = index + x - half_kernel_size;
+                    if color_data_index >= row + width {
+                        continue;
+                    }
+
+                    smoothed_ambient_occlusion +=
+                        kernel_weight * color_data_buffer[color_data_index].ambient_occlusion;
+                }
+            }
+            let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
+            color_data_buffer[index].ambient_occlusion = smoothed_ambient_occlusion;
+        }
+
+        for index in 0..len {
+            let mut smoothed_ambient_occlusion = 0.0;
+            {
+                let color_data_buffer = color_data_buffer_lock.read().unwrap();
+
+                for (y, kernel_weight) in kernel.iter().enumerate() {
+                    if index + y * width < half_kernel_size * width {
+                        continue;
+                    }
+                    let color_data_index = index + y * width - half_kernel_size * width;
+                    if color_data_index >= len {
+                        continue;
+                    }
+
+                    smoothed_ambient_occlusion +=
+                        kernel_weight * color_data_buffer[color_data_index].ambient_occlusion;
+                }
+            }
+            let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
+            color_data_buffer[index].ambient_occlusion = smoothed_ambient_occlusion;
+        }
+    }
+
     fn build_progress_bar(&self) -> ProgressBar {
         let width = self.get_width();
         let height = self.get_height();
@@ -528,6 +582,8 @@ impl RaytracingScene {
             indexes.par_iter().for_each(process_pixel);
         }
 
+        self.post_process_pass(&color_data_buffer_lock);
+
         indexes.iter().for_each(|&index| {
             let color_data_buffer = color_data_buffer_lock.read().unwrap();
             let ambient_occlusion = color_data_buffer[index].ambient_occlusion;
@@ -579,7 +635,7 @@ impl RaytracingScene {
             for _ in 0..width * height {
                 color_data_buffer.push(ColorData::zero());
             }
-            let color_data_buffer_lock = RwLock::new(&mut color_data_buffer);
+            let color_data_buffer_lock = RwLock::new(color_data_buffer);
 
             let process_pixel = |&index| {
                 let (color_data, stats) =
@@ -612,7 +668,10 @@ impl RaytracingScene {
                 indexes.par_iter().for_each(process_pixel);
             }
 
+            self.post_process_pass(&color_data_buffer_lock);
+
             indexes.iter().for_each(|&index| {
+                let color_data_buffer = color_data_buffer_lock.read().unwrap();
                 let mut image_buffer = ray_image_buffer_lock.write().unwrap();
                 image_buffer[index] = utils::mul_argb_u32(
                     image_buffer[index],
