@@ -1,6 +1,6 @@
 use nalgebra::{Point2, Point3, Unit, Vector2, Vector3};
 use rand::Rng;
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, TAU};
 use std::f64::EPSILON;
 
 fn concentric_sample_disk() -> Point2<f64> {
@@ -51,7 +51,7 @@ pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Un
     let z = theta.cos();
     let radius = theta.sin();
 
-    let phi = rng.gen::<f64>() * 2.0 * PI;
+    let phi = rng.gen::<f64>() * TAU;
 
     let u = direction.cross(&Vector3::z_axis());
     let mag = u.magnitude();
@@ -74,6 +74,7 @@ pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Un
 mod test {
     use super::*;
     use more_asserts::assert_le;
+    use std::f64::consts::PI;
 
     const PRECISION: f64 = 1e-6;
 
