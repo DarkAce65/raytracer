@@ -48,12 +48,12 @@ impl Default for PhongMaterial {
 
 impl PhongMaterial {
     pub fn get_color(&self, uv: Vector2<f64>, textures: &HashMap<String, Texture>) -> Vector3<f64> {
-        if let Some(texture_path) = &self.texture_path {
-            let texture = textures.get(texture_path).expect("texture not loaded");
-            self.color.component_mul(&texture.get_color(uv))
-        } else {
-            self.color
-        }
+        self.texture_path
+            .as_ref()
+            .map_or(self.color, |texture_path| {
+                let texture = textures.get(texture_path).expect("texture not loaded");
+                self.color.component_mul(&texture.get_color(uv))
+            })
     }
 }
 
@@ -90,12 +90,12 @@ impl Default for PhysicalMaterial {
 
 impl PhysicalMaterial {
     pub fn get_color(&self, uv: Vector2<f64>, textures: &HashMap<String, Texture>) -> Vector3<f64> {
-        if let Some(texture_path) = &self.texture_path {
-            let texture = textures.get(texture_path).expect("texture not loaded");
-            self.color.component_mul(&texture.get_color(uv))
-        } else {
-            self.color
-        }
+        self.texture_path
+            .as_ref()
+            .map_or(self.color, |texture_path| {
+                let texture = textures.get(texture_path).expect("texture not loaded");
+                self.color.component_mul(&texture.get_color(uv))
+            })
     }
 }
 

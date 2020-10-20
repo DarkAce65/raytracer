@@ -240,7 +240,7 @@ impl RaytracingScene {
 
         let refraction = if material.opacity < 1.0 {
             let eta = ray.refractive_index / material.refractive_index;
-            if let Some(refraction_dir) = utils::refract(&ray.direction, &normal, eta) {
+            utils::refract(&ray.direction, &normal, eta).map(|refraction_dir| {
                 let refraction_dir = refraction_dir.into_inner();
                 let refraction_ray = Ray {
                     ray_type: RayType::Secondary(depth + 1),
@@ -250,10 +250,9 @@ impl RaytracingScene {
                 };
                 let (color_data, stats) = self.get_color(&refraction_ray);
                 cast_stats += stats;
-                Some(color_data.color.component_mul(&material_color))
-            } else {
-                None
-            }
+
+                color_data.color.component_mul(&material_color)
+            })
         } else {
             None
         };
@@ -350,6 +349,7 @@ impl RaytracingScene {
         )
     }
 
+    #[allow(clippy::option_if_let_else)]
     fn get_color(&self, ray: &Ray) -> (ColorData, CastStats) {
         let mut cast_stats = CastStats::zero();
 

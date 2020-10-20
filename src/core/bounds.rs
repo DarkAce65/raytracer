@@ -341,17 +341,17 @@ impl KdTreeAccelerator {
                         (right, left)
                     };
 
-                    let close_intersection = self.raycast_tree(first, ray, max_distance);
-                    if let Some(close_intersection) = close_intersection {
-                        let max_distance = Some(close_intersection.distance);
+                    self.raycast_tree(first, ray, max_distance).map_or_else(
+                        || self.raycast_tree(second, ray, max_distance),
+                        |close_intersection| {
+                            let max_distance = Some(close_intersection.distance);
 
-                        Some(close_intersection)
-                            .into_iter()
-                            .chain(self.raycast_tree(second, ray, max_distance).into_iter())
-                            .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
-                    } else {
-                        self.raycast_tree(second, ray, max_distance)
-                    }
+                            Some(close_intersection)
+                                .into_iter()
+                                .chain(self.raycast_tree(second, ray, max_distance).into_iter())
+                                .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal))
+                        },
+                    )
                 } else {
                     None
                 }
