@@ -164,6 +164,14 @@ impl RaytracingScene {
             emissive_light + (1.0 - material.reflectivity) * (ambient_light + irradiance),
         );
 
+        // Ambient occlusion computation can be skipped for perfectly reflective materials
+        if material.reflectivity < 1.0 {
+            let (ambient_occlusion, ambient_occlusion_stats) =
+                self.compute_ambient_occlusion(intersection, depth);
+            color_data.ambient_occlusion = ambient_occlusion;
+            cast_stats += ambient_occlusion_stats;
+        }
+
         if let Some(reflection) = reflection {
             color_data.color += material.reflectivity * reflection.color;
             color_data.ambient_occlusion = utils::lerp(
@@ -307,9 +315,18 @@ impl RaytracingScene {
 
         let mut color_data = ColorData::new(emissive_light + ambient_light + irradiance);
 
+        let (ambient_occlusion, ambient_occlusion_stats) =
+            self.compute_ambient_occlusion(intersection, depth);
+        color_data.ambient_occlusion = ambient_occlusion;
+        cast_stats += ambient_occlusion_stats;
+
         if let Some(reflection) = reflection {
             color_data.color += reflection.color;
-            color_data.ambient_occlusion *= reflection.ambient_occlusion;
+            color_data.ambient_occlusion = utils::lerp(
+                color_data.ambient_occlusion,
+                reflection.ambient_occlusion,
+                1.0 - roughness,
+            );
         }
 
         if let Some(refraction) = refraction {
@@ -325,10 +342,11 @@ impl RaytracingScene {
         depth: u8,
     ) -> (f64, CastStats) {
         let mut cast_stats = CastStats::zero();
-        let d = 0.125_f64.powi(i32::from(depth));
-        let reflected_rays = (f64::from(self.render_options.max_occlusion_rays) * d) as u16;
+        let d = 0.25_f64.powi(i32::from(depth));
+        let occlusion_rays =
+            ((f64::from(self.render_options.max_occlusion_rays) * d) as u16).max(1);
         let mut ambient_occlusion = 0;
-        for _ in 0..reflected_rays {
+        for _ in 0..occlusion_rays {
             let direction =
                 utils::uniform_sample_cone(&intersection.get_normal(), FRAC_PI_2).into_inner();
             let occlusion_ray = Ray {
@@ -344,7 +362,7 @@ impl RaytracingScene {
         }
 
         (
-            f64::from(ambient_occlusion) / f64::from(reflected_rays),
+            f64::from(ambient_occlusion) / f64::from(occlusion_rays),
             cast_stats,
         )
     }
@@ -354,7 +372,7 @@ impl RaytracingScene {
         let mut cast_stats = CastStats::zero();
 
         if ray.get_depth() >= self.render_options.max_depth {
-            return (ColorData::zero(), cast_stats);
+            return (ColorData::black(), cast_stats);
         }
 
         cast_stats.ray_count += 1;
@@ -362,7 +380,7 @@ impl RaytracingScene {
             intersection.compute_data(&ray);
             let material = intersection.object.get_material();
 
-            let (mut color_data, material_stats) = match material {
+            let (color_data, material_stats) = match material {
                 Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {
                     self.get_color_physical(&ray, &intersection, material)
@@ -370,14 +388,9 @@ impl RaytracingScene {
             };
             cast_stats += material_stats;
 
-            let (ambient_occlusion, ambient_occlusion_stats) =
-                self.compute_ambient_occlusion(&intersection, ray.get_depth());
-            color_data.ambient_occlusion *= ambient_occlusion;
-            cast_stats += ambient_occlusion_stats;
-
             (color_data.clamp(), cast_stats)
         } else {
-            (ColorData::zero(), cast_stats)
+            (ColorData::black(), cast_stats)
         }
     }
 
@@ -539,7 +552,7 @@ impl RaytracingScene {
 
         let mut color_data_buffer: Vec<ColorData> = Vec::new();
         for _ in 0..width * height {
-            color_data_buffer.push(ColorData::zero());
+            color_data_buffer.push(ColorData::black());
         }
         let color_data_buffer_lock = RwLock::new(color_data_buffer);
         let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
@@ -633,7 +646,7 @@ impl RaytracingScene {
 
             let mut color_data_buffer: Vec<ColorData> = Vec::new();
             for _ in 0..width * height {
-                color_data_buffer.push(ColorData::zero());
+                color_data_buffer.push(ColorData::black());
             }
             let color_data_buffer_lock = RwLock::new(color_data_buffer);
 

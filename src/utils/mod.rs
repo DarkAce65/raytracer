@@ -93,6 +93,26 @@ mod test {
         assert_eq!(to_argb_u32(Vector3::from([1.0, 0.0, 1.0])), color);
     }
 
+    #[allow(clippy::shadow_unrelated)]
+    #[test]
+    fn it_converts_multiplies_u32_colors() {
+        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
+        let color2 = ALPHA_BIT_MASK | 127 << 16 | 127 << 8 | 127;
+        assert_eq!(mul_argb_u32(color1, 0.5), color2);
+
+        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
+        let color2 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
+        assert_eq!(mul_argb_u32(color1, 1.0), color2);
+
+        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
+        let color2 = ALPHA_BIT_MASK;
+        assert_eq!(mul_argb_u32(color1, 0.0), color2);
+
+        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
+        let color2 = ALPHA_BIT_MASK | 63 << 16 | 63 << 8 | 63;
+        assert_eq!(mul_argb_u32(color1, 0.25), color2);
+    }
+
     #[test]
     fn it_maps_numbers() {
         assert_eq!(remap_value(1.0, (0.0, 1.0), (0.0, 5.0)), 5.0);
