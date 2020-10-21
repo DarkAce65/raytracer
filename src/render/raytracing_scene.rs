@@ -164,6 +164,14 @@ impl RaytracingScene {
             emissive_light + (1.0 - material.reflectivity) * (ambient_light + irradiance),
         );
 
+        // Ambient occlusion computation can be skipped for perfectly reflective materials
+        if material.reflectivity < 1.0 {
+            let (ambient_occlusion, ambient_occlusion_stats) =
+                self.compute_ambient_occlusion(intersection, depth);
+            color_data.ambient_occlusion = ambient_occlusion;
+            cast_stats += ambient_occlusion_stats;
+        }
+
         if let Some(reflection) = reflection {
             color_data.color += material.reflectivity * reflection.color;
             color_data.ambient_occlusion = utils::lerp(
@@ -307,9 +315,18 @@ impl RaytracingScene {
 
         let mut color_data = ColorData::new(emissive_light + ambient_light + irradiance);
 
+        let (ambient_occlusion, ambient_occlusion_stats) =
+            self.compute_ambient_occlusion(intersection, depth);
+        color_data.ambient_occlusion = ambient_occlusion;
+        cast_stats += ambient_occlusion_stats;
+
         if let Some(reflection) = reflection {
             color_data.color += reflection.color;
-            color_data.ambient_occlusion *= reflection.ambient_occlusion;
+            color_data.ambient_occlusion = utils::lerp(
+                color_data.ambient_occlusion,
+                reflection.ambient_occlusion,
+                1.0 - roughness,
+            );
         }
 
         if let Some(refraction) = refraction {
@@ -363,18 +380,13 @@ impl RaytracingScene {
             intersection.compute_data(&ray);
             let material = intersection.object.get_material();
 
-            let (mut color_data, material_stats) = match material {
+            let (color_data, material_stats) = match material {
                 Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {
                     self.get_color_physical(&ray, &intersection, material)
                 }
             };
             cast_stats += material_stats;
-
-            let (ambient_occlusion, ambient_occlusion_stats) =
-                self.compute_ambient_occlusion(&intersection, ray.get_depth());
-            color_data.ambient_occlusion *= ambient_occlusion;
-            cast_stats += ambient_occlusion_stats;
 
             (color_data.clamp(), cast_stats)
         } else {
