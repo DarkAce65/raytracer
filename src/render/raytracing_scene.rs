@@ -372,7 +372,7 @@ impl RaytracingScene {
         let mut cast_stats = CastStats::zero();
 
         if ray.get_depth() >= self.render_options.max_depth {
-            return (ColorData::zero(), cast_stats);
+            return (ColorData::black(), cast_stats);
         }
 
         cast_stats.ray_count += 1;
@@ -390,7 +390,7 @@ impl RaytracingScene {
 
             (color_data.clamp(), cast_stats)
         } else {
-            (ColorData::zero(), cast_stats)
+            (ColorData::black(), cast_stats)
         }
     }
 
@@ -552,7 +552,7 @@ impl RaytracingScene {
 
         let mut color_data_buffer: Vec<ColorData> = Vec::new();
         for _ in 0..width * height {
-            color_data_buffer.push(ColorData::zero());
+            color_data_buffer.push(ColorData::black());
         }
         let color_data_buffer_lock = RwLock::new(color_data_buffer);
         let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
@@ -646,7 +646,7 @@ impl RaytracingScene {
 
             let mut color_data_buffer: Vec<ColorData> = Vec::new();
             for _ in 0..width * height {
-                color_data_buffer.push(ColorData::zero());
+                color_data_buffer.push(ColorData::black());
             }
             let color_data_buffer_lock = RwLock::new(color_data_buffer);
 

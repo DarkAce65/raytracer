@@ -26,6 +26,13 @@ impl ColorData {
     }
 
     fn zero() -> Self {
+        Self {
+            color: Vector3::zero(),
+            ambient_occlusion: 0.0,
+        }
+    }
+
+    fn black() -> Self {
         Self::new(Vector3::zero())
     }
 
