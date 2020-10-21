@@ -325,10 +325,11 @@ impl RaytracingScene {
         depth: u8,
     ) -> (f64, CastStats) {
         let mut cast_stats = CastStats::zero();
-        let d = 0.125_f64.powi(i32::from(depth));
-        let reflected_rays = (f64::from(self.render_options.max_occlusion_rays) * d) as u16;
+        let d = 0.25_f64.powi(i32::from(depth));
+        let occlusion_rays =
+            ((f64::from(self.render_options.max_occlusion_rays) * d) as u16).max(1);
         let mut ambient_occlusion = 0;
-        for _ in 0..reflected_rays {
+        for _ in 0..occlusion_rays {
             let direction =
                 utils::uniform_sample_cone(&intersection.get_normal(), FRAC_PI_2).into_inner();
             let occlusion_ray = Ray {
@@ -344,7 +345,7 @@ impl RaytracingScene {
         }
 
         (
-            f64::from(ambient_occlusion) / f64::from(reflected_rays),
+            f64::from(ambient_occlusion) / f64::from(occlusion_rays),
             cast_stats,
         )
     }
