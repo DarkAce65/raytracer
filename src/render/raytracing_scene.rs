@@ -99,7 +99,7 @@ impl RaytracingScene {
 
         let uv = intersection.get_uv();
         let material_color = material.get_color(uv, &self.textures);
-        let emissive_light = material.emissive;
+        let emissive = material.emissive;
 
         let reflection = if material.reflectivity > 0.0 {
             let reflection_dir = utils::reflect(&ray.direction, &normal).into_inner();
@@ -160,7 +160,9 @@ impl RaytracingScene {
         }
 
         let mut color_data = ColorData::new(
-            emissive_light + (1.0 - material.reflectivity) * (ambient_light + irradiance),
+            emissive + (1.0 - material.reflectivity) * (ambient_light + irradiance),
+            material_color,
+            emissive,
         );
 
         // Ambient occlusion computation can be skipped for perfectly reflective materials
@@ -206,7 +208,7 @@ impl RaytracingScene {
         let k_s = f;
         let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
 
-        let emissive_light = material.emissive;
+        let emissive = material.emissive;
 
         let reflection = if self.render_options.max_reflected_rays > 0 {
             let d = 0.125_f64.powi(i32::from(depth));
@@ -312,7 +314,11 @@ impl RaytracingScene {
             };
         }
 
-        let mut color_data = ColorData::new(emissive_light + ambient_light + irradiance);
+        let mut color_data = ColorData::new(
+            emissive + ambient_light + irradiance,
+            material_color,
+            emissive,
+        );
 
         let (ambient_occlusion, ambient_occlusion_stats) =
             self.compute_ambient_occlusion(intersection, depth);
@@ -377,8 +383,8 @@ impl RaytracingScene {
         cast_stats.ray_count += 1;
         if let Some(mut intersection) = self.raycast(&ray) {
             intersection.compute_data(&ray);
-            let material = intersection.object.get_material();
 
+            let material = intersection.object.get_material();
             let (color_data, material_stats) = match material {
                 Material::Phong(material) => self.get_color_phong(&ray, &intersection, material),
                 Material::Physical(material) => {

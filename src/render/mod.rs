@@ -14,13 +14,17 @@ const GAUSSIAN_KERNEL_SIZE: usize = 5;
 
 pub struct ColorData {
     color: Vector3<f64>,
+    albedo: Vector3<f64>,
+    emissive: Vector3<f64>,
     ambient_occlusion: f64,
 }
 
 impl ColorData {
-    fn new(color: Vector3<f64>) -> Self {
+    fn new(color: Vector3<f64>, albedo: Vector3<f64>, emissive: Vector3<f64>) -> Self {
         Self {
             color,
+            albedo,
+            emissive,
             ambient_occlusion: 1.0,
         }
     }
@@ -28,16 +32,20 @@ impl ColorData {
     fn zero() -> Self {
         Self {
             color: Vector3::zero(),
+            albedo: Vector3::zero(),
+            emissive: Vector3::zero(),
             ambient_occlusion: 0.0,
         }
     }
 
     fn black() -> Self {
-        Self::new(Vector3::zero())
+        Self::new(Vector3::zero(), Vector3::zero(), Vector3::zero())
     }
 
     fn clamp(mut self) -> Self {
         self.color = self.color.map(|c| clamp(c, 0.0, 1.0));
+        self.albedo = self.albedo.map(|c| clamp(c, 0.0, 1.0));
+        self.emissive = self.emissive.map(|c| clamp(c, 0.0, 1.0));
         self.ambient_occlusion = clamp(self.ambient_occlusion, 0.0, 1.0);
         self
     }
