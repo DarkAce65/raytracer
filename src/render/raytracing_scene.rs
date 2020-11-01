@@ -15,7 +15,6 @@ use rand::{seq::SliceRandom, thread_rng};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -546,7 +545,7 @@ impl RaytracingScene {
         progress
     }
 
-    pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, Duration, u64) {
+    pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, Duration, CastStats) {
         let width = self.get_width() as usize;
         let height = self.get_height() as usize;
 
@@ -557,12 +556,14 @@ impl RaytracingScene {
         let color_data_buffer_lock = RwLock::new(color_data_buffer);
         let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
         let image_buffer_lock = RwLock::new(&mut image_buffer);
-        let total_ray_count = AtomicU64::new(0);
+        let cast_stats = CastStats::zero();
+        let cast_stats_lock = RwLock::new(cast_stats);
 
         let process_pixel = |&index| {
             let (color_data, stats) =
                 self.screen_raycast((index % width) as u32, (index / width) as u32);
-            total_ray_count.fetch_add(stats.ray_count, Ordering::SeqCst);
+            let mut cast_stats = cast_stats_lock.write().unwrap();
+            *cast_stats += stats;
 
             let buffer_index = index * 4;
             let mut image_buffer = image_buffer_lock.write().unwrap();
@@ -586,11 +587,11 @@ impl RaytracingScene {
                 .par_iter()
                 .progress_with(progress.clone())
                 .inspect(|_| {
-                    progress.set_message(&total_ray_count.load(Ordering::SeqCst).to_string())
+                    progress.set_message(&cast_stats_lock.read().unwrap().ray_count.to_string())
                 })
                 .for_each(process_pixel);
 
-            progress.finish_with_message(&total_ray_count.load(Ordering::SeqCst).to_string());
+            progress.finish_with_message(&cast_stats_lock.read().unwrap().ray_count.to_string());
         } else {
             indexes.par_iter().for_each(process_pixel);
         }
@@ -616,7 +617,8 @@ impl RaytracingScene {
         let image = RgbaImage::from_raw(width as u32, height as u32, image_buffer)
             .expect("failed to convert buffer");
 
-        (image, duration, total_ray_count.load(Ordering::SeqCst))
+        let cast_stats = *cast_stats_lock.read().unwrap();
+        (image, duration, cast_stats)
     }
 
     pub fn raytrace_to_buffer(self, use_progress: bool) {
@@ -642,18 +644,20 @@ impl RaytracingScene {
         let ray_image_buffer_lock = image_buffer_lock.clone();
         thread::spawn(move || {
             println!("Raytracing...");
-            let total_ray_count = AtomicU64::new(0);
 
             let mut color_data_buffer: Vec<ColorData> = Vec::new();
             for _ in 0..width * height {
                 color_data_buffer.push(ColorData::black());
             }
             let color_data_buffer_lock = RwLock::new(color_data_buffer);
+            let cast_stats = CastStats::zero();
+            let cast_stats_lock = RwLock::new(cast_stats);
 
             let process_pixel = |&index| {
                 let (color_data, stats) =
                     self.screen_raycast((index % width) as u32, (index / width) as u32);
-                total_ray_count.fetch_add(stats.ray_count, Ordering::SeqCst);
+                let mut cast_stats = cast_stats_lock.write().unwrap();
+                *cast_stats += stats;
 
                 let mut image_buffer = ray_image_buffer_lock.write().unwrap();
                 image_buffer[index] = utils::to_argb_u32(color_data.color);
@@ -672,11 +676,12 @@ impl RaytracingScene {
                     .par_iter()
                     .progress_with(progress.clone())
                     .inspect(|_| {
-                        progress.set_message(&total_ray_count.load(Ordering::SeqCst).to_string())
+                        progress.set_message(&cast_stats_lock.read().unwrap().ray_count.to_string())
                     })
                     .for_each(process_pixel);
 
-                progress.finish_with_message(&total_ray_count.load(Ordering::SeqCst).to_string());
+                progress
+                    .finish_with_message(&cast_stats_lock.read().unwrap().ray_count.to_string());
             } else {
                 indexes.par_iter().for_each(process_pixel);
             }

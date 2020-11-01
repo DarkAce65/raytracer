@@ -21,4 +21,4 @@ mod utils;
 pub use crate::core::{Material, PhongMaterial, PhysicalMaterial, Transform};
 pub use crate::lights::{AmbientLight, Light, PointLight};
 pub use crate::primitives::{Cube, Group, Mesh, Object3D, Plane, Sphere, Triangle};
-pub use crate::render::{Camera, RenderOptions, Scene};
+pub use crate::render::{Camera, CastStats, RenderOptions, Scene};

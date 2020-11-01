@@ -43,15 +43,15 @@ fn main() {
             print!("\u{2514} Iteration {}: tracing...", i + 1);
             io::stdout().flush().unwrap();
 
-            let (image, duration, ray_count) = scene.raytrace_to_image(false);
+            let (image, duration, stats) = scene.raytrace_to_image(false);
             duration_sum += duration;
-            ray_count_sum += ray_count;
+            ray_count_sum += stats.ray_count;
 
             println!(
                 "\r\u{2502} Iteration {}: rendered in {:.3?} ({} rays)",
                 i + 1,
                 duration,
-                ray_count
+                stats.ray_count
             );
 
             if i == iterations - 1 {

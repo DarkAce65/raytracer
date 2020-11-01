@@ -48,13 +48,14 @@ impl ColorData {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct CastStats {
-    ray_count: u64,
+    pub ray_count: u64,
 }
 
 impl CastStats {
-    const fn zero() -> Self {
-        CastStats { ray_count: 0 }
+    pub const fn zero() -> Self {
+        Self { ray_count: 0 }
     }
 }
 
