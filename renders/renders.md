@@ -22,7 +22,7 @@ _spp = samples per pixel_
 
 #### `scenes/physical.json`
 
-800 x 800 pixels (4 spp), 50 primitives, 542,987,729 rays, 53.991s on i7 8650U
+800 x 800 pixels (4 spp), 50 primitives, 542,941,155 rays, 54.406s on i7 8650U
 
 ![physical.json](./physical.png)
 
