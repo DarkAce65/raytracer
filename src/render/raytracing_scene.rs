@@ -562,15 +562,19 @@ impl RaytracingScene {
         let process_pixel = |&index| {
             let (color_data, stats) =
                 self.screen_raycast((index % width) as u32, (index / width) as u32);
-            let mut cast_stats = cast_stats_lock.write().unwrap();
-            *cast_stats += stats;
+            {
+                let mut cast_stats = cast_stats_lock.write().unwrap();
+                *cast_stats += stats;
+            }
 
             let buffer_index = index * 4;
-            let mut image_buffer = image_buffer_lock.write().unwrap();
-            image_buffer[buffer_index] = (color_data.color.x * 255.0) as u8;
-            image_buffer[buffer_index + 1] = (color_data.color.y * 255.0) as u8;
-            image_buffer[buffer_index + 2] = (color_data.color.z * 255.0) as u8;
-            image_buffer[buffer_index + 3] = 255;
+            {
+                let mut image_buffer = image_buffer_lock.write().unwrap();
+                image_buffer[buffer_index] = (color_data.color.x * 255.0) as u8;
+                image_buffer[buffer_index + 1] = (color_data.color.y * 255.0) as u8;
+                image_buffer[buffer_index + 2] = (color_data.color.z * 255.0) as u8;
+                image_buffer[buffer_index + 3] = 255;
+            }
 
             let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
             color_data_buffer[index] = color_data;
@@ -599,11 +603,13 @@ impl RaytracingScene {
         self.post_process_pass(&color_data_buffer_lock);
 
         indexes.iter().for_each(|&index| {
-            let color_data_buffer = color_data_buffer_lock.read().unwrap();
-            let ambient_occlusion = color_data_buffer[index].ambient_occlusion;
-            let mut image_buffer = image_buffer_lock.write().unwrap();
+            let ambient_occlusion = {
+                let color_data_buffer = color_data_buffer_lock.read().unwrap();
+                color_data_buffer[index].ambient_occlusion
+            };
 
             let buffer_index = index * 4;
+            let mut image_buffer = image_buffer_lock.write().unwrap();
             image_buffer[buffer_index] =
                 (f64::from(image_buffer[buffer_index]) * ambient_occlusion) as u8;
             image_buffer[buffer_index + 1] =
@@ -656,11 +662,15 @@ impl RaytracingScene {
             let process_pixel = |&index| {
                 let (color_data, stats) =
                     self.screen_raycast((index % width) as u32, (index / width) as u32);
-                let mut cast_stats = cast_stats_lock.write().unwrap();
-                *cast_stats += stats;
+                {
+                    let mut cast_stats = cast_stats_lock.write().unwrap();
+                    *cast_stats += stats;
+                }
 
-                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                image_buffer[index] = utils::to_argb_u32(color_data.color);
+                {
+                    let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+                    image_buffer[index] = utils::to_argb_u32(color_data.color);
+                }
 
                 let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
                 color_data_buffer[index] = color_data;
@@ -699,11 +709,12 @@ impl RaytracingScene {
         });
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
-            let image_buffer = image_buffer_lock.read().unwrap();
-            window
-                .update_with_buffer(&image_buffer, width, height)
-                .unwrap();
-            drop(image_buffer);
+            {
+                let image_buffer = image_buffer_lock.read().unwrap();
+                window
+                    .update_with_buffer(&image_buffer, width, height)
+                    .unwrap();
+            }
 
             thread::sleep(Duration::from_millis(100));
         }
