@@ -211,9 +211,8 @@ impl RaytracingScene {
         let emissive = material.emissive;
 
         let reflection = if self.render_options.max_reflected_rays > 0 {
-            let d = 0.125_f64.powi(i32::from(depth));
-            let reflected_rays =
-                ((f64::from(self.render_options.max_reflected_rays) * d) as u16).max(1);
+            let d = 8_u16.pow(depth.into());
+            let reflected_rays = (self.render_options.max_reflected_rays / d).max(1);
 
             let max_angle = FRAC_PI_2 * material.roughness;
             let reflection_dir = utils::reflect(&ray.direction, &normal);
@@ -344,9 +343,9 @@ impl RaytracingScene {
         depth: u8,
     ) -> (f64, CastStats) {
         let mut cast_stats = CastStats::zero();
-        let d = 0.25_f64.powi(i32::from(depth));
-        let occlusion_rays =
-            ((f64::from(self.render_options.max_occlusion_rays) * d) as u16).max(1);
+        let d = 4_u16.pow(depth.into());
+        let occlusion_rays = (self.render_options.max_occlusion_rays / d).max(1);
+
         let mut ambient_occlusion = 0;
         for _ in 0..occlusion_rays {
             let direction =
