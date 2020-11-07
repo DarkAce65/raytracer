@@ -212,37 +212,34 @@ impl RaytracingScene {
 
         let reflection = if self.render_options.max_reflected_rays > 0 {
             let d = 0.125_f64.powi(i32::from(depth));
-            let reflected_rays = (f64::from(self.render_options.max_reflected_rays) * d) as u16;
-            if reflected_rays > 0 {
-                let max_angle = FRAC_PI_2 * material.roughness;
-                let reflection_dir = utils::reflect(&ray.direction, &normal);
+            let reflected_rays =
+                ((f64::from(self.render_options.max_reflected_rays) * d) as u16).max(1);
 
-                let mut reflection = (0..reflected_rays).fold(ColorData::zero(), |mut acc, _| {
-                    let direction =
-                        utils::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
-                    let reflection_ray = Ray {
-                        ray_type: RayType::Secondary(depth + 1),
-                        origin: hit_point + (direction * BIAS),
-                        direction,
-                        refractive_index: 1.0,
-                    };
-                    let (color_data, stats) = self.get_color(&reflection_ray);
-                    cast_stats += stats;
+            let max_angle = FRAC_PI_2 * material.roughness;
+            let reflection_dir = utils::reflect(&ray.direction, &normal);
 
-                    acc.color += color_data.color;
-                    acc.ambient_occlusion += color_data.ambient_occlusion;
+            let mut reflection = (0..reflected_rays).fold(ColorData::zero(), |mut acc, _| {
+                let direction = utils::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
+                let reflection_ray = Ray {
+                    ray_type: RayType::Secondary(depth + 1),
+                    origin: hit_point + (direction * BIAS),
+                    direction,
+                    refractive_index: 1.0,
+                };
+                let (color_data, stats) = self.get_color(&reflection_ray);
+                cast_stats += stats;
 
-                    acc
-                });
-                reflection
-                    .color
-                    .component_mul_assign(&(f * FRAC_PI_2 / f64::from(reflected_rays)));
-                reflection.ambient_occlusion /= f64::from(reflected_rays);
+                acc.color += color_data.color;
+                acc.ambient_occlusion += color_data.ambient_occlusion;
 
-                Some(reflection)
-            } else {
-                None
-            }
+                acc
+            });
+            reflection
+                .color
+                .component_mul_assign(&(f * FRAC_PI_2 / f64::from(reflected_rays)));
+            reflection.ambient_occlusion /= f64::from(reflected_rays);
+
+            Some(reflection)
         } else {
             None
         };
