@@ -18,11 +18,8 @@ pub fn to_argb_u32(rgb: Vector3<f64>) -> u32 {
     ALPHA_BIT_MASK | r << 16 | g << 8 | b
 }
 
-pub fn mul_argb_u32(argb: u32, f: f64) -> u32 {
-    let r = (f64::from((argb >> 16) & 255) * f) as u32;
-    let g = (f64::from((argb >> 8) & 255) * f) as u32;
-    let b = (f64::from(argb & 255) * f) as u32;
-    ALPHA_BIT_MASK | r << 16 | g << 8 | b
+pub fn gamma_correct(color: Vector3<f64>, gamma: f64) -> Vector3<f64> {
+    color.map(|c| c.powf(1.0 / gamma))
 }
 
 pub fn lerp<F: Float>(x0: F, x1: F, t: F) -> F {
@@ -91,26 +88,6 @@ mod test {
         assert_eq!(to_argb_u32(Vector3::from([0.0, 0.0, 1.0])), color);
         let color = ALPHA_BIT_MASK | 255 << 16 | 255;
         assert_eq!(to_argb_u32(Vector3::from([1.0, 0.0, 1.0])), color);
-    }
-
-    #[allow(clippy::shadow_unrelated)]
-    #[test]
-    fn it_converts_multiplies_u32_colors() {
-        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
-        let color2 = ALPHA_BIT_MASK | 127 << 16 | 127 << 8 | 127;
-        assert_eq!(mul_argb_u32(color1, 0.5), color2);
-
-        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
-        let color2 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
-        assert_eq!(mul_argb_u32(color1, 1.0), color2);
-
-        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
-        let color2 = ALPHA_BIT_MASK;
-        assert_eq!(mul_argb_u32(color1, 0.0), color2);
-
-        let color1 = ALPHA_BIT_MASK | 255 << 16 | 255 << 8 | 255;
-        let color2 = ALPHA_BIT_MASK | 63 << 16 | 63 << 8 | 63;
-        assert_eq!(mul_argb_u32(color1, 0.25), color2);
     }
 
     #[test]

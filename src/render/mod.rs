@@ -1,6 +1,7 @@
 mod raytracing_scene;
 mod scene;
 
+use crate::utils;
 use nalgebra::{clamp, Point3, Unit, Vector3};
 use num_traits::Zero;
 use serde::Deserialize;
@@ -51,7 +52,7 @@ impl ColorData {
     }
 
     fn gamma_correct(mut self) -> Self {
-        self.color = self.color.map(|c| c.powf(1.0 / GAMMA));
+        self.color = utils::gamma_correct(self.color, GAMMA);
         self
     }
 }

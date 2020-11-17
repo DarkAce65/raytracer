@@ -73,6 +73,14 @@ impl RaytracingScene {
         self.render_options.height
     }
 
+    fn get_aspect(&self) -> f64 {
+        f64::from(self.get_width()) / f64::from(self.get_height())
+    }
+
+    fn compute_screen_to_fov(&self) -> f64 {
+        (self.camera.fov.to_radians() / 2.0).tan()
+    }
+
     pub fn get_num_objects(&self) -> usize {
         self.object_tree.get_num_objects()
     }
@@ -395,23 +403,21 @@ impl RaytracingScene {
         }
     }
 
-    fn build_camera_rays(&self, x: u32, y: u32, samples: u16) -> Vec<Ray> {
+    fn build_camera_rays(&self, x: u32, y: u32) -> Vec<Ray> {
         assert!(x < self.get_width() && y < self.get_height());
-        assert!(samples >= 1);
+
+        let samples = self.render_options.samples_per_pixel;
+        let (width, height) = (f64::from(self.get_width()), f64::from(self.get_height()));
+        let aspect = self.get_aspect();
+        let fov = self.compute_screen_to_fov();
 
         let (x, y) = (f64::from(x), f64::from(y));
-        let (width, height) = (
-            f64::from(self.get_width() - 1),
-            f64::from(self.get_height() - 1),
-        );
-        let aspect = width / height;
-        let fov = (self.camera.fov.to_radians() / 2.0).tan();
 
         let mut ray_pixel_positions = Vec::with_capacity(samples.into());
         ray_pixel_positions.push((x + 0.5, y + 0.5));
 
         let mut rng = rand::thread_rng();
-        for _ in 0..(samples - 1) {
+        for _ in 1..samples {
             let rx: f64 = rng.gen();
             let ry: f64 = rng.gen();
             ray_pixel_positions.push((x + rx, y + ry));
@@ -448,7 +454,7 @@ impl RaytracingScene {
 
     pub fn screen_raycast(&self, x: u32, y: u32) -> (ColorData, CastStats) {
         let samples = self.render_options.samples_per_pixel;
-        let rays = self.build_camera_rays(x, y, samples);
+        let rays = self.build_camera_rays(x, y);
 
         let (color_data, stats) = if samples == 1 {
             self.get_color(rays.first().unwrap())
@@ -527,11 +533,11 @@ impl RaytracingScene {
     }
 
     fn build_progress_bar(&self) -> ProgressBar {
-        let width = self.get_width();
-        let height = self.get_height();
+        let width = u64::from(self.get_width());
+        let height = u64::from(self.get_height());
 
-        let progress = ProgressBar::new((width * height).into());
-        progress.set_draw_delta((width * height / 200).into());
+        let progress = ProgressBar::new(width * height);
+        progress.set_draw_delta(width * height / 200);
         progress.set_style(
             ProgressStyle::default_bar().template(
                 format!(
@@ -703,9 +709,8 @@ impl RaytracingScene {
             indexes.iter().for_each(|&index| {
                 let color_data_buffer = color_data_buffer_lock.read().unwrap();
                 let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                image_buffer[index] = utils::mul_argb_u32(
-                    image_buffer[index],
-                    color_data_buffer[index].ambient_occlusion,
+                image_buffer[index] = utils::to_argb_u32(
+                    color_data_buffer[index].color * color_data_buffer[index].ambient_occlusion,
                 );
             });
         });
