@@ -10,6 +10,7 @@ pub use rays::{reflect, refract};
 pub use sampling::{cosine_sample_hemisphere, uniform_sample_cone};
 
 const ALPHA_BIT_MASK: u32 = 255 << 24;
+const BOX_BLUR_ITERATIONS: usize = 3;
 
 pub fn to_argb_u32(rgb: Vector3<f64>) -> u32 {
     let r = (rgb.x * 255.0) as u32;
@@ -46,31 +47,70 @@ pub fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
     }
 }
 
-pub const fn factorial(x: u64) -> u64 {
-    match x {
-        0 | 1 => 1,
-        x => x * factorial(x - 1),
-    }
-}
+pub fn repeated_box_blur(input: &[f64], width: usize, radius: u16) -> Vec<f64> {
+    let mut output = box_blur(&input, width, radius);
 
-pub fn compute_binomial_coefficients(row: usize) -> Vec<u64> {
-    let mut coefficients = vec![0; row + 1];
-
-    let n = row as u64;
-    for (i, coefficient) in coefficients.iter_mut().enumerate() {
-        let k = i as u64;
-
-        *coefficient = factorial(n) / (factorial(k) * factorial(n - k));
+    for _ in 1..BOX_BLUR_ITERATIONS {
+        output = box_blur(&output, width, radius);
     }
 
-    coefficients
+    output
 }
 
-pub fn compute_gaussian_kernel(kernel_size: usize) -> Vec<f64> {
-    let coefficients = compute_binomial_coefficients(kernel_size - 1);
-    let sum = coefficients.iter().sum::<u64>() as f64;
+fn box_blur(input: &[f64], width: usize, radius: u16) -> Vec<f64> {
+    let radius = radius.into();
 
-    coefficients.into_iter().map(|c| c as f64 / sum).collect()
+    vertical_1d_blur_pass(
+        &horizontal_1d_blur_pass(&input, width, radius),
+        width,
+        radius,
+    )
+}
+
+fn vertical_1d_blur_pass(input: &[f64], width: usize, radius: usize) -> Vec<f64> {
+    let scale = 1.0 / (radius as f64 * 2.0 + 1.0);
+    let mut output = vec![0.0; input.len()];
+
+    let height = input.len() / width;
+
+    for col_index in 0..width {
+        let mut blur_acc = input[col_index];
+        for index in 0..radius {
+            blur_acc += input[col_index] + input[col_index + index.min(height - 1) * width];
+        }
+
+        for index in 0..height {
+            blur_acc += input[col_index + (index + radius).min(height - 1) * width]
+                - input[col_index + index.saturating_sub(radius + 1) * width];
+
+            output[col_index + index * width] = scale * blur_acc;
+        }
+    }
+
+    output
+}
+
+fn horizontal_1d_blur_pass(input: &[f64], width: usize, radius: usize) -> Vec<f64> {
+    let scale = 1.0 / (radius as f64 * 2.0 + 1.0);
+    let mut output = vec![0.0; input.len()];
+
+    for row in 0..(input.len() / width) {
+        let row_index = row * width;
+
+        let mut blur_acc = input[row_index];
+        for index in 0..radius {
+            blur_acc += input[row_index] + input[row_index + index.min(width - 1)];
+        }
+
+        for index in 0..width {
+            blur_acc += input[row_index + (index + radius).min(width - 1)]
+                - input[row_index + index.saturating_sub(radius + 1)];
+
+            output[row_index + index] = scale * blur_acc;
+        }
+    }
+
+    output
 }
 
 #[cfg(test)]
@@ -107,28 +147,5 @@ mod test {
         assert_eq!(quadratic(4.0, 4.0, 1.0), Some((-0.5, -0.5)));
         assert_eq!(quadratic(2.0, -25.0, 12.0), Some((0.5, 12.0)));
         assert_eq!(quadratic(1.0, 1.0, 1.0), None);
-    }
-
-    #[test]
-    fn it_computes_factorials() {
-        assert_eq!(factorial(0), 1);
-        assert_eq!(factorial(1), 1);
-        assert_eq!(factorial(2), 2);
-        assert_eq!(factorial(5), 120);
-        assert_eq!(factorial(10), 3_628_800);
-    }
-
-    #[test]
-    fn it_computes_binomial_coefficients() {
-        assert_eq!(compute_binomial_coefficients(0), vec![1]);
-        assert_eq!(compute_binomial_coefficients(1), vec![1, 1]);
-        assert_eq!(compute_binomial_coefficients(2), vec![1, 2, 1]);
-        assert_eq!(compute_binomial_coefficients(3), vec![1, 3, 3, 1]);
-        assert_eq!(compute_binomial_coefficients(4), vec![1, 4, 6, 4, 1]);
-        assert_eq!(compute_binomial_coefficients(5), vec![1, 5, 10, 10, 5, 1]);
-        assert_eq!(
-            compute_binomial_coefficients(6),
-            vec![1, 6, 15, 20, 15, 6, 1]
-        );
     }
 }

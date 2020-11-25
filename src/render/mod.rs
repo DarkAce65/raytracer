@@ -11,7 +11,6 @@ pub use scene::Scene;
 
 const GAMMA: f64 = 2.2;
 const BIAS: f64 = 1e-10;
-const GAUSSIAN_KERNEL_SIZE: usize = 5;
 
 pub struct ColorData {
     color: Vector3<f64>,
@@ -104,6 +103,7 @@ pub struct RenderOptions {
     pub max_reflected_rays: u16,
     pub max_occlusion_rays: u16,
     pub max_occlusion_distance: f64,
+    pub occlusion_blur_radius: u16,
 }
 
 impl Default for RenderOptions {
@@ -116,6 +116,7 @@ impl Default for RenderOptions {
             max_reflected_rays: 32,
             max_occlusion_rays: 16,
             max_occlusion_distance: 1.0,
+            occlusion_blur_radius: 2,
         }
     }
 }

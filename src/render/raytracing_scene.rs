@@ -1,4 +1,4 @@
-use super::{Camera, CastStats, ColorData, RenderOptions, BIAS, GAUSSIAN_KERNEL_SIZE};
+use super::{Camera, CastStats, ColorData, RenderOptions, BIAS};
 use crate::core::{
     KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture, Transformed,
 };
@@ -480,55 +480,19 @@ impl RaytracingScene {
 
     fn post_process_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) {
         let width = self.get_width() as usize;
+        let blur_radius = self.render_options.occlusion_blur_radius;
 
-        let kernel = utils::compute_gaussian_kernel(GAUSSIAN_KERNEL_SIZE);
-        let half_kernel_size = GAUSSIAN_KERNEL_SIZE / 2;
-        let len = color_data_buffer_lock.read().unwrap().len();
+        let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
+        let ambient_occlusion: Vec<f64> = color_data_buffer
+            .iter()
+            .map(|color_data| color_data.ambient_occlusion)
+            .collect();
 
-        for index in 0..len {
-            let row = (index / width) * width;
-
-            let mut smoothed_ambient_occlusion = 0.0;
-            {
-                let color_data_buffer = color_data_buffer_lock.read().unwrap();
-
-                for (x, kernel_weight) in kernel.iter().enumerate() {
-                    if index + x < row + half_kernel_size {
-                        continue;
-                    }
-                    let color_data_index = index + x - half_kernel_size;
-                    if color_data_index >= row + width {
-                        continue;
-                    }
-
-                    smoothed_ambient_occlusion +=
-                        kernel_weight * color_data_buffer[color_data_index].ambient_occlusion;
-                }
-            }
-            let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
-            color_data_buffer[index].ambient_occlusion = smoothed_ambient_occlusion;
-        }
-
-        for index in 0..len {
-            let mut smoothed_ambient_occlusion = 0.0;
-            {
-                let color_data_buffer = color_data_buffer_lock.read().unwrap();
-
-                for (y, kernel_weight) in kernel.iter().enumerate() {
-                    if index + y * width < half_kernel_size * width {
-                        continue;
-                    }
-                    let color_data_index = index + y * width - half_kernel_size * width;
-                    if color_data_index >= len {
-                        continue;
-                    }
-
-                    smoothed_ambient_occlusion +=
-                        kernel_weight * color_data_buffer[color_data_index].ambient_occlusion;
-                }
-            }
-            let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
-            color_data_buffer[index].ambient_occlusion = smoothed_ambient_occlusion;
+        for (color_data, blurred_occlusion) in color_data_buffer
+            .iter_mut()
+            .zip(utils::repeated_box_blur(&ambient_occlusion, width, blur_radius).into_iter())
+        {
+            (*color_data).ambient_occlusion = blurred_occlusion;
         }
     }
 
