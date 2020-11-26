@@ -167,11 +167,7 @@ impl RaytracingScene {
             }
         }
 
-        let mut color_data = ColorData::new(
-            emissive + (1.0 - material.reflectivity) * (ambient_light + irradiance),
-            material_color,
-            emissive,
-        );
+        let mut color_data = ColorData::new(ambient_light + irradiance, material_color, emissive);
 
         // Ambient occlusion computation can be skipped for perfectly reflective materials
         if material.reflectivity < 1.0 {
@@ -182,7 +178,12 @@ impl RaytracingScene {
         }
 
         if let Some(reflection) = reflection {
-            color_data.color += material.reflectivity * reflection.color;
+            color_data.color = color_data
+                .color
+                .lerp(&reflection.color, material.reflectivity);
+            color_data.emissive = color_data
+                .emissive
+                .lerp(&reflection.emissive, material.reflectivity);
             color_data.ambient_occlusion = utils::lerp(
                 color_data.ambient_occlusion,
                 reflection.ambient_occlusion,
@@ -318,11 +319,7 @@ impl RaytracingScene {
             };
         }
 
-        let mut color_data = ColorData::new(
-            emissive + ambient_light + irradiance,
-            material_color,
-            emissive,
-        );
+        let mut color_data = ColorData::new(ambient_light + irradiance, material_color, emissive);
 
         let (ambient_occlusion, ambient_occlusion_stats) =
             self.compute_ambient_occlusion(intersection, depth);
@@ -331,6 +328,7 @@ impl RaytracingScene {
 
         if let Some(reflection) = reflection {
             color_data.color += reflection.color;
+            color_data.emissive += reflection.emissive;
             color_data.ambient_occlusion = utils::lerp(
                 color_data.ambient_occlusion,
                 reflection.ambient_occlusion,
@@ -340,6 +338,7 @@ impl RaytracingScene {
 
         if let Some(refraction) = refraction {
             color_data.color = color_data.color.lerp(&refraction, material.opacity);
+            color_data.emissive = color_data.emissive.lerp(&refraction, material.opacity);
         }
 
         (color_data, cast_stats)
@@ -475,7 +474,7 @@ impl RaytracingScene {
             (color_data.clamp(), cast_stats)
         };
 
-        (color_data.gamma_correct(), stats)
+        (color_data, stats)
     }
 
     fn post_process_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) {
@@ -539,15 +538,6 @@ impl RaytracingScene {
                 *cast_stats += stats;
             }
 
-            let buffer_index = index * 4;
-            {
-                let mut image_buffer = image_buffer_lock.write().unwrap();
-                image_buffer[buffer_index] = (color_data.color.x * 255.0) as u8;
-                image_buffer[buffer_index + 1] = (color_data.color.y * 255.0) as u8;
-                image_buffer[buffer_index + 2] = (color_data.color.z * 255.0) as u8;
-                image_buffer[buffer_index + 3] = 255;
-            }
-
             let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
             color_data_buffer[index] = color_data;
         };
@@ -575,19 +565,17 @@ impl RaytracingScene {
         self.post_process_pass(&color_data_buffer_lock);
 
         indexes.iter().for_each(|&index| {
-            let ambient_occlusion = {
+            let color = {
                 let color_data_buffer = color_data_buffer_lock.read().unwrap();
-                color_data_buffer[index].ambient_occlusion
+                color_data_buffer[index].compute_color()
             };
 
             let buffer_index = index * 4;
             let mut image_buffer = image_buffer_lock.write().unwrap();
-            image_buffer[buffer_index] =
-                (f64::from(image_buffer[buffer_index]) * ambient_occlusion) as u8;
-            image_buffer[buffer_index + 1] =
-                (f64::from(image_buffer[buffer_index + 1]) * ambient_occlusion) as u8;
-            image_buffer[buffer_index + 2] =
-                (f64::from(image_buffer[buffer_index + 2]) * ambient_occlusion) as u8;
+            image_buffer[buffer_index] = (color.x * 255.0) as u8;
+            image_buffer[buffer_index + 1] = (color.y * 255.0) as u8;
+            image_buffer[buffer_index + 2] = (color.z * 255.0) as u8;
+            image_buffer[buffer_index + 3] = 255;
         });
 
         let duration = start.elapsed();
@@ -641,7 +629,7 @@ impl RaytracingScene {
 
                 {
                     let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                    image_buffer[index] = utils::to_argb_u32(color_data.color);
+                    image_buffer[index] = utils::to_argb_u32(color_data.compute_color());
                 }
 
                 let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
@@ -673,9 +661,7 @@ impl RaytracingScene {
             indexes.iter().for_each(|&index| {
                 let color_data_buffer = color_data_buffer_lock.read().unwrap();
                 let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                image_buffer[index] = utils::to_argb_u32(
-                    color_data_buffer[index].color * color_data_buffer[index].ambient_occlusion,
-                );
+                image_buffer[index] = utils::to_argb_u32(color_data_buffer[index].compute_color());
             });
         });
 

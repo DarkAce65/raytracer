@@ -50,9 +50,8 @@ impl ColorData {
         self
     }
 
-    fn gamma_correct(mut self) -> Self {
-        self.color = utils::gamma_correct(self.color, GAMMA);
-        self
+    fn compute_color(&self) -> Vector3<f64> {
+        utils::gamma_correct(self.color * self.ambient_occlusion + self.emissive, GAMMA)
     }
 }
 
