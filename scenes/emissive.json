@@ -1,0 +1,109 @@
+{
+  "width": 800,
+  "height": 800,
+  "camera": { "position": [5, 1, 4] },
+  "lights": [
+    {
+      "type": "point",
+      "transform": [{ "translate": [1, 5, 3] }],
+      "color": [0.5, 0.5, 0.5]
+    }
+  ],
+  "objects": [
+    {
+      "type": "plane",
+      "normal": [0, 1, 0],
+      "transform": [{ "translate": [0, -1, 0] }],
+      "material": { "type": "phong", "color": [1, 1, 1] }
+    },
+    {
+      "type": "sphere",
+      "radius": 0.7,
+      "transform": [{ "translate": [1, 2, -1] }],
+      "material": { "type": "phong", "color": [0.4, 1, 0.2] }
+    },
+    {
+      "type": "sphere",
+      "radius": 1.2,
+      "transform": [{ "translate": [-2, 1, 0] }],
+      "material": { "type": "phong", "color": [1, 0.4, 0.2] }
+    },
+    {
+      "type": "sphere",
+      "radius": 1,
+      "transform": [{ "translate": [1, 0, 0] }],
+      "material": { "type": "phong", "color": [0.4, 0.2, 1] }
+    },
+    {
+      "type": "sphere",
+      "radius": 0.5,
+      "transform": [{ "translate": [1, 0, 2] }],
+      "material": { "type": "phong", "color": [0.2, 0.4, 1] }
+    },
+    {
+      "type": "sphere",
+      "radius": 0.25,
+      "transform": [{ "translate": [2, 0, 2] }],
+      "material": { "type": "phong", "emissive": [1, 0.2, 0.4] }
+    },
+    {
+      "type": "cube",
+      "size": 0.7,
+      "transform": [{ "translate": [-2, -0.5, -1] }],
+      "material": { "type": "phong", "emissive": [0.2, 1, 0.4] }
+    },
+    {
+      "type": "cube",
+      "size": 0.5,
+      "transform": [{ "translate": [2, -0.5, 1] }],
+      "material": { "type": "phong", "color": [0.2, 1, 0.4] },
+      "children": [
+        {
+          "type": "cube",
+          "size": 0.1,
+          "transform": [{ "scale": [0.2, 2, 2] }, { "translate": [0.3, 0, 0] }],
+          "material": { "type": "phong", "color": [0, 0, 0] }
+        },
+        {
+          "type": "cube",
+          "size": 0.1,
+          "transform": [
+            { "scale": [0.1, 1, 1] },
+            { "translate": [0.31, 0, 0] }
+          ],
+          "material": { "type": "phong", "emissive": [1, 1, 1] }
+        },
+        {
+          "type": "cube",
+          "size": 0.1,
+          "transform": [{ "scale": [0.2, 2, 2] }, { "translate": [0.5, 0, 0] }],
+          "material": { "type": "phong", "color": [1, 1, 1], "reflectivity": 1 }
+        }
+      ]
+    },
+    {
+      "type": "cube",
+      "size": 1.5,
+      "transform": [{ "translate": [2, -0.5, -2] }],
+      "material": {
+        "type": "phong",
+        "color": [1, 0.2, 0.4],
+        "reflectivity": 1
+      },
+      "children": [
+        {
+          "type": "cube",
+          "size": 0.3,
+          "transform": [{ "translate": [1, -0.3, 0] }],
+          "material": { "type": "phong", "emissive": [0.2, 0.4, 1] }
+        },
+        {
+          "type": "sphere",
+          "radius": 0.2,
+          "transform": [{ "translate": [0, -0.3, 1.2] }],
+          "material": { "type": "phong", "emissive": [0.4, 1, 0.2] }
+        }
+      ]
+    }
+  ]
+}
