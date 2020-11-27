@@ -567,7 +567,7 @@ impl RaytracingScene {
         indexes.iter().for_each(|&index| {
             let color = {
                 let color_data_buffer = color_data_buffer_lock.read().unwrap();
-                color_data_buffer[index].compute_color()
+                color_data_buffer[index].compute_color_with_gamma_correction()
             };
 
             let buffer_index = index * 4;
@@ -629,7 +629,8 @@ impl RaytracingScene {
 
                 {
                     let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                    image_buffer[index] = utils::to_argb_u32(color_data.compute_color());
+                    image_buffer[index] =
+                        utils::to_argb_u32(color_data.compute_color_with_gamma_correction());
                 }
 
                 let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
