@@ -45,7 +45,6 @@ impl ColorData {
     fn clamp(mut self) -> Self {
         self.color = self.color.map(|c| clamp(c, 0.0, 1.0));
         self.albedo = self.albedo.map(|c| clamp(c, 0.0, 1.0));
-        self.emissive = self.emissive.map(|c| clamp(c, 0.0, 1.0));
         self.ambient_occlusion = clamp(self.ambient_occlusion, 0.0, 1.0);
         self
     }
