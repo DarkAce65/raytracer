@@ -113,6 +113,9 @@ impl Default for Material {
 }
 
 impl Material {
+    /// # Panics
+    ///
+    /// Will panic if texture cannot be loaded
     pub fn load_textures(&self, asset_base: &Path, textures: &mut HashMap<String, Texture>) {
         let texture_path = match self {
             Material::Phong(material) => material.texture_path.as_ref(),
@@ -124,10 +127,10 @@ impl Material {
                 let texture_path = texture_path.to_string();
                 let mut texture = Texture::new(&texture_path);
                 texture.load(asset_base).unwrap_or_else(|err| {
-                    panic!(format!(
+                    panic!(
                         "failed to load texture at path \"{}\": {}",
                         texture_path, err
-                    ))
+                    )
                 });
                 textures.insert(texture_path, texture);
             }

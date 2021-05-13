@@ -4,7 +4,7 @@ use nalgebra::{Point3, Unit, Vector2, Vector3};
 use num_traits::identities::Zero;
 use serde::Deserialize;
 use std::path::Path;
-use tobj::load_obj;
+use tobj::{load_obj, LoadOptions};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -51,13 +51,25 @@ impl Mesh {
         objects
     }
 
+    /// # Panics
+    ///
+    /// Will panic if object asset cannot be loaded
     pub fn load_assets(&mut self, asset_base: &Path) {
-        let (models, _) = load_obj(&asset_base.join(&self.file), true).unwrap_or_else(|err| {
-            panic!(format!(
+        let (models, _) = load_obj(
+            &asset_base.join(&self.file),
+            &LoadOptions {
+                triangulate: true,
+                ignore_lines: true,
+                ignore_points: true,
+                ..tobj::LoadOptions::default()
+            },
+        )
+        .unwrap_or_else(|err| {
+            panic!(
                 "failed to load object at path \"{}\": {}",
                 &asset_base.join(&self.file).display(),
                 err
-            ))
+            )
         });
 
         let mut children: Vec<Object3D> = Vec::new();
