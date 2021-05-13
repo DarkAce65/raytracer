@@ -38,7 +38,7 @@ pub fn cosine_sample_hemisphere(direction: &Unit<Vector3<f64>>) -> Unit<Vector3<
 
 // Sample a cone in the direction of the given direction
 pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Unit<Vector3<f64>> {
-    debug_assert!(0.0 <= max_angle && max_angle <= FRAC_PI_2);
+    debug_assert!((0.0..=FRAC_PI_2).contains(&max_angle));
 
     if max_angle < EPSILON {
         return *direction;

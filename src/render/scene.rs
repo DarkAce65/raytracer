@@ -48,6 +48,9 @@ impl Scene {
         self.lights.push(light)
     }
 
+    /// # Panics
+    ///
+    /// Will panic if scene assets have been loaded already
     pub fn add_object(&mut self, object: Object3D) {
         if self.loaded {
             panic!("objects cannot be added after scene assets have loaded")
@@ -56,6 +59,9 @@ impl Scene {
         self.objects.push(object)
     }
 
+    /// # Panics
+    ///
+    /// Will panic if scene assets have been loaded already
     pub fn load_assets(&mut self, asset_base: &Path) {
         if self.loaded {
             panic!("assets are already loaded for scene")

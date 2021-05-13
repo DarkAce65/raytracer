@@ -1,6 +1,6 @@
 use image::Pixel;
 use image::RgbImage;
-use nalgebra::{clamp, Vector2, Vector3};
+use nalgebra::{Vector2, Vector3};
 use std::fmt;
 use std::path::Path;
 
@@ -51,7 +51,7 @@ impl Texture {
         let y = if y < 0.0 { y + 1.0 } else { y };
 
         let (x, y) = (x * f64::from(w), (1.0 - y) * f64::from(h));
-        let (x, y) = (clamp(x as u32, 0, w), clamp(y as u32, 0, h));
+        let (x, y) = ((x as u32).clamp(0, w), (y as u32).clamp(0, h));
 
         let pixel = self
             .texture

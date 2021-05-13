@@ -207,7 +207,7 @@ impl Intersectable for RaytracingTriangle {
 
         let t_vec = ray.origin - self.vertex_data[0].position;
         let u = t_vec.dot(&p_vec) / det;
-        if u < 0.0 || 1.0 < u {
+        if !(0.0..=1.0).contains(&u) {
             return None;
         }
 

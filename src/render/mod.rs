@@ -2,7 +2,7 @@ mod raytracing_scene;
 mod scene;
 
 use crate::utils;
-use nalgebra::{clamp, Point3, Unit, Vector3};
+use nalgebra::{Point3, Unit, Vector3};
 use num_traits::Zero;
 use serde::Deserialize;
 use std::ops::AddAssign;
@@ -43,10 +43,10 @@ impl ColorData {
     }
 
     fn clamp(mut self) -> Self {
-        self.color = self.color.map(|c| clamp(c, 0.0, 1.0));
-        self.albedo = self.albedo.map(|c| clamp(c, 0.0, 1.0));
-        self.emissive = self.emissive.map(|c| clamp(c, 0.0, 1.0));
-        self.ambient_occlusion = clamp(self.ambient_occlusion, 0.0, 1.0);
+        self.color = self.color.map(|c| c.clamp(0.0, 1.0));
+        self.albedo = self.albedo.map(|c| c.clamp(0.0, 1.0));
+        self.emissive = self.emissive.map(|c| c.clamp(0.0, 1.0));
+        self.ambient_occlusion = self.ambient_occlusion.clamp(0.0, 1.0);
         self
     }
 

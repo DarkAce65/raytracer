@@ -1,5 +1,5 @@
 use crate::core::{Transform, Transformed};
-use nalgebra::{clamp, Vector3};
+use nalgebra::Vector3;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -30,7 +30,7 @@ impl PointLight {
     }
 
     pub fn get_color(&self, distance: f64) -> Vector3<f64> {
-        (self.intensity * self.color / distance.powi(2)).map(|c| clamp(c, 0.0, 1.0))
+        (self.intensity * self.color / distance.powi(2)).map(|c| c.clamp(0.0, 1.0))
     }
 }
 

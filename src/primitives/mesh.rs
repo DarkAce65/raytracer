@@ -51,6 +51,9 @@ impl Mesh {
         objects
     }
 
+    /// # Panics
+    ///
+    /// Will panic if object asset cannot be loaded
     pub fn load_assets(&mut self, asset_base: &Path) {
         let (models, _) = load_obj(
             &asset_base.join(&self.file),
@@ -58,7 +61,7 @@ impl Mesh {
                 triangulate: true,
                 ignore_lines: true,
                 ignore_points: true,
-                ..Default::default()
+                ..tobj::LoadOptions::default()
             },
         )
         .unwrap_or_else(|err| {
