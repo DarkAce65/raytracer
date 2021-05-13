@@ -6,7 +6,7 @@ use crate::lights::Light;
 use crate::ray_intersection::{Intersection, Ray, RayType};
 use crate::utils;
 use image::RgbaImage;
-use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{Matrix4, Point3, Unit, Vector3};
 use num_traits::identities::Zero;
@@ -561,13 +561,13 @@ impl RaytracingScene {
 
             indexes
                 .par_iter()
-                .progress_with(progress.clone())
                 .inspect(|_| {
-                    progress.set_message(&cast_stats_lock.read().unwrap().ray_count.to_string())
+                    progress.set_message(cast_stats_lock.read().unwrap().ray_count.to_string());
+                    progress.inc(1);
                 })
                 .for_each(process_pixel);
 
-            progress.finish_with_message(&cast_stats_lock.read().unwrap().ray_count.to_string());
+            progress.finish_with_message(cast_stats_lock.read().unwrap().ray_count.to_string());
         } else {
             indexes.par_iter().for_each(process_pixel);
         }
@@ -656,14 +656,13 @@ impl RaytracingScene {
 
                 indexes
                     .par_iter()
-                    .progress_with(progress.clone())
                     .inspect(|_| {
-                        progress.set_message(&cast_stats_lock.read().unwrap().ray_count.to_string())
+                        progress.set_message(cast_stats_lock.read().unwrap().ray_count.to_string());
+                        progress.inc(1);
                     })
                     .for_each(process_pixel);
 
-                progress
-                    .finish_with_message(&cast_stats_lock.read().unwrap().ray_count.to_string());
+                progress.finish_with_message(cast_stats_lock.read().unwrap().ray_count.to_string());
             } else {
                 indexes.par_iter().for_each(process_pixel);
             }

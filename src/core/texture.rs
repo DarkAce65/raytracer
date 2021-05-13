@@ -35,7 +35,7 @@ impl Texture {
     pub fn load(&mut self, asset_base: &Path) -> Result<(), image::ImageError> {
         assert!(self.texture.is_none());
 
-        let texture = image::open(asset_base.join(self.texture_path.clone()))?.to_rgb();
+        let texture = image::open(asset_base.join(self.texture_path.clone()))?.to_rgb8();
         self.width = texture.width();
         self.height = texture.height();
         self.texture = Some(texture);

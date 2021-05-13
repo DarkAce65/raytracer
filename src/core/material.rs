@@ -124,10 +124,10 @@ impl Material {
                 let texture_path = texture_path.to_string();
                 let mut texture = Texture::new(&texture_path);
                 texture.load(asset_base).unwrap_or_else(|err| {
-                    panic!(format!(
+                    panic!(
                         "failed to load texture at path \"{}\": {}",
                         texture_path, err
-                    ))
+                    )
                 });
                 textures.insert(texture_path, texture);
             }

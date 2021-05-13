@@ -29,7 +29,7 @@ impl VertexPNT {
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum VertexData {
-    PNT([VertexPNT; 3]),
+    VertexPNT([VertexPNT; 3]),
     Position([Point3<f64>; 3]),
 }
 
@@ -68,7 +68,7 @@ impl Triangle {
         transform: Transform,
         material: Material,
     ) -> Self {
-        let vertex_data = VertexData::PNT([
+        let vertex_data = VertexData::VertexPNT([
             VertexPNT::new(positions[0], normals[0], texcoords[0]),
             VertexPNT::new(positions[1], normals[1], texcoords[1]),
             VertexPNT::new(positions[2], normals[2], texcoords[2]),
@@ -124,7 +124,7 @@ impl Triangle {
         }
 
         match self.vertex_data {
-            VertexData::PNT(vertex_data) => {
+            VertexData::VertexPNT(vertex_data) => {
                 objects.push(Box::new(RaytracingTriangle::new(
                     vertex_data,
                     transform,
