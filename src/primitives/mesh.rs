@@ -59,9 +59,9 @@ impl Mesh {
             &asset_base.join(&self.file),
             &LoadOptions {
                 triangulate: true,
+                single_index: true,
                 ignore_lines: true,
                 ignore_points: true,
-                ..tobj::LoadOptions::default()
             },
         )
         .unwrap_or_else(|err| {
