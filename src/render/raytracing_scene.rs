@@ -215,11 +215,12 @@ impl RaytracingScene {
             self.compute_illumination(intersection, depth);
 
         let mut color_data = ColorData::new(
-            ambient_light + irradiance + incoming_emissive.component_mul(&material_color),
+            (ambient_light + irradiance + incoming_emissive.component_mul(&material_color))
+                * ambient_occlusion,
             material_color,
             material.emissive,
+            normal,
         );
-        color_data.ambient_occlusion = ambient_occlusion;
         cast_stats += illumination_stats;
 
         if let Some(reflection) = reflection {
@@ -228,11 +229,6 @@ impl RaytracingScene {
                 .lerp(&reflection.compute_color(), material.reflectivity);
             color_data.emissive +=
                 incoming_emissive.component_mul(&material_color) * material.reflectivity;
-            color_data.ambient_occlusion = utils::lerp(
-                color_data.ambient_occlusion,
-                reflection.ambient_occlusion,
-                material.reflectivity,
-            );
         }
 
         (color_data, cast_stats)
@@ -361,21 +357,17 @@ impl RaytracingScene {
             self.compute_illumination(intersection, depth);
 
         let mut color_data = ColorData::new(
-            ambient_light + irradiance + incoming_emissive.component_mul(&diffuse),
+            (ambient_light + irradiance + incoming_emissive.component_mul(&diffuse))
+                * ambient_occlusion,
             material_color,
             material.emissive,
+            normal,
         );
-        color_data.ambient_occlusion = ambient_occlusion;
         cast_stats += illumination_stats;
 
         if let Some(reflection) = reflection {
             color_data.color += reflection.compute_color().component_mul(&f);
             color_data.emissive += reflection.emissive;
-            color_data.ambient_occlusion = utils::lerp(
-                color_data.ambient_occlusion,
-                reflection.ambient_occlusion,
-                1.0 - roughness,
-            );
         }
 
         if let Some(refraction) = refraction {
@@ -385,11 +377,6 @@ impl RaytracingScene {
             color_data.emissive = color_data
                 .emissive
                 .lerp(&refraction.emissive, material.opacity);
-            color_data.ambient_occlusion = utils::lerp(
-                color_data.ambient_occlusion,
-                refraction.ambient_occlusion,
-                material.opacity,
-            );
         }
 
         (color_data, cast_stats)
@@ -485,7 +472,6 @@ impl RaytracingScene {
                 color_data.color += data.color;
                 color_data.albedo += data.albedo;
                 color_data.emissive += data.emissive;
-                color_data.ambient_occlusion += data.ambient_occlusion;
                 cast_stats += stats;
             }
 
@@ -493,7 +479,6 @@ impl RaytracingScene {
             color_data.color *= inv_samples;
             color_data.albedo *= inv_samples;
             color_data.emissive *= inv_samples;
-            color_data.ambient_occlusion *= inv_samples;
 
             (color_data.clamp(), cast_stats)
         };
@@ -514,20 +499,14 @@ impl RaytracingScene {
             .iter()
             .map(|color_data| color_data.emissive)
             .collect();
-        let occlusion: Vec<f64> = color_data_buffer
-            .iter()
-            .map(|color_data| color_data.ambient_occlusion)
-            .collect();
 
-        for (color_data, color, emissive, occlusion) in izip!(
+        for (color_data, color, emissive) in izip!(
             color_data_buffer.iter_mut(),
             utils::repeated_box_blur_color(&color, width, blur_radius).into_iter(),
-            utils::repeated_box_blur_color(&emissive, width, blur_radius / 2).into_iter(),
-            utils::repeated_box_blur(&occlusion, width, blur_radius).into_iter()
+            utils::repeated_box_blur_color(&emissive, width, blur_radius).into_iter(),
         ) {
             // (*color_data).color= color;
             (*color_data).emissive = emissive;
-            (*color_data).ambient_occlusion = occlusion;
         }
     }
 
