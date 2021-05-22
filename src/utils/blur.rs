@@ -1,6 +1,31 @@
-use super::BOX_BLUR_ITERATIONS;
+use nalgebra::Vector3;
 
-#[allow(dead_code)]
+use super::BOX_BLUR_ITERATIONS;
+use itertools::izip;
+
+pub fn repeated_box_blur_color(
+    input: &[Vector3<f64>],
+    width: usize,
+    radius: u16,
+) -> Vec<Vector3<f64>> {
+    let mut r = Vec::new();
+    let mut y = Vec::new();
+    let mut b = Vec::new();
+    for color in input {
+        r.push(color.x);
+        y.push(color.y);
+        b.push(color.z);
+    }
+
+    izip!(
+        repeated_box_blur(&r, width, radius),
+        repeated_box_blur(&y, width, radius),
+        repeated_box_blur(&b, width, radius)
+    )
+    .map(|(r, g, b)| Vector3::from([r, g, b]))
+    .collect()
+}
+
 pub fn repeated_box_blur(input: &[f64], width: usize, radius: u16) -> Vec<f64> {
     let mut output = box_blur(&input, width, radius);
 

@@ -6,6 +6,7 @@ mod sampling;
 use nalgebra::Vector3;
 use num_traits::Float;
 
+pub use blur::{repeated_box_blur, repeated_box_blur_color};
 pub use physical_material_equations::{fresnel, geometry_function, ndf};
 pub use rays::{reflect, refract};
 pub use sampling::{cosine_sample_hemisphere, uniform_sample_cone};

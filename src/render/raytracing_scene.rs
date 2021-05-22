@@ -7,6 +7,7 @@ use crate::ray_intersection::{Intersection, Ray, RayType};
 use crate::utils;
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
+use itertools::izip;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{Matrix4, Point3, Unit, Vector3};
 use num_traits::identities::Zero;
@@ -501,40 +502,33 @@ impl RaytracingScene {
     }
 
     fn post_process_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) {
-        // let width = self.get_width() as usize;
-        // let blur_radius = self.render_options.occlusion_blur_radius;
+        let width = self.get_width() as usize;
+        let blur_radius = self.render_options.occlusion_blur_radius;
 
-        // let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
-        // let red: Vec<f64> = color_data_buffer
-        //     .iter()
-        //     .map(|color_data| color_data.color.x)
-        //     .collect();
-        //     let green: Vec<f64> = color_data_buffer
-        //         .iter()
-        //         .map(|color_data| color_data.color.y)
-        //         .collect();
-        //         let blue: Vec<f64> = color_data_buffer
-        //         .iter()
-        //         .map(|color_data| color_data.color.z
-        //         )
-        //         .collect();let occ: Vec<f64> = color_data_buffer
-        //         .iter()
-        //         .map(|color_data| color_data.ambient_occlusion
-        //         )
-        //         .collect();
+        let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
+        let color: Vec<Vector3<f64>> = color_data_buffer
+            .iter()
+            .map(|color_data| color_data.color)
+            .collect();
+        let emissive: Vec<Vector3<f64>> = color_data_buffer
+            .iter()
+            .map(|color_data| color_data.emissive)
+            .collect();
+        let occlusion: Vec<f64> = color_data_buffer
+            .iter()
+            .map(|color_data| color_data.ambient_occlusion)
+            .collect();
 
-        // for (color_data, r,g,b,o) in izip!( color_data_buffer.iter_mut()
-        //     ,utils::repeated_box_blur(&red, width, blur_radius).into_iter(),utils::repeated_box_blur(&green, width, blur_radius).into_iter(),utils::repeated_box_blur(&blue, width, blur_radius).into_iter(),utils::repeated_box_blur(&occ, width, blur_radius).into_iter())
-        // {
-        //     (*color_data).color.x =
-        //      r;
-        //      (*color_data).color.y=
-        //       g;
-        //       (*color_data).color.z =
-        //        b;
-        //        (*color_data).ambient_occlusion =
-        //         o;
-        // }
+        for (color_data, color, emissive, occlusion) in izip!(
+            color_data_buffer.iter_mut(),
+            utils::repeated_box_blur_color(&color, width, blur_radius).into_iter(),
+            utils::repeated_box_blur_color(&emissive, width, blur_radius / 2).into_iter(),
+            utils::repeated_box_blur(&occlusion, width, blur_radius).into_iter()
+        ) {
+            // (*color_data).color= color;
+            (*color_data).emissive = emissive;
+            (*color_data).ambient_occlusion = occlusion;
+        }
     }
 
     fn build_progress_bar(&self) -> ProgressBar {
