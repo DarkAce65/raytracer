@@ -276,10 +276,14 @@ impl RaytracingScene {
                 cast_stats += stats;
 
                 acc.color += color_data.compute_color();
-
+                acc.emissive += color_data.emissive;
                 acc
             });
             reflection.color *= FRAC_PI_2 / f64::from(reflected_rays);
+            reflection
+                .color
+                .component_mul_assign(&Vector3::repeat(1.0).lerp(&f, material.opacity));
+            reflection.emissive *= FRAC_PI_2 / f64::from(reflected_rays);
 
             Some(reflection)
         } else {
@@ -296,10 +300,14 @@ impl RaytracingScene {
                     direction: refraction_dir,
                     refractive_index: material.refractive_index,
                 };
-                let (color_data, stats) = self.get_color(&refraction_ray);
+                let (mut refraction, stats) = self.get_color(&refraction_ray);
                 cast_stats += stats;
 
-                color_data
+                refraction
+                    .color
+                    .component_mul_assign(&Vector3::repeat(1.0).lerp(&f, material.opacity));
+
+                refraction
             })
         } else {
             None
@@ -366,17 +374,17 @@ impl RaytracingScene {
         cast_stats += illumination_stats;
 
         if let Some(reflection) = reflection {
-            color_data.color += reflection.compute_color().component_mul(&f);
+            color_data.color += reflection.compute_color();
             color_data.emissive += reflection.emissive;
         }
 
         if let Some(refraction) = refraction {
-            color_data.color = color_data
-                .color
-                .lerp(&refraction.compute_color(), material.opacity);
-            color_data.emissive = color_data
+            color_data.color = refraction
+                .compute_color()
+                .lerp(&color_data.color, material.opacity);
+            color_data.emissive = refraction
                 .emissive
-                .lerp(&refraction.emissive, material.opacity);
+                .lerp(&color_data.emissive, material.opacity);
         }
 
         (color_data, cast_stats)
