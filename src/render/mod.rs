@@ -15,21 +15,14 @@ const BIAS: f64 = 1e-10;
 pub struct ColorData {
     color: Vector3<f64>,
     albedo: Vector3<f64>,
-    emissive: Vector3<f64>,
     normal: Unit<Vector3<f64>>,
 }
 
 impl ColorData {
-    fn new(
-        color: Vector3<f64>,
-        albedo: Vector3<f64>,
-        emissive: Vector3<f64>,
-        normal: Unit<Vector3<f64>>,
-    ) -> Self {
+    fn new(color: Vector3<f64>, albedo: Vector3<f64>, normal: Unit<Vector3<f64>>) -> Self {
         Self {
             color,
             albedo,
-            emissive,
             normal,
         }
     }
@@ -38,29 +31,22 @@ impl ColorData {
         Self {
             color: Vector3::zero(),
             albedo: Vector3::zero(),
-            emissive: Vector3::zero(),
             normal: Vector3::z_axis(),
         }
     }
 
     fn black() -> Self {
-        Self::new(
-            Vector3::zero(),
-            Vector3::zero(),
-            Vector3::zero(),
-            Vector3::z_axis(),
-        )
+        Self::new(Vector3::zero(), Vector3::zero(), Vector3::z_axis())
     }
 
     fn clamp(mut self) -> Self {
         self.color = self.color.map(|c| c.clamp(0.0, 1.0));
-        self.emissive = self.emissive.map(|c| c.clamp(0.0, 1.0));
         self.albedo = self.albedo.map(|c| c.clamp(0.0, 1.0));
         self
     }
 
     fn compute_color(&self) -> Vector3<f64> {
-        (self.color + self.emissive).map(|c| c.clamp(0.0, 1.0))
+        self.color.map(|c| c.clamp(0.0, 1.0))
     }
 
     fn compute_color_with_gamma_correction(&self) -> Vector3<f64> {
