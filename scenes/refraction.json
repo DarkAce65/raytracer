@@ -63,7 +63,7 @@
         "color": [1, 1, 0.4],
         "metalness": 0,
         "roughness": 0,
-        "opacity": 0.2,
+        "opacity": 0.5,
         "refractive_index": 1.2
       }
     },
@@ -91,7 +91,7 @@
         "color": [1, 0, 0],
         "metalness": 0,
         "roughness": 0,
-        "opacity": 0.2,
+        "opacity": 0.7,
         "refractive_index": 1.05
       }
     }
