@@ -7,6 +7,7 @@ use crate::ray_intersection::{Intersection, Ray, RayType};
 use crate::utils;
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
+use itertools::izip;
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{Matrix4, Point3, Unit, Vector3};
 use num_traits::identities::Zero;
@@ -93,6 +94,77 @@ impl RaytracingScene {
         self.object_tree.shadow_cast(ray, max_distance - BIAS)
     }
 
+    fn compute_global_illumination(
+        &self,
+        intersection: &Intersection,
+        depth: u8,
+    ) -> (Vector3<f64>, f64, CastStats) {
+        let mut cast_stats = CastStats::zero();
+        let d = 4_u16.pow(depth.into());
+        let illumination_rays = (self.render_options.max_illumination_rays / d).max(1);
+
+        let mut incoming_emissive = Vector3::zero();
+        let mut ambient_occlusion = 0;
+        for _ in 0..illumination_rays {
+            let direction =
+                utils::cosine_sample_hemisphere(&intersection.get_normal()).into_inner();
+
+            let illumination_ray = Ray {
+                ray_type: RayType::Secondary(depth + 1),
+                origin: intersection.get_hit_point() + direction * BIAS,
+                direction,
+                refractive_index: 1.0,
+            };
+            let (emissive, occluded, illumination_stats) = self.get_illumination(&illumination_ray);
+            cast_stats += illumination_stats;
+            incoming_emissive += emissive;
+
+            if !occluded {
+                ambient_occlusion += 1;
+            }
+        }
+
+        (
+            incoming_emissive / f64::from(illumination_rays),
+            f64::from(ambient_occlusion) / f64::from(illumination_rays),
+            cast_stats,
+        )
+    }
+
+    fn get_emissive_phong(
+        &self,
+        ray: &Ray,
+        intersection: &Intersection,
+        material: &PhongMaterial,
+    ) -> (Vector3<f64>, CastStats) {
+        let mut cast_stats = CastStats::zero();
+        let depth = ray.get_depth();
+        let hit_point = intersection.get_hit_point();
+
+        let normal = intersection.get_normal();
+
+        let uv = intersection.get_uv();
+        let material_color = material.get_color(uv, &self.textures);
+
+        let mut emissive = material.emissive;
+
+        if material.reflectivity > 0.0 {
+            let reflection_dir = utils::reflect(&ray.direction, &normal).into_inner();
+            let reflection_ray = Ray {
+                ray_type: RayType::Secondary(depth + 1),
+                origin: hit_point + reflection_dir * BIAS,
+                direction: reflection_dir,
+                refractive_index: 1.0,
+            };
+            let (incoming_emissive, occluded, stats) = self.get_illumination(&reflection_ray);
+            cast_stats += stats;
+
+            emissive += incoming_emissive.component_mul(&material_color) * material.reflectivity;
+        };
+
+        (emissive, cast_stats)
+    }
+
     fn get_color_phong(
         &self,
         ray: &Ray,
@@ -107,13 +179,12 @@ impl RaytracingScene {
 
         let uv = intersection.get_uv();
         let material_color = material.get_color(uv, &self.textures);
-        let emissive = material.emissive;
 
         let reflection = if material.reflectivity > 0.0 {
             let reflection_dir = utils::reflect(&ray.direction, &normal).into_inner();
             let reflection_ray = Ray {
                 ray_type: RayType::Secondary(depth + 1),
-                origin: hit_point + (reflection_dir * BIAS),
+                origin: hit_point + reflection_dir * BIAS,
                 direction: reflection_dir,
                 refractive_index: 1.0,
             };
@@ -167,30 +238,102 @@ impl RaytracingScene {
             }
         }
 
+        let (incoming_emissive, ambient_occlusion, illumination_stats) =
+            self.compute_global_illumination(intersection, depth);
+        cast_stats += illumination_stats;
+
         let mut color_data = ColorData::new(
-            emissive + (1.0 - material.reflectivity) * (ambient_light + irradiance),
+            material.emissive
+                + (ambient_light + irradiance + incoming_emissive.component_mul(&material_color))
+                    * ambient_occlusion,
             material_color,
-            emissive,
+            normal,
         );
 
-        // Ambient occlusion computation can be skipped for perfectly reflective materials
-        if material.reflectivity < 1.0 {
-            let (ambient_occlusion, ambient_occlusion_stats) =
-                self.compute_ambient_occlusion(intersection, depth);
-            color_data.ambient_occlusion = ambient_occlusion;
-            cast_stats += ambient_occlusion_stats;
-        }
-
         if let Some(reflection) = reflection {
-            color_data.color += material.reflectivity * reflection.color;
-            color_data.ambient_occlusion = utils::lerp(
-                color_data.ambient_occlusion,
-                reflection.ambient_occlusion,
-                material.reflectivity,
-            );
+            color_data.color = color_data
+                .color
+                .lerp(&reflection.compute_color(), material.reflectivity);
         }
 
         (color_data, cast_stats)
+    }
+
+    fn get_emissive_physical(
+        &self,
+        ray: &Ray,
+        intersection: &Intersection,
+        material: &PhysicalMaterial,
+    ) -> (Vector3<f64>, CastStats) {
+        let mut cast_stats = CastStats::zero();
+        let depth = ray.get_depth();
+        let hit_point = intersection.get_hit_point();
+
+        let normal = intersection.get_normal();
+
+        let uv = intersection.get_uv();
+        let material_color = material.get_color(uv, &self.textures);
+
+        let reflected_emissive = if self.render_options.max_reflected_rays > 0 {
+            let d = 8_u16.pow(depth.into());
+            let reflected_rays = (self.render_options.max_reflected_rays / d).max(1);
+
+            let max_angle = FRAC_PI_2 * material.roughness;
+            let reflection_dir = utils::reflect(&ray.direction, &normal);
+
+            let mut emissive = (0..reflected_rays).fold(Vector3::zero(), |mut acc, _| {
+                let direction = utils::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
+                let reflection_ray = Ray {
+                    ray_type: RayType::Secondary(depth + 1),
+                    origin: hit_point + direction * BIAS,
+                    direction,
+                    refractive_index: 1.0,
+                };
+                let (incoming_emissive, occluded, stats) = self.get_illumination(&reflection_ray);
+                cast_stats += stats;
+
+                acc += incoming_emissive;
+                acc
+            });
+            emissive *= FRAC_PI_2 / f64::from(reflected_rays);
+            emissive.component_mul_assign(&material_color);
+
+            Some(emissive)
+        } else {
+            None
+        };
+
+        let refracted_emissive = if material.opacity < 1.0 {
+            let eta = ray.refractive_index / material.refractive_index;
+            utils::refract(&ray.direction, &normal, eta).map(|refraction_dir| {
+                let refraction_dir = refraction_dir.into_inner();
+                let refraction_ray = Ray {
+                    ray_type: RayType::Secondary(depth + 1),
+                    origin: hit_point + refraction_dir * BIAS,
+                    direction: refraction_dir,
+                    refractive_index: material.refractive_index,
+                };
+                let (passthrough_emissive, occluded, stats) =
+                    self.get_illumination(&refraction_ray);
+                cast_stats += stats;
+
+                passthrough_emissive
+            })
+        } else {
+            None
+        };
+
+        let mut emissive = material.emissive;
+
+        if let Some(reflected_emissive) = reflected_emissive {
+            emissive += reflected_emissive;
+        }
+
+        if let Some(refracted_emissive) = refracted_emissive {
+            emissive += refracted_emissive * (1.0 - material.opacity);
+        }
+
+        (emissive, cast_stats)
     }
 
     fn get_color_physical(
@@ -216,8 +359,6 @@ impl RaytracingScene {
         let k_s = f;
         let k_d = (Vector3::repeat(1.0) - k_s) * (1.0 - material.metalness);
 
-        let emissive = material.emissive;
-
         let reflection = if self.render_options.max_reflected_rays > 0 {
             let d = 8_u16.pow(depth.into());
             let reflected_rays = (self.render_options.max_reflected_rays / d).max(1);
@@ -229,22 +370,17 @@ impl RaytracingScene {
                 let direction = utils::uniform_sample_cone(&reflection_dir, max_angle).into_inner();
                 let reflection_ray = Ray {
                     ray_type: RayType::Secondary(depth + 1),
-                    origin: hit_point + (direction * BIAS),
+                    origin: hit_point + direction * BIAS,
                     direction,
                     refractive_index: 1.0,
                 };
                 let (color_data, stats) = self.get_color(&reflection_ray);
                 cast_stats += stats;
 
-                acc.color += color_data.color;
-                acc.ambient_occlusion += color_data.ambient_occlusion;
-
+                acc.color += color_data.compute_color();
                 acc
             });
-            reflection
-                .color
-                .component_mul_assign(&(f * FRAC_PI_2 / f64::from(reflected_rays)));
-            reflection.ambient_occlusion /= f64::from(reflected_rays);
+            reflection.color *= FRAC_PI_2 / f64::from(reflected_rays);
 
             Some(reflection)
         } else {
@@ -257,14 +393,18 @@ impl RaytracingScene {
                 let refraction_dir = refraction_dir.into_inner();
                 let refraction_ray = Ray {
                     ray_type: RayType::Secondary(depth + 1),
-                    origin: hit_point + (refraction_dir * BIAS),
+                    origin: hit_point + refraction_dir * BIAS,
                     direction: refraction_dir,
                     refractive_index: material.refractive_index,
                 };
-                let (color_data, stats) = self.get_color(&refraction_ray);
+                let (mut refraction, stats) = self.get_color(&refraction_ray);
                 cast_stats += stats;
 
-                color_data.color.component_mul(&material_color)
+                refraction
+                    .color
+                    .component_mul_assign(&Vector3::repeat(1.0).lerp(&f, material.opacity));
+
+                refraction
             })
         } else {
             None
@@ -318,62 +458,65 @@ impl RaytracingScene {
             };
         }
 
+        let (incoming_emissive, ambient_occlusion, illumination_stats) =
+            self.compute_global_illumination(intersection, depth);
+        cast_stats += illumination_stats;
+
         let mut color_data = ColorData::new(
-            emissive + ambient_light + irradiance,
+            material.emissive
+                + (ambient_light + irradiance + incoming_emissive.component_mul(&diffuse))
+                    * ambient_occlusion,
             material_color,
-            emissive,
+            normal,
         );
 
-        let (ambient_occlusion, ambient_occlusion_stats) =
-            self.compute_ambient_occlusion(intersection, depth);
-        color_data.ambient_occlusion = ambient_occlusion;
-        cast_stats += ambient_occlusion_stats;
-
         if let Some(reflection) = reflection {
-            color_data.color += reflection.color;
-            color_data.ambient_occlusion = utils::lerp(
-                color_data.ambient_occlusion,
-                reflection.ambient_occlusion,
-                1.0 - roughness,
+            color_data.color = Vector3::new(
+                utils::lerp(color_data.color.x, reflection.color.x, f.x),
+                utils::lerp(color_data.color.y, reflection.color.y, f.y),
+                utils::lerp(color_data.color.z, reflection.color.z, f.z),
             );
         }
 
         if let Some(refraction) = refraction {
-            color_data.color = color_data.color.lerp(&refraction, material.opacity);
+            color_data.color = refraction
+                .compute_color()
+                .lerp(&color_data.color, material.opacity);
+            color_data.normal = refraction.normal;
         }
 
         (color_data, cast_stats)
     }
 
-    fn compute_ambient_occlusion(
-        &self,
-        intersection: &Intersection,
-        depth: u8,
-    ) -> (f64, CastStats) {
+    #[allow(clippy::option_if_let_else)]
+    fn get_illumination(&self, ray: &Ray) -> (Vector3<f64>, bool, CastStats) {
         let mut cast_stats = CastStats::zero();
-        let d = 4_u16.pow(depth.into());
-        let occlusion_rays = (self.render_options.max_occlusion_rays / d).max(1);
 
-        let mut ambient_occlusion = 0;
-        for _ in 0..occlusion_rays {
-            let direction =
-                utils::uniform_sample_cone(&intersection.get_normal(), FRAC_PI_2).into_inner();
-            let occlusion_ray = Ray {
-                ray_type: RayType::Secondary(depth + 1),
-                origin: intersection.get_hit_point() + (direction * BIAS),
-                direction,
-                refractive_index: 1.0,
-            };
-            cast_stats.ray_count += 1;
-            if !self.shadow_cast(&occlusion_ray, self.render_options.max_occlusion_distance) {
-                ambient_occlusion += 1;
-            }
+        if ray.get_depth() >= self.render_options.max_depth {
+            return (Vector3::zero(), false, cast_stats);
         }
 
-        (
-            f64::from(ambient_occlusion) / f64::from(occlusion_rays),
-            cast_stats,
-        )
+        cast_stats.ray_count += 1;
+        if let Some(mut intersection) = self.raycast(&ray) {
+            intersection.compute_data(&ray);
+
+            let material = intersection.object.get_material();
+            let (emissive, material_stats) = match material {
+                Material::Phong(material) => self.get_emissive_phong(&ray, &intersection, material),
+                Material::Physical(material) => {
+                    self.get_emissive_physical(&ray, &intersection, material)
+                }
+            };
+            cast_stats += material_stats;
+
+            (
+                emissive,
+                intersection.distance <= self.render_options.max_occlusion_distance,
+                cast_stats,
+            )
+        } else {
+            (Vector3::zero(), false, cast_stats)
+        }
     }
 
     #[allow(clippy::option_if_let_else)]
@@ -464,18 +607,18 @@ impl RaytracingScene {
             for ray in &rays[1..] {
                 let (data, stats) = self.get_color(ray);
                 color_data.color += data.color;
-                color_data.ambient_occlusion += data.ambient_occlusion;
+                color_data.albedo += data.albedo;
                 cast_stats += stats;
             }
 
             let inv_samples = 1.0 / f64::from(samples);
             color_data.color *= inv_samples;
-            color_data.ambient_occlusion *= inv_samples;
+            color_data.albedo *= inv_samples;
 
             (color_data.clamp(), cast_stats)
         };
 
-        (color_data.gamma_correct(), stats)
+        (color_data, stats)
     }
 
     fn post_process_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) {
@@ -483,16 +626,16 @@ impl RaytracingScene {
         let blur_radius = self.render_options.occlusion_blur_radius;
 
         let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
-        let ambient_occlusion: Vec<f64> = color_data_buffer
+        let color: Vec<Vector3<f64>> = color_data_buffer
             .iter()
-            .map(|color_data| color_data.ambient_occlusion)
+            .map(|color_data| color_data.color)
             .collect();
 
-        for (color_data, blurred_occlusion) in color_data_buffer
-            .iter_mut()
-            .zip(utils::repeated_box_blur(&ambient_occlusion, width, blur_radius).into_iter())
-        {
-            (*color_data).ambient_occlusion = blurred_occlusion;
+        for (color_data, color) in izip!(
+            color_data_buffer.iter_mut(),
+            utils::repeated_box_blur_color(&color, width, blur_radius).into_iter(),
+        ) {
+            // (*color_data).color= color;
         }
     }
 
@@ -539,15 +682,6 @@ impl RaytracingScene {
                 *cast_stats += stats;
             }
 
-            let buffer_index = index * 4;
-            {
-                let mut image_buffer = image_buffer_lock.write().unwrap();
-                image_buffer[buffer_index] = (color_data.color.x * 255.0) as u8;
-                image_buffer[buffer_index + 1] = (color_data.color.y * 255.0) as u8;
-                image_buffer[buffer_index + 2] = (color_data.color.z * 255.0) as u8;
-                image_buffer[buffer_index + 3] = 255;
-            }
-
             let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
             color_data_buffer[index] = color_data;
         };
@@ -572,22 +706,20 @@ impl RaytracingScene {
             indexes.par_iter().for_each(process_pixel);
         }
 
-        self.post_process_pass(&color_data_buffer_lock);
+        // self.post_process_pass(&color_data_buffer_lock);
 
         indexes.iter().for_each(|&index| {
-            let ambient_occlusion = {
+            let color = {
                 let color_data_buffer = color_data_buffer_lock.read().unwrap();
-                color_data_buffer[index].ambient_occlusion
+                color_data_buffer[index].compute_color_with_gamma_correction()
             };
 
             let buffer_index = index * 4;
             let mut image_buffer = image_buffer_lock.write().unwrap();
-            image_buffer[buffer_index] =
-                (f64::from(image_buffer[buffer_index]) * ambient_occlusion) as u8;
-            image_buffer[buffer_index + 1] =
-                (f64::from(image_buffer[buffer_index + 1]) * ambient_occlusion) as u8;
-            image_buffer[buffer_index + 2] =
-                (f64::from(image_buffer[buffer_index + 2]) * ambient_occlusion) as u8;
+            image_buffer[buffer_index] = (color.x * 255.0) as u8;
+            image_buffer[buffer_index + 1] = (color.y * 255.0) as u8;
+            image_buffer[buffer_index + 2] = (color.z * 255.0) as u8;
+            image_buffer[buffer_index + 3] = 255;
         });
 
         let duration = start.elapsed();
@@ -641,7 +773,8 @@ impl RaytracingScene {
 
                 {
                     let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                    image_buffer[index] = utils::to_argb_u32(color_data.color);
+                    image_buffer[index] =
+                        utils::to_argb_u32(color_data.compute_color_with_gamma_correction());
                 }
 
                 let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
@@ -667,15 +800,15 @@ impl RaytracingScene {
                 indexes.par_iter().for_each(process_pixel);
             }
 
-            self.post_process_pass(&color_data_buffer_lock);
+            // self.post_process_pass(&color_data_buffer_lock);
 
-            indexes.iter().for_each(|&index| {
-                let color_data_buffer = color_data_buffer_lock.read().unwrap();
-                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                image_buffer[index] = utils::to_argb_u32(
-                    color_data_buffer[index].color * color_data_buffer[index].ambient_occlusion,
-                );
-            });
+            // indexes.iter().for_each(|&index| {
+            //     let color_data_buffer = color_data_buffer_lock.read().unwrap();
+            //     let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+            //     image_buffer[index] = utils::to_argb_u32(
+            //         color_data_buffer[index].compute_color_with_gamma_correction(),
+            //     );
+            // });
         });
 
         while window.is_open() && !window.is_key_down(Key::Escape) {

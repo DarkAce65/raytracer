@@ -14,6 +14,7 @@ fn main() {
         "scenes/physical.json",
         "scenes/mesh_test.json",
         "scenes/occlusion.json",
+        "scenes/emissive.json",
         "scenes/test.json",
     ];
     let output_dir = "renders";

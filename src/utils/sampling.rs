@@ -20,7 +20,6 @@ fn concentric_sample_disk() -> Point2<f64> {
 }
 
 // Sample a hemisphere with a cosine weight in the direction of the given direction using Malley's method
-#[allow(dead_code)]
 pub fn cosine_sample_hemisphere(direction: &Unit<Vector3<f64>>) -> Unit<Vector3<f64>> {
     let p = concentric_sample_disk();
     let p = Point3::from([p.x, p.y, (1.0 - p.x * p.x - p.y * p.y).sqrt()]);
@@ -74,7 +73,6 @@ pub fn uniform_sample_cone(direction: &Unit<Vector3<f64>>, max_angle: f64) -> Un
 mod test {
     use super::*;
     use more_asserts::assert_le;
-    use std::f64::consts::PI;
 
     const PRECISION: f64 = 1e-6;
 
@@ -85,7 +83,7 @@ mod test {
             let sampled = cosine_sample_hemisphere(&vec);
             let dot = sampled.dot(&vec);
 
-            assert_le!(dot.min(1.0).acos(), PI + PRECISION);
+            assert_le!(dot.min(1.0).acos(), FRAC_PI_2 + PRECISION);
         }
     }
 

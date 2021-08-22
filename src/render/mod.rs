@@ -15,17 +15,15 @@ const BIAS: f64 = 1e-10;
 pub struct ColorData {
     color: Vector3<f64>,
     albedo: Vector3<f64>,
-    emissive: Vector3<f64>,
-    ambient_occlusion: f64,
+    normal: Unit<Vector3<f64>>,
 }
 
 impl ColorData {
-    fn new(color: Vector3<f64>, albedo: Vector3<f64>, emissive: Vector3<f64>) -> Self {
+    fn new(color: Vector3<f64>, albedo: Vector3<f64>, normal: Unit<Vector3<f64>>) -> Self {
         Self {
             color,
             albedo,
-            emissive,
-            ambient_occlusion: 1.0,
+            normal,
         }
     }
 
@@ -33,26 +31,26 @@ impl ColorData {
         Self {
             color: Vector3::zero(),
             albedo: Vector3::zero(),
-            emissive: Vector3::zero(),
-            ambient_occlusion: 0.0,
+            normal: Vector3::z_axis(),
         }
     }
 
     fn black() -> Self {
-        Self::new(Vector3::zero(), Vector3::zero(), Vector3::zero())
+        Self::new(Vector3::zero(), Vector3::zero(), Vector3::z_axis())
     }
 
     fn clamp(mut self) -> Self {
         self.color = self.color.map(|c| c.clamp(0.0, 1.0));
         self.albedo = self.albedo.map(|c| c.clamp(0.0, 1.0));
-        self.emissive = self.emissive.map(|c| c.clamp(0.0, 1.0));
-        self.ambient_occlusion = self.ambient_occlusion.clamp(0.0, 1.0);
         self
     }
 
-    fn gamma_correct(mut self) -> Self {
-        self.color = utils::gamma_correct(self.color, GAMMA);
-        self
+    fn compute_color(&self) -> Vector3<f64> {
+        self.color.map(|c| c.clamp(0.0, 1.0))
+    }
+
+    fn compute_color_with_gamma_correction(&self) -> Vector3<f64> {
+        utils::gamma_correct(self.compute_color(), GAMMA)
     }
 }
 
@@ -101,7 +99,7 @@ pub struct RenderOptions {
     pub max_depth: u8,
     pub samples_per_pixel: u16,
     pub max_reflected_rays: u16,
-    pub max_occlusion_rays: u16,
+    pub max_illumination_rays: u16,
     pub max_occlusion_distance: f64,
     pub occlusion_blur_radius: u16,
 }
@@ -114,7 +112,7 @@ impl Default for RenderOptions {
             max_depth: 3,
             samples_per_pixel: 4,
             max_reflected_rays: 32,
-            max_occlusion_rays: 16,
+            max_illumination_rays: 16,
             max_occlusion_distance: 1.0,
             occlusion_blur_radius: 2,
         }
