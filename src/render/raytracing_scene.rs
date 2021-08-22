@@ -7,7 +7,7 @@ use crate::ray_intersection::{Intersection, Ray, RayType};
 use crate::utils;
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
-use itertools::izip;
+
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{Matrix4, Point3, Unit, Vector3};
 use num_traits::identities::Zero;
@@ -620,24 +620,6 @@ impl RaytracingScene {
         (color_data, stats)
     }
 
-    fn post_process_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) {
-        let width = self.get_width() as usize;
-        let blur_radius = self.render_options.occlusion_blur_radius;
-
-        let mut color_data_buffer = color_data_buffer_lock.write().unwrap();
-        let color: Vec<Vector3<f64>> = color_data_buffer
-            .iter()
-            .map(|color_data| color_data.color)
-            .collect();
-
-        for (color_data, color) in izip!(
-            color_data_buffer.iter_mut(),
-            utils::repeated_box_blur_color(&color, width, blur_radius).into_iter(),
-        ) {
-            (*color_data).color = color;
-        }
-    }
-
     fn build_progress_bar(&self) -> ProgressBar {
         let width = u64::from(self.get_width());
         let height = u64::from(self.get_height());
@@ -704,8 +686,6 @@ impl RaytracingScene {
         } else {
             indexes.par_iter().for_each(process_pixel);
         }
-
-        // self.post_process_pass(&color_data_buffer_lock);
 
         for &index in &indexes {
             let color = {
@@ -798,16 +778,6 @@ impl RaytracingScene {
             } else {
                 indexes.par_iter().for_each(process_pixel);
             }
-
-            // self.post_process_pass(&color_data_buffer_lock);
-
-            // for &index in &indexes {
-            //     let color_data_buffer = color_data_buffer_lock.read().unwrap();
-            //     let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-            //     image_buffer[index] = utils::to_argb_u32(
-            //         color_data_buffer[index].compute_color_with_gamma_correction(),
-            //     );
-            // }
         });
 
         while window.is_open() && !window.is_key_down(Key::Escape) {

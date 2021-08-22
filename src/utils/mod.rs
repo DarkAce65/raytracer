@@ -1,4 +1,3 @@
-mod blur;
 mod physical_material_equations;
 mod rays;
 mod sampling;
@@ -6,13 +5,11 @@ mod sampling;
 use nalgebra::Vector3;
 use num_traits::Float;
 
-pub use blur::{repeated_box_blur, repeated_box_blur_color};
 pub use physical_material_equations::{fresnel, geometry_function, ndf};
 pub use rays::{reflect, refract};
 pub use sampling::{cosine_sample_hemisphere, uniform_sample_cone};
 
 const ALPHA_BIT_MASK: u32 = 255 << 24;
-const BOX_BLUR_ITERATIONS: usize = 3;
 
 pub fn to_argb_u32(rgb: Vector3<f64>) -> u32 {
     let r = (rgb.x * 255.0) as u32;
