@@ -650,8 +650,6 @@ impl RaytracingScene {
             color_data_buffer.push(ColorData::black());
         }
         let color_data_buffer_lock = RwLock::new(color_data_buffer);
-        let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
-        let image_buffer_lock = RwLock::new(&mut image_buffer);
         let cast_stats = CastStats::zero();
         let cast_stats_lock = RwLock::new(cast_stats);
 
@@ -687,6 +685,7 @@ impl RaytracingScene {
             indexes.par_iter().for_each(process_pixel);
         }
 
+        let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
         for &index in &indexes {
             let color = {
                 let color_data_buffer = color_data_buffer_lock.read().unwrap();
@@ -694,7 +693,6 @@ impl RaytracingScene {
             };
 
             let buffer_index = index * 4;
-            let mut image_buffer = image_buffer_lock.write().unwrap();
             image_buffer[buffer_index] = (color.x * 255.0) as u8;
             image_buffer[buffer_index + 1] = (color.y * 255.0) as u8;
             image_buffer[buffer_index + 2] = (color.z * 255.0) as u8;
