@@ -135,7 +135,7 @@ impl Primitive for RaytracingPlane {
         object_normal: &Unit<Vector3<f64>>,
         _intermediate: IntermediateData,
     ) -> Vector2<f64> {
-        let p = Rotation3::rotation_between(&object_normal, &Vector3::y_axis()).unwrap()
+        let p = Rotation3::rotation_between(object_normal, &Vector3::y_axis()).unwrap()
             * object_hit_point;
 
         Vector2::new(p.x, p.z)

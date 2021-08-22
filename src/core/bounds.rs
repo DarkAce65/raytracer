@@ -9,7 +9,7 @@ use std::fmt;
 
 fn build_bounding_volume(bounding_volumes: &[BoundingVolume]) -> BoundingVolume {
     if bounding_volumes.is_empty() {
-        panic!("trying to build a bounding volume out of nothing")
+        panic!("trying to build a bounding volume out of nothing");
     }
 
     bounding_volumes[1..]
@@ -358,7 +358,7 @@ impl KdTreeAccelerator {
             }
             KdTree::Leaf(object_indexes) => object_indexes
                 .iter()
-                .filter_map(|index| self.bounded_objects[*index].intersect(&ray, max_distance))
+                .filter_map(|index| self.bounded_objects[*index].intersect(ray, max_distance))
                 .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(Equal)),
         }
     }
@@ -392,7 +392,7 @@ impl KdTreeAccelerator {
             }
             KdTree::Leaf(object_indexes) => object_indexes.iter().any(|index| {
                 self.bounded_objects[*index]
-                    .intersect(&ray, max_distance)
+                    .intersect(ray, max_distance)
                     .is_some()
             }),
         }

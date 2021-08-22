@@ -130,7 +130,7 @@ impl Material {
                     panic!(
                         "failed to load texture at path \"{}\": {}",
                         texture_path, err
-                    )
+                    );
                 });
                 textures.insert(texture_path, texture);
             }

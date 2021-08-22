@@ -27,7 +27,7 @@ pub fn repeated_box_blur_color(
 }
 
 pub fn repeated_box_blur(input: &[f64], width: usize, radius: u16) -> Vec<f64> {
-    let mut output = box_blur(&input, width, radius);
+    let mut output = box_blur(input, width, radius);
 
     for _ in 1..BOX_BLUR_ITERATIONS {
         output = box_blur(&output, width, radius);
@@ -40,7 +40,7 @@ fn box_blur(input: &[f64], width: usize, radius: u16) -> Vec<f64> {
     let radius = radius.into();
 
     vertical_1d_blur_pass(
-        &horizontal_1d_blur_pass(&input, width, radius),
+        &horizontal_1d_blur_pass(input, width, radius),
         width,
         radius,
     )
