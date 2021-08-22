@@ -4,43 +4,49 @@ _spp = samples per pixel_
 
 #### `scenes/scene.json`
 
-800 x 800 pixels (4 spp), 1,524 primitives, 132,017,870 rays, 33.123s on i7 8650U
+800 x 800 pixels, 4 spp, 1,524 primitives, 147,101,174 rays, 48.764s on i7 8650U
 
 ![scene.json](./scene.png)
 
 #### `scenes/mesh.json`
 
-800 x 800 pixels (8 spp), 2,269 primitives, 71,639,689 rays, 11.663s on i7 8650U
+800 x 800 pixels, 8 spp, 2,269 primitives, 76,556,677 rays, 19.098s on i7 8650U
 
 ![mesh.json](./mesh.png)
 
 #### `scenes/refraction.json`
 
-800 x 800 pixels (4 spp), 6 primitives, 217,556,119 rays, 14.430s on i7 8650U
+800 x 800 pixels, 4 spp, 6 primitives, 229,269,620 rays, 14.925s on i7 8650U
 
 ![refraction.json](./refraction.png)
 
 #### `scenes/physical.json`
 
-800 x 800 pixels (4 spp), 50 primitives, 542,941,155 rays, 54.406s on i7 8650U
+800 x 800 pixels, 4 spp, 50 primitives, 533,729,973 rays, 57.934s on i7 8650U
 
 ![physical.json](./physical.png)
 
 #### `scenes/mesh_test.json`
 
-800 x 800 pixels (4 spp), 41,372 primitives, 39,602,408 rays, 8.834s on i7 8650U
+800 x 800 pixels, 4 spp, 41,372 primitives, 41,492,799 rays, 12.535s on i7 8650U
 
 ![mesh_test.json](./mesh_test.png)
 
 #### `scenes/occlusion.json`
 
-800 x 800 pixels (4 spp), 9 primitives, 48,369,356 rays, 3.763s on i7 8650U
+800 x 800 pixels, 4 spp, 9 primitives, 54,221,581 rays, 4.371s on i7 8650U
 
 ![occlusion.json](./occlusion.png)
 
+#### `scenes/emissive.json`
+
+800 x 800 pixels, 4 spp, 15 primitives, 31,854,022 rays, 3.111s on i7 8650U
+
+![emissive.json](./emissive.png)
+
 #### `scenes/test.json`
 
-800 x 800 pixels (4 spp), 9 primitives, 35,717,893 rays, 2.981s on i7 8650U
+800 x 800 pixels, 4 spp, 9 primitives, 35,707,193 rays, 3.149s on i7 8650U
 
 ![test.json](./test.png)
 
