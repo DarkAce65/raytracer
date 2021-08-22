@@ -51,6 +51,7 @@ _spp = samples per pixel_
 ![test.json](./test.png)
 
 # Model credits
+
 - [Utah teapot](https://en.wikipedia.org/wiki/Utah_teapot)
 - [Low Poly Deer](https://free3d.com/3d-model/low-poly-deer-72513.html) by snippysnappets
 - [lowpoly tree](https://www.turbosquid.com/3d-models/free-tree-3d-model/592617) by stanloshka

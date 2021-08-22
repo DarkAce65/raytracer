@@ -1,8 +1,9 @@
-# raytracing
+# raytracer
 
-A ray tracer written in Rust which implements Blinn-Phong shading and physically-based rendering using a Metallic-Roughness workflow
+A ray tracer written in Rust which implements Blinn-Phong shading and physically-based rendering using a Metallic-Roughness workflow.
 
-#### References
+### References
+
 - [_Physically Based Rendering: From Theory To Implementation_](http://www.pbr-book.org/)
 - [Scratchapixel](https://www.scratchapixel.com)
 - https://bheisler.github.io/post/writing-raytracer-in-rust-part-1/
@@ -10,24 +11,24 @@ A ray tracer written in Rust which implements Blinn-Phong shading and physically
 
 ### Building/Running
 
-*Make sure [Rust and `cargo`](https://www.rust-lang.org/learn/get-started) are installed.*
+_Requires that [Rust and `cargo`](https://www.rust-lang.org/learn/get-started) are installed._
 
 - For a live visualization of the ray tracer, run `cargo run -- scenes/scene.json`
 - To output to a file, run `cargo run -- -o image.png scenes/scene.json`
 
-*Additional scene files are in the [scenes](./scenes) folder*
+Additional sample scene files are in the [`scenes`](./scenes) folder.
 
 ### Renders
 
-Other renders can be found in the [renders](./renders/renders.md) folder.
+See the full list of renders [here](./renders/renders.md).
 
-`scenes/scene.json` (800 x 800 pixels (4 spp), 1,524 primitives, 112,806,820 rays, 29.305s on i7 8650U):
+`scenes/scene.json` (800 x 800 pixels, 4 spp, 1,524 primitives, 147,113,202 rays, 49.979s on i7 8650U)
 
 ![scene.json](./renders/scene.png)
 
-----
+---
 
-#### raytrace usage
+### raytrace usage
 
 The following options may be passed through `cargo` like so: `cargo run -- [FLAGS] [OPTIONS] <scene>`
 
