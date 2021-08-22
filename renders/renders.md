@@ -4,13 +4,13 @@ _spp = samples per pixel_
 
 #### `scenes/scene.json`
 
-800 x 800 pixels, 4 spp, 1,524 primitives, 147,101,174 rays, 48.764s on i7 8650U
+800 x 800 pixels, 4 spp, 1,524 primitives, 147,113,202 rays, 49.979s on i7 8650U
 
 ![scene.json](./scene.png)
 
 #### `scenes/mesh.json`
 
-800 x 800 pixels, 8 spp, 2,269 primitives, 76,556,677 rays, 19.098s on i7 8650U
+800 x 800 pixels, 8 spp, 2,269 primitives, 76,650,390 rays, 18.133s on i7 8650U
 
 ![mesh.json](./mesh.png)
 
