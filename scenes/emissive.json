@@ -1,6 +1,7 @@
 {
   "width": 800,
   "height": 800,
+  "max_illumination_rays": 128,
   "camera": { "position": [5, 1, 4] },
   "objects": [
     {

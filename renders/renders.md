@@ -40,7 +40,7 @@ _spp = samples per pixel_
 
 #### `scenes/emissive.json`
 
-800 x 800 pixels, 4 spp, 15 primitives, 31,854,022 rays, 3.111s on i7 8650U
+800 x 800 pixels, 4 spp, 15 primitives, 236,030,663 rays, 20.904s on i7 8650U
 
 ![emissive.json](./emissive.png)
 
