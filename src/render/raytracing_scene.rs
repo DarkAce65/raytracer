@@ -706,7 +706,7 @@ impl RaytracingScene {
             indexes.par_iter().for_each(process_pixel);
         }
 
-        self.post_process_pass(&color_data_buffer_lock);
+        // self.post_process_pass(&color_data_buffer_lock);
 
         indexes.iter().for_each(|&index| {
             let color = {
@@ -800,15 +800,15 @@ impl RaytracingScene {
                 indexes.par_iter().for_each(process_pixel);
             }
 
-            self.post_process_pass(&color_data_buffer_lock);
+            // self.post_process_pass(&color_data_buffer_lock);
 
-            indexes.iter().for_each(|&index| {
-                let color_data_buffer = color_data_buffer_lock.read().unwrap();
-                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                image_buffer[index] = utils::to_argb_u32(
-                    color_data_buffer[index].compute_color_with_gamma_correction(),
-                );
-            });
+            // indexes.iter().for_each(|&index| {
+            //     let color_data_buffer = color_data_buffer_lock.read().unwrap();
+            //     let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+            //     image_buffer[index] = utils::to_argb_u32(
+            //         color_data_buffer[index].compute_color_with_gamma_correction(),
+            //     );
+            // });
         });
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
