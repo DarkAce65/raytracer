@@ -101,7 +101,6 @@ pub struct RenderOptions {
     pub max_reflected_rays: u16,
     pub max_illumination_rays: u16,
     pub max_occlusion_distance: f64,
-    pub occlusion_blur_radius: u16,
 }
 
 impl Default for RenderOptions {
@@ -114,7 +113,6 @@ impl Default for RenderOptions {
             max_reflected_rays: 32,
             max_illumination_rays: 16,
             max_occlusion_distance: 1.0,
-            occlusion_blur_radius: 2,
         }
     }
 }
