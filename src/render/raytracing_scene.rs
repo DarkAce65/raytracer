@@ -7,7 +7,6 @@ use crate::ray_intersection::{Intersection, Ray, RayType};
 use crate::utils;
 use image::RgbaImage;
 use indicatif::{ProgressBar, ProgressStyle};
-
 use minifb::{Key, Window, WindowOptions};
 use nalgebra::{Matrix4, Point3, Unit, Vector3};
 use num_traits::identities::Zero;
@@ -641,6 +640,56 @@ impl RaytracingScene {
         progress
     }
 
+    #[cfg(feature = "denoise")]
+    fn denoising_pass(&self, color_data_buffer_lock: &RwLock<Vec<ColorData>>) -> Vec<f32> {
+        let width = self.get_width() as usize;
+        let height = self.get_height() as usize;
+
+        let mut beauty_image: Vec<f32> = vec![0.0; width * height * 3];
+        let mut normal_data: Vec<f32> = vec![0.0; width * height * 3];
+        let mut albedo_data: Vec<f32> = vec![0.0; width * height * 3];
+        for index in 0..width * height {
+            let (color, normal, albedo) = {
+                let color_data_buffer = color_data_buffer_lock.read().unwrap();
+                (
+                    color_data_buffer[index].compute_color_with_gamma_correction(),
+                    color_data_buffer[index].normal,
+                    color_data_buffer[index].albedo,
+                )
+            };
+
+            let buffer_index = index * 3;
+            beauty_image[buffer_index] = color.x as f32;
+            beauty_image[buffer_index + 1] = color.y as f32;
+            beauty_image[buffer_index + 2] = color.z as f32;
+
+            normal_data[buffer_index] = normal.x as f32;
+            normal_data[buffer_index + 1] = normal.y as f32;
+            normal_data[buffer_index + 2] = normal.z as f32;
+
+            albedo_data[buffer_index] = albedo.x as f32;
+            albedo_data[buffer_index + 1] = albedo.y as f32;
+            albedo_data[buffer_index + 2] = albedo.z as f32;
+        }
+
+        let mut denoised_output = vec![0.0; width * height * 3];
+
+        let device = oidn::Device::new();
+        let mut filter = oidn::RayTracing::new(&device);
+        filter
+            .srgb(true)
+            .image_dimensions(width, height)
+            .albedo_normal(&albedo_data, &normal_data)
+            .filter(&beauty_image, &mut denoised_output)
+            .expect("error configuring denoising filter");
+
+        if let Err(e) = device.get_error() {
+            panic!("error denoising image: {:#?}", e);
+        }
+
+        denoised_output
+    }
+
     pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, Duration, CastStats) {
         let width = self.get_width() as usize;
         let height = self.get_height() as usize;
@@ -686,17 +735,33 @@ impl RaytracingScene {
         }
 
         let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
-        for &index in &indexes {
-            let color = {
-                let color_data_buffer = color_data_buffer_lock.read().unwrap();
-                color_data_buffer[index].compute_color_with_gamma_correction()
-            };
 
-            let buffer_index = index * 4;
-            image_buffer[buffer_index] = (color.x * 255.0) as u8;
-            image_buffer[buffer_index + 1] = (color.y * 255.0) as u8;
-            image_buffer[buffer_index + 2] = (color.z * 255.0) as u8;
-            image_buffer[buffer_index + 3] = 255;
+        #[cfg(feature = "denoise")]
+        {
+            let denoised_image = self.denoising_pass(&color_data_buffer_lock);
+            for &index in &indexes {
+                let buffer_index = index * 4;
+                image_buffer[buffer_index] = (denoised_image[index * 3] * 255.0) as u8;
+                image_buffer[buffer_index + 1] = (denoised_image[index * 3 + 1] * 255.0) as u8;
+                image_buffer[buffer_index + 2] = (denoised_image[index * 3 + 2] * 255.0) as u8;
+                image_buffer[buffer_index + 3] = 255;
+            }
+        }
+
+        #[cfg(not(feature = "denoise"))]
+        {
+            for &index in &indexes {
+                let color = {
+                    let color_data_buffer = color_data_buffer_lock.read().unwrap();
+                    color_data_buffer[index].compute_color_with_gamma_correction()
+                };
+
+                let buffer_index = index * 4;
+                image_buffer[buffer_index] = (color.x * 255.0) as u8;
+                image_buffer[buffer_index + 1] = (color.y * 255.0) as u8;
+                image_buffer[buffer_index + 2] = (color.z * 255.0) as u8;
+                image_buffer[buffer_index + 3] = 255;
+            }
         }
 
         let duration = start.elapsed();
@@ -775,6 +840,20 @@ impl RaytracingScene {
                 progress.finish_with_message(cast_stats_lock.read().unwrap().ray_count.to_string());
             } else {
                 indexes.par_iter().for_each(process_pixel);
+            }
+
+            #[cfg(feature = "denoise")]
+            {
+                let denoised_output = self.denoising_pass(&color_data_buffer_lock);
+
+                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+                for &index in &indexes {
+                    image_buffer[index] = utils::to_argb_u32(Vector3::new(
+                        denoised_output[index * 3].into(),
+                        denoised_output[index * 3 + 1].into(),
+                        denoised_output[index * 3 + 2].into(),
+                    ));
+                }
             }
         });
 
