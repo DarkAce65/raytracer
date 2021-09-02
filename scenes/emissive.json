@@ -1,7 +1,6 @@
 {
   "width": 800,
   "height": 800,
-  "max_illumination_rays": 128,
   "camera": { "position": [5, 1, 4] },
   "objects": [
     {
@@ -29,7 +28,11 @@
         { "rotate": [[1, 0, 1], 50] },
         { "translate": [-0.5, 2, 2] }
       ],
-      "material": { "type": "phong", "emissive": [0.2, 1, 1] }
+      "material": {
+        "type": "phong",
+        "color": [0.2, 1, 1],
+        "emissive": [0.2, 1, 1]
+      }
     },
     {
       "type": "sphere",
@@ -47,13 +50,21 @@
       "type": "sphere",
       "radius": 0.25,
       "transform": [{ "translate": [2, 0, 2] }],
-      "material": { "type": "phong", "emissive": [1, 0.2, 0.4] }
+      "material": {
+        "type": "phong",
+        "color": [1, 0.2, 0.4],
+        "emissive": [1, 0.2, 0.4]
+      }
     },
     {
       "type": "cube",
       "size": 0.7,
       "transform": [{ "translate": [-2, -0.5, -1] }],
-      "material": { "type": "phong", "emissive": [0.2, 1, 0.4] }
+      "material": {
+        "type": "phong",
+        "color": [0.2, 1, 0.4],
+        "emissive": [0.2, 1, 0.4]
+      }
     },
     {
       "type": "cube",
@@ -74,7 +85,11 @@
             { "scale": [0.1, 1, 1] },
             { "translate": [0.31, 0, 0] }
           ],
-          "material": { "type": "phong", "emissive": [1, 1, 1] }
+          "material": {
+            "type": "phong",
+            "color": [1, 1, 1],
+            "emissive": [1, 1, 1]
+          }
         },
         {
           "type": "cube",
@@ -98,13 +113,21 @@
           "type": "cube",
           "size": 0.3,
           "transform": [{ "translate": [1, -0.3, 0] }],
-          "material": { "type": "phong", "emissive": [0.2, 0.4, 1] }
+          "material": {
+            "type": "phong",
+            "color": [0.2, 0.4, 1],
+            "emissive": [0.2, 0.4, 1]
+          }
         },
         {
           "type": "sphere",
           "radius": 0.2,
           "transform": [{ "translate": [0, -0.3, 1.2] }],
-          "material": { "type": "phong", "emissive": [0.4, 1, 0.2] }
+          "material": {
+            "type": "phong",
+            "color": [0.4, 1, 0.2],
+            "emissive": [0.4, 1, 0.2]
+          }
         }
       ]
     }
