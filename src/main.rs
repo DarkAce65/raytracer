@@ -4,7 +4,7 @@ use clap::{App, Arg};
 use raytrace::Scene;
 use std::fs::File;
 use std::path::Path;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 fn main() {
     let matches = App::new("ray tracer")
@@ -38,24 +38,43 @@ fn main() {
     let output_filename = matches.value_of("output");
     let use_progress = !matches.is_present("noprogress");
 
+    let mut total_duration = Duration::ZERO;
+
     let mut scene: Scene = serde_json::from_reader(scene_file).expect("failed to parse scene");
 
     let now = Instant::now();
     scene.load_assets(scene_path.parent().unwrap_or_else(|| Path::new("")));
-    println!("Took {:?} to load assets.", now.elapsed());
+    let duration = now.elapsed();
+    total_duration += duration;
+    println!("Took {:?} to load assets.", duration);
 
     let now = Instant::now();
     let scene = scene.build_raytracing_scene();
+    let duration = now.elapsed();
+    total_duration += duration;
     println!(
         "Took {:?} to pre-process scene and construct bounding boxes for {} primitives.",
-        now.elapsed(),
+        duration,
         scene.get_num_objects()
     );
 
     if let Some(filename) = output_filename {
-        let (image, duration, _) = scene.raytrace_to_image(use_progress);
+        let (image, cast_timings, _) = scene.raytrace_to_image(use_progress);
+        total_duration += cast_timings.ray_casting_duration;
+        println!(
+            "Took {:?} to render the scene.",
+            cast_timings.ray_casting_duration
+        );
+        if let Some(post_processing_duration) = cast_timings.post_processing_duration {
+            total_duration += post_processing_duration;
+            println!(
+                "Took {:?} to run the post processing pass.",
+                post_processing_duration
+            );
+        }
+
         image.save(filename).expect("unable to write image");
-        println!("Output written to {} in {:.3?}", filename, duration);
+        println!("Output written to {} in {:.3?}", filename, total_duration);
     } else {
         scene.raytrace_to_buffer(use_progress);
     }

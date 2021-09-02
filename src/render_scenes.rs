@@ -32,7 +32,7 @@ fn main() {
         scene.load_assets(scene_path.parent().unwrap_or_else(|| Path::new("")));
         let scene = scene.build_raytracing_scene();
 
-        let mut duration_sum = Duration::new(0, 0);
+        let mut duration_sum = Duration::ZERO;
         let mut ray_count_sum = 0;
 
         println!(
@@ -44,14 +44,18 @@ fn main() {
             print!("\u{2514} Iteration {}: tracing...", i + 1);
             io::stdout().flush().unwrap();
 
-            let (image, duration, stats) = scene.raytrace_to_image(false);
-            duration_sum += duration;
+            let (image, cast_timings, stats) = scene.raytrace_to_image(false);
+            let mut iteration_duration = cast_timings.ray_casting_duration;
+            if let Some(post_processing_duration) = cast_timings.post_processing_duration {
+                iteration_duration += post_processing_duration;
+            }
+            duration_sum += iteration_duration;
             ray_count_sum += stats.ray_count;
 
             println!(
                 "\r\u{2502} Iteration {}: rendered in {:.3?} ({} rays)",
                 i + 1,
-                duration,
+                iteration_duration,
                 stats.ray_count
             );
 

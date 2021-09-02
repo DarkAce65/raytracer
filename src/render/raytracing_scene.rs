@@ -1,4 +1,4 @@
-use super::{Camera, CastStats, ColorData, RenderOptions, BIAS};
+use super::{Camera, CastStats, CastTimings, ColorData, RenderOptions, BIAS};
 use crate::core::{
     KdTreeAccelerator, Material, PhongMaterial, PhysicalMaterial, Texture, Transformed,
 };
@@ -17,7 +17,9 @@ use std::collections::HashMap;
 use std::f64::consts::{FRAC_1_PI, FRAC_PI_2};
 use std::sync::{Arc, RwLock};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(feature = "denoise")]
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct RaytracingCamera {
@@ -690,7 +692,7 @@ impl RaytracingScene {
         denoised_output
     }
 
-    pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, Duration, CastStats) {
+    pub fn raytrace_to_image(&self, use_progress: bool) -> (RgbaImage, CastTimings, CastStats) {
         let width = self.get_width() as usize;
         let height = self.get_height() as usize;
 
@@ -717,7 +719,7 @@ impl RaytracingScene {
         let mut indexes: Vec<usize> = (0..width * height).collect();
         indexes.shuffle(&mut thread_rng());
 
-        let start = Instant::now();
+        let cast_timings = CastTimings::start_ray_tracing();
         if use_progress {
             let progress = self.build_progress_bar();
 
@@ -733,12 +735,15 @@ impl RaytracingScene {
         } else {
             indexes.par_iter().for_each(process_pixel);
         }
+        cast_timings.finish_ray_tracing();
 
         let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
-
         #[cfg(feature = "denoise")]
         {
+            cast_timings.start_post_processing();
             let denoised_image = self.denoising_pass(&color_data_buffer_lock);
+            cast_timings.finish_post_processing();
+
             for &index in &indexes {
                 let buffer_index = index * 4;
                 image_buffer[buffer_index] = (denoised_image[index * 3] * 255.0) as u8;
@@ -747,7 +752,6 @@ impl RaytracingScene {
                 image_buffer[buffer_index + 3] = 255;
             }
         }
-
         #[cfg(not(feature = "denoise"))]
         {
             for &index in &indexes {
@@ -764,13 +768,11 @@ impl RaytracingScene {
             }
         }
 
-        let duration = start.elapsed();
-
         let image = RgbaImage::from_raw(width as u32, height as u32, image_buffer)
             .expect("failed to convert buffer");
 
         let cast_stats = *cast_stats_lock.read().unwrap();
-        (image, duration, cast_stats)
+        (image, cast_timings, cast_stats)
     }
 
     pub fn raytrace_to_buffer(self, use_progress: bool) {
@@ -844,14 +846,19 @@ impl RaytracingScene {
 
             #[cfg(feature = "denoise")]
             {
-                let denoised_output = self.denoising_pass(&color_data_buffer_lock);
+                let post_processing_start = Instant::now();
+                let denoised_image = self.denoising_pass(&color_data_buffer_lock);
+                println!(
+                    "Took {:?} to run the post processing pass.",
+                    post_processing_start.elapsed()
+                );
 
                 let mut image_buffer = ray_image_buffer_lock.write().unwrap();
                 for &index in &indexes {
                     image_buffer[index] = utils::to_argb_u32(Vector3::new(
-                        denoised_output[index * 3].into(),
-                        denoised_output[index * 3 + 1].into(),
-                        denoised_output[index * 3 + 2].into(),
+                        denoised_image[index * 3].into(),
+                        denoised_image[index * 3 + 1].into(),
+                        denoised_image[index * 3 + 2].into(),
                     ));
                 }
             }
