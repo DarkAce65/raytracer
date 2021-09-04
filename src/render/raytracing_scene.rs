@@ -747,9 +747,11 @@ impl RaytracingScene {
 
         #[cfg(feature = "denoise")]
         {
-            cast_timings.start_post_processing();
-            self.denoising_pass(&color_data_buffer_lock);
-            cast_timings.finish_post_processing();
+            if !self.render_options.skip_denoise_pass {
+                cast_timings.start_post_processing();
+                self.denoising_pass(&color_data_buffer_lock);
+                cast_timings.finish_post_processing();
+            }
         }
 
         let mut image_buffer: Vec<u8> = vec![0; width * height * 4];
@@ -843,17 +845,19 @@ impl RaytracingScene {
 
             #[cfg(feature = "denoise")]
             {
-                let post_processing_start = Instant::now();
-                self.denoising_pass(&color_data_buffer_lock);
-                println!(
-                    "Took {:?} to run the post processing pass.",
-                    post_processing_start.elapsed()
-                );
+                if !self.render_options.skip_denoise_pass {
+                    let post_processing_start = Instant::now();
+                    self.denoising_pass(&color_data_buffer_lock);
+                    println!(
+                        "Took {:?} to run the post processing pass.",
+                        post_processing_start.elapsed()
+                    );
 
-                let mut image_buffer = ray_image_buffer_lock.write().unwrap();
-                for &index in &indexes {
-                    let color_data_buffer = color_data_buffer_lock.write().unwrap();
-                    image_buffer[index] = utils::to_argb_u32(color_data_buffer[index].color);
+                    let mut image_buffer = ray_image_buffer_lock.write().unwrap();
+                    for &index in &indexes {
+                        let color_data_buffer = color_data_buffer_lock.write().unwrap();
+                        image_buffer[index] = utils::to_argb_u32(color_data_buffer[index].color);
+                    }
                 }
             }
         });
