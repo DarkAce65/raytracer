@@ -22,7 +22,7 @@ Additional sample scene files are in the [`scenes`](./scenes) folder.
 
 See the full list of renders [here](./renders/renders.md).
 
-`scenes/scene.json` (800 x 800 pixels, 4 spp, 1,524 primitives, 147,113,202 rays, 49.979s on i7 8650U)
+`scenes/scene.json` (800 x 800 pixels, 4 spp, 1,524 primitives, 147,115,715 rays, 51.451s on i7 8650U)
 
 ![scene.json](./renders/scene.png)
 
