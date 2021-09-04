@@ -1,6 +1,7 @@
 {
   "width": 800,
   "height": 800,
+  "skip_denoise_pass": true,
   "camera": { "position": [5, 1, 5] },
   "lights": [
     { "type": "ambient", "color": [0.1, 0.1, 0.1] },

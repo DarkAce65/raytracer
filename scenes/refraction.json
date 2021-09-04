@@ -2,6 +2,7 @@
   "width": 800,
   "height": 800,
   "max_depth": 3,
+  "skip_denoise_pass": true,
   "camera": { "fov": 45, "position": [3, 1.25, 7] },
   "lights": [
     { "type": "ambient", "color": [0.01, 0.01, 0.01] },

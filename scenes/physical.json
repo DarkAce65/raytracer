@@ -1,6 +1,7 @@
 {
   "width": 800,
   "height": 800,
+  "skip_denoise_pass": true,
   "camera": { "fov": 45, "position": [-15, 10, 20] },
   "lights": [
     {
