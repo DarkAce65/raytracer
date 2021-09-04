@@ -6,6 +6,7 @@ use nalgebra::{Point3, Unit, Vector3};
 use num_traits::Zero;
 use serde::Deserialize;
 use std::ops::AddAssign;
+use std::time::{Duration, Instant};
 
 pub use scene::Scene;
 
@@ -49,8 +50,46 @@ impl ColorData {
         self.color.map(|c| c.clamp(0.0, 1.0))
     }
 
-    fn compute_color_with_gamma_correction(&self) -> Vector3<f64> {
-        utils::gamma_correct(self.compute_color(), GAMMA)
+    fn gamma_correct(mut self) -> Self {
+        self.color = utils::gamma_correct(self.compute_color(), GAMMA);
+        self
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct CastTimings {
+    ray_casting_start: Instant,
+    pub ray_casting_duration: Duration,
+    post_processing_start: Option<Instant>,
+    pub post_processing_duration: Option<Duration>,
+}
+
+impl CastTimings {
+    pub fn start_ray_tracing() -> Self {
+        Self {
+            ray_casting_start: Instant::now(),
+            ray_casting_duration: Duration::ZERO,
+            post_processing_start: None,
+            post_processing_duration: None,
+        }
+    }
+
+    pub fn finish_ray_tracing(&mut self) {
+        self.ray_casting_duration = self.ray_casting_start.elapsed();
+    }
+
+    pub fn start_post_processing(&mut self) {
+        self.post_processing_start = Some(Instant::now());
+    }
+
+    pub fn finish_post_processing(&mut self) {
+        self.post_processing_duration = Some(
+            self.post_processing_start
+                .expect(
+                    "expected finish_post_processing() to be called after start_post_processing()",
+                )
+                .elapsed(),
+        );
     }
 }
 
@@ -101,7 +140,7 @@ pub struct RenderOptions {
     pub max_reflected_rays: u16,
     pub max_illumination_rays: u16,
     pub max_occlusion_distance: f64,
-    pub occlusion_blur_radius: u16,
+    pub skip_denoise_pass: bool,
 }
 
 impl Default for RenderOptions {
@@ -114,7 +153,7 @@ impl Default for RenderOptions {
             max_reflected_rays: 32,
             max_illumination_rays: 16,
             max_occlusion_distance: 1.0,
-            occlusion_blur_radius: 2,
+            skip_denoise_pass: false,
         }
     }
 }
