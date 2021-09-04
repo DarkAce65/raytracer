@@ -1,5 +1,7 @@
 # Rendered scenes
 
+_The images below were rendered, then denoised using Intel's Open Image Denoise library. [See here for more info](../README.md#oidn-support)_
+
 _spp = samples per pixel_
 
 #### `scenes/scene.json`
