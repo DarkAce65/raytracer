@@ -719,7 +719,7 @@ impl RaytracingScene {
         let mut indexes: Vec<usize> = (0..width * height).collect();
         indexes.shuffle(&mut thread_rng());
 
-        let cast_timings = CastTimings::start_ray_tracing();
+        let mut cast_timings = CastTimings::start_ray_tracing();
         if use_progress {
             let progress = self.build_progress_bar();
 

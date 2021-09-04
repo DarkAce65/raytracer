@@ -73,16 +73,22 @@ impl CastTimings {
         }
     }
 
-    pub fn finish_ray_tracing(mut self) {
+    pub fn finish_ray_tracing(&mut self) {
         self.ray_casting_duration = self.ray_casting_start.elapsed();
     }
 
-    pub fn start_post_processing(mut self) {
+    pub fn start_post_processing(&mut self) {
         self.post_processing_start = Some(Instant::now());
     }
 
-    pub fn finish_post_processing(mut self) {
-        self.post_processing_duration = Some(self.post_processing_start.unwrap().elapsed());
+    pub fn finish_post_processing(&mut self) {
+        self.post_processing_duration = Some(
+            self.post_processing_start
+                .expect(
+                    "expected finish_post_processing() to be called after start_post_processing()",
+                )
+                .elapsed(),
+        );
     }
 }
 
