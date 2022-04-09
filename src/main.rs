@@ -1,33 +1,30 @@
 #![deny(clippy::all)]
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use raytrace::Scene;
 use std::fs::File;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
 fn main() {
-    let matches = App::new("ray tracer")
+    let matches = Command::new("ray tracer")
         .about("A ray tracer written in Rust")
         .arg(
-            Arg::with_name("scene")
+            Arg::new("scene")
                 .index(1)
                 .required(true)
                 .takes_value(true)
                 .help("input scene as a json file"),
         )
         .arg(
-            Arg::with_name("output")
-                .short("o")
+            Arg::new("output")
+                .short('o')
                 .long("output")
                 .takes_value(true)
-                .help(
-                    "Output rendered image to file\n\
-                     If omitted, image is rendered to a window",
-                ),
+                .help("Output rendered image to file. If omitted, image is rendered to a window"),
         )
         .arg(
-            Arg::with_name("noprogress")
+            Arg::new("noprogress")
                 .long("no-progress")
                 .help("Hide progress bar"),
         )
