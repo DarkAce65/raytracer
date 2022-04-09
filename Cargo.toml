@@ -2,7 +2,7 @@
 name = "raytrace"
 version = "1.0.0"
 authors = ["DarkAce65 <tvdood99@gmail.com>"]
-edition = "2018"
+edition = "2021"
 default-run = "raytrace"
 
 [lib]
